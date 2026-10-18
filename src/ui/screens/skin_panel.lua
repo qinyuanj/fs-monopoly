@@ -43,9 +43,9 @@ end
 
 -- ===== 面板门面:panel.lua 再导出保持公开 API =====
 
--- skin_panel.catalog 是 test/acceptance steps 消费的公开契约面;真源在
--- transaction_context,这里先经 panel.sync_catalog 拉新再镜像(configure/reset/
--- port 注入三个时机,与拆分前 _sync_catalog 直读 transaction 等价)。
+-- skin_panel.catalog 供行为测试通过公开面核对选择、装备与宿主资源装配；
+-- 真源在 transaction_context。configure/reset/port 注入时经 panel.sync_catalog
+-- 拉新镜像，供调用方观察当前目录。
 local function _sync_catalog()
   panel.sync_catalog()
   skin_panel.catalog = panel.catalog

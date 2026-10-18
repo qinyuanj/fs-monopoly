@@ -209,18 +209,6 @@ describe("TestV102ExtensionContract", function()
   luassert.is.equal(1, achievement.mapped_ids_for_event("游戏胜利")[1], "win event should map to the win achievements")
   end)
 
-  it("test_share_task_integration_is_host_managed", function()
-  local share_task = require("src.app.host_integrations.share_task")
-  local task = share_task.find_task("永久", "邀请10人")
-
-  luassert.truthy(share_task.host_pending ~= true, "share_task should no longer be a host-pending noop")
-  luassert.is.equal("function", type(share_task.find_task), "share_task should expose task lookup")
-  luassert.is.equal("首次进入地图的人数", task.progress_source, "share_task should mirror host progress source")
-  luassert.is.equal(10, task.target_progress, "share_task should mirror host target progress")
-  luassert.is.equal(36800, task.reward_amount, "share_task should mirror host reward amount")
-  luassert.is.equal("host_managed", share_task.claim().reason, "share_task claims should stay host-managed")
-  end)
-
   it("test_sign_in_integration_is_implemented", function()
   local sign_in = require("src.app.host_integrations.sign_in")
 

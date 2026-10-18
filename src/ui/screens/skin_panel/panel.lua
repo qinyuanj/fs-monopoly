@@ -25,9 +25,8 @@ local function _notify(text, key)
   })
 end
 
--- panel.catalog 是 test/acceptance steps 消费的公开契约面(经主文件镜像到
--- skin_panel.catalog);在 configure/reset/open 时通过 transaction.refresh_catalog
--- 重新从 transaction_context 排序拉新，确保渲染与步骤断言的 catalog 一致。
+-- configure/reset/open 时从 transaction_context 拉新排序目录，供槽位渲染
+-- 与 skin_panel.catalog 的行为测试观察面共同使用。
 function panel.sync_catalog()
   transaction.refresh_catalog()
   panel.catalog = transaction.catalog
@@ -136,7 +135,7 @@ function panel.install_default_result_applier()
 end
 
 function panel.open(state, role_id)
-  panel.sync_catalog()  -- #513: open 前重新排序，确保渲染与步骤断言的 catalog 一致
+  panel.sync_catalog()  -- open 前重新排序，确保槽位渲染使用当前目录
   return _handle_transaction(state, role_id, { type = "open" })
 end
 

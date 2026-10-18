@@ -23,12 +23,8 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_default_ports = require("src.host.default_ports")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
-local card_reveal_port = require("src.rules.ports.card_reveal")
 local share_panel_port = require("src.foundation.ports.share_panel")
 local host_share_panel = require("src.host.share_panel")
-local land_presenter = require("src.rules.land.presenter")
-local gain_reveal = require("src.rules.items.gain_reveal")
-local bankruptcy = require("src.rules.endgame.bankruptcy")
 local screen_openers_port = require("src.ui.seams.screen_openers")
 local resolver_seam = require("src.ui.seams.local_actor_resolver")
 local host_runtime_impl = require("src.host")
@@ -204,14 +200,6 @@ local function _refresh_runtime_services_for_tests()
   paid_purchase_port.reset_for_tests()
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
   achievement_progress_port.reset_for_tests()
-  -- #329:card_reveal 纯契约 port 的实现基线,镜像 host_install 装配(闭包在
-  -- 调用时读模块字段,spec 对实现模块字段的 patch 保持可截获)。
-  card_reveal_port.reset_for_tests()
-  card_reveal_port.configure({
-    push_land_popup = function(...) return land_presenter.push_popup(...) end,
-    queue_gain_reveal = function(...) return gain_reveal.queue(...) end,
-    bankruptcy_text = function(...) return bankruptcy.resolve_bankruptcy_text(...) end,
-  })
   -- #463:share_panel 纯契约 port 的实现基线,镜像 host_install 装配(闭包在
   -- 调用时读模块字段,spec 对实现模块字段的 patch 保持可截获)。
   share_panel_port.reset_for_tests()
