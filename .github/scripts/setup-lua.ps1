@@ -76,6 +76,28 @@ $config = "$Prefix\luarocks-config.lua"
 Set-Content -Encoding ascii $config @'
 variables = { CC = "cl", LD = "link", AR = "lib", RC = "rc", MT = "mt" }
 '@
+# 受控 Lua 环境(#151):测试与质量工具只从机器 LuaRocks tree 解析、仓内不再自举安装,
+# 所以 CI 在这里把五个钉定 rock 预装进默认 tree。失败分类沿用本脚本口径:
+# 下载 / 清单不可达退 3(重跑可恢复),编译或其他错误退 1。
+$rockPins = @(
+  'busted 2.3.0-1',
+  'luassert 1.9.0-1',
+  'luacov 0.17.0-1',
+  'luacov-reporter-lcov 0.2-0',
+  'luacheck 1.2.0-1'
+)
+$env:LUAROCKS_CONFIG = $config
+$env:PATH = "$Prefix\bin;$env:PATH"
+foreach ($pin in $rockPins) {
+  $name, $ver = $pin -split ' '
+  $out = & "$Prefix\bin\luarocks.exe" --lua-version 5.4 install $name $ver 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    $text = ($out | Out-String)
+    $code = if ($text -match 'Failed downloading|Failed searching manifest|timed out|Could not connect') { 3 } else { 1 }
+    Stop-Setup $code "安装 $name $ver 失败: $text"
+  }
+}
+
 if ($env:GITHUB_PATH -and $env:GITHUB_ENV) {
   Add-Content -Encoding utf8 $env:GITHUB_PATH "$Prefix\bin"
   Add-Content -Encoding utf8 $env:GITHUB_ENV "LUAROCKS_CONFIG=$config"
