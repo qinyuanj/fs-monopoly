@@ -139,7 +139,6 @@ end
 
 bankruptcy._try_call_life_die = life_loss.try_call_life_die
 bankruptcy._resolve_bankruptcy_text = _resolve_bankruptcy_text
--- 公开名:破产展示文案是 card_reveal port 的转发面(#165),不再经下划线私有名。
 bankruptcy.resolve_bankruptcy_text = _resolve_bankruptcy_text
 
 bankruptcy._M_test = {

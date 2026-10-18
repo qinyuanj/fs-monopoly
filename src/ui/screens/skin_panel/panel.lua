@@ -1,6 +1,5 @@
 -- skin_panel 面板门面(自 screens/skin_panel.lua 拆分,>100 mutation sites
 -- 行为保持):事务派发、结果应用(canvas 切换/槽位刷新/提示)、公开动作 API。
--- catalog 公开契约面在装配主文件镜像同步(skin_panel.catalog)。
 local cosmetics_ports = require("src.ui.seams.cosmetics")
 local transaction = cosmetics_ports.build().transaction
 local tip_queue = require("src.foundation.tips")
@@ -25,9 +24,7 @@ local function _notify(text, key)
   })
 end
 
--- panel.catalog 是 test/acceptance steps 消费的公开契约面(经主文件镜像到
--- skin_panel.catalog);在 configure/reset/open 时通过 transaction.refresh_catalog
--- 重新从 transaction_context 排序拉新，确保渲染与步骤断言的 catalog 一致。
+-- configure/reset/open 时从 transaction_context 拉新排序目录，供槽位渲染使用。
 function panel.sync_catalog()
   transaction.refresh_catalog()
   panel.catalog = transaction.catalog
@@ -136,7 +133,7 @@ function panel.install_default_result_applier()
 end
 
 function panel.open(state, role_id)
-  panel.sync_catalog()  -- #513: open 前重新排序，确保渲染与步骤断言的 catalog 一致
+  panel.sync_catalog()  -- open 前重新排序，确保槽位渲染使用当前目录
   return _handle_transaction(state, role_id, { type = "open" })
 end
 

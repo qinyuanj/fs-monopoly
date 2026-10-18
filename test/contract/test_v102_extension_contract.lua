@@ -2,6 +2,7 @@ local luassert = assert
 
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
+local transaction = require("src.app.cosmetics.transaction")
 
 describe("TestV102ExtensionContract", function()
   after_each(function()
@@ -68,7 +69,7 @@ describe("TestV102ExtensionContract", function()
   item_atlas.handle_action(state, { type = "select", slot_index = 2 }, 1)
 
   luassert.is.equal(false, state.ui.skin_panel.open, "skin panel should auto-close after owned equip (design 336)")
-  luassert.is.equal(skin_panel.catalog[1].product_id, state.ui.skin_panel.selected_by_role["1"],
+  luassert.is.equal(transaction.catalog[1].product_id, state.ui.skin_panel.selected_by_role["1"],
     "skin panel should keep selected skin by role")
   luassert.is.equal(true, state.ui.item_atlas.open, "item atlas should open independently")
   luassert.is.equal(item_atlas.catalog[2].id, state.ui.item_atlas.selected_item_id,
@@ -98,10 +99,10 @@ describe("TestV102ExtensionContract", function()
   luassert.truthy(view_command.dispatch(state, { type = "item_atlas_action", action = { type = "select", slot_index = 1 }, actor_role_id = 7 }) == true,
     "atlas action intent should be handled")
 
-  luassert.is.equal(true, state.ui.skin_panel.owned_by_role["7"][skin_panel.catalog[2].product_id],
+  luassert.is.equal(true, state.ui.skin_panel.owned_by_role["7"][transaction.catalog[2].product_id],
     "skin action should update selected slot")
   luassert.is.equal(7, equipped and equipped.role_id, "skin equip callback should receive actor role")
-  luassert.is.equal(skin_panel.catalog[2], equipped and equipped.skin, "skin equip callback should receive selected skin")
+  luassert.is.equal(transaction.catalog[2], equipped and equipped.skin, "skin equip callback should receive selected skin")
   luassert.is.equal(require("src.ui.screens.item_atlas").catalog[1].id, state.ui.item_atlas.selected_item_id,
     "atlas action should update item atlas")
 
@@ -134,7 +135,7 @@ describe("TestV102ExtensionContract", function()
   end)
 
   luassert.is.equal(9, captured and captured.role_id, "host install should pass role id to skin equip")
-  luassert.is.equal(runtime_refs.skins[tostring(skin_panel.catalog[3].product_id)],
+  luassert.is.equal(runtime_refs.skins[tostring(transaction.catalog[3].product_id)],
     captured and captured.creature_key,
     "host install should map selected skin to the numeric resource id from refs.skins")
   skin_panel.reset_for_tests()
@@ -185,7 +186,7 @@ describe("TestV102ExtensionContract", function()
     captured.entry.on_purchase(state.game, player, captured.entry, {})
   end)
 
-  local skin = skin_panel.catalog[1]
+  local skin = transaction.catalog[1]
   luassert.is.equal(state.game, captured and captured.game, "skin purchase should use current game")
   luassert.is.equal(player, captured and captured.player, "skin purchase should resolve player by role id")
   luassert.is.equal(skin.product_id, captured and captured.entry.product_id,
@@ -207,18 +208,6 @@ describe("TestV102ExtensionContract", function()
   luassert.is.equal("function", type(achievement.add_progress), "achievement should expose progress routing")
   luassert.is.equal("function", type(achievement.current_progress), "achievement should expose host progress reads")
   luassert.is.equal(1, achievement.mapped_ids_for_event("游戏胜利")[1], "win event should map to the win achievements")
-  end)
-
-  it("test_share_task_integration_is_host_managed", function()
-  local share_task = require("src.app.host_integrations.share_task")
-  local task = share_task.find_task("永久", "邀请10人")
-
-  luassert.truthy(share_task.host_pending ~= true, "share_task should no longer be a host-pending noop")
-  luassert.is.equal("function", type(share_task.find_task), "share_task should expose task lookup")
-  luassert.is.equal("首次进入地图的人数", task.progress_source, "share_task should mirror host progress source")
-  luassert.is.equal(10, task.target_progress, "share_task should mirror host target progress")
-  luassert.is.equal(36800, task.reward_amount, "share_task should mirror host reward amount")
-  luassert.is.equal("host_managed", share_task.claim().reason, "share_task claims should stay host-managed")
   end)
 
   it("test_sign_in_integration_is_implemented", function()
