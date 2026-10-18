@@ -36,32 +36,3 @@ end
 
 return result
 
---[[ mutate4lua-manifest
-version=4
-projectHash=87e3c3cbdc8e9ff9
-scope.0.id=chunk:src/app/cosmetics/transaction_result.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=38
-scope.0.semanticHash=b358404a572d73da
-scope.1.id=function:result.panel_or_rejection
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=12
-scope.1.semanticHash=5875887962bfc1dd
-scope.2.id=function:result.value_or_rejection
-scope.2.kind=function
-scope.2.startLine=14
-scope.2.endLine=19
-scope.2.semanticHash=54d46eab4bb6d243
-scope.3.id=function:_equipped_skin_fields
-scope.3.kind=function
-scope.3.startLine=21
-scope.3.endLine=29
-scope.3.semanticHash=c6f0a80dfcf0d3f9
-scope.4.id=function:result.accepted_equipped_skin
-scope.4.kind=function
-scope.4.startLine=31
-scope.4.endLine=35
-scope.4.semanticHash=75e727df759ece13
-]]

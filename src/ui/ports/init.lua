@@ -26,22 +26,3 @@ end
 
 return presentation_ports
 
---[[ mutate4lua-manifest
-version=4
-projectHash=22909d715d291cc4
-scope.0.id=chunk:src/ui/ports/init.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=101
-scope.0.semanticHash=2cfff9d3759ff8f7
-scope.1.id=function:presentation_ports.build
-scope.1.kind=function
-scope.1.startLine=82
-scope.1.endLine=94
-scope.1.semanticHash=b8b3c06918de14eb
-scope.2.id=function:presentation_ports.describe_boundary_contract
-scope.2.kind=function
-scope.2.startLine=96
-scope.2.endLine=98
-scope.2.semanticHash=1136505bd37c301e
-]]

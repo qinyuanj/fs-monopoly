@@ -47,32 +47,3 @@ end
 
 return target_query
 
---[[ mutate4lua-manifest
-version=4
-projectHash=13cb49aed975ecd7
-scope.0.id=chunk:src/rules/items/target_query.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=49
-scope.0.semanticHash=b4012909be883316
-scope.1.id=function:_validate_find_best_tile_args
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=12
-scope.1.semanticHash=781d2d803c191455
-scope.2.id=function:_filter_self_indices
-scope.2.kind=function
-scope.2.startLine=14
-scope.2.endLine=25
-scope.2.semanticHash=80150e358b6612c9
-scope.3.id=function:_find_highest_score
-scope.3.kind=function
-scope.3.startLine=27
-scope.3.endLine=39
-scope.3.semanticHash=c01665bc50297c10
-scope.4.id=function:target_query.find_best_tile
-scope.4.kind=function
-scope.4.startLine=41
-scope.4.endLine=46
-scope.4.semanticHash=7e5c11b0a796f9a1
-]]

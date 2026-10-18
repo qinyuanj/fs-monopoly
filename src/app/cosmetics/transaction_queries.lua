@@ -38,37 +38,3 @@ end
 
 return queries
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b66fb14b9d5b2220
-scope.0.id=chunk:src/app/cosmetics/transaction_queries.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=40
-scope.0.semanticHash=d6466debefc279d3
-scope.1.id=function:_skin_panel
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=7
-scope.1.semanticHash=c250138038aa193a
-scope.2.id=function:queries.is_slot_equipped
-scope.2.kind=function
-scope.2.startLine=9
-scope.2.endLine=19
-scope.2.semanticHash=60b7a0cc0f1c8521
-scope.3.id=function:queries.slot_view_model
-scope.3.kind=function
-scope.3.startLine=24
-scope.3.endLine=27
-scope.3.semanticHash=6275d1f374bcc37f
-scope.4.id=function:queries.slot_view_models
-scope.4.kind=function
-scope.4.startLine=29
-scope.4.endLine=32
-scope.4.semanticHash=c6b8ad6f79cd9e35
-scope.5.id=function:queries.equipped_product
-scope.5.kind=function
-scope.5.startLine=34
-scope.5.endLine=37
-scope.5.semanticHash=9777cac48bf200bb
-]]

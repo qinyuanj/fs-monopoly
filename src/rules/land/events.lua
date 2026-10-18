@@ -68,32 +68,3 @@ end
 
 return land_events
 
---[[ mutate4lua-manifest
-version=4
-projectHash=eb566ce61d7ce41f
-scope.0.id=chunk:src/rules/land/events.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=70
-scope.0.semanticHash=e858ca16103d9c1f
-scope.1.id=function:land_events.build
-scope.1.kind=function
-scope.1.startLine=21
-scope.1.endLine=33
-scope.1.semanticHash=e336437fcf8df65b
-scope.2.id=function:_publish_to_feed
-scope.2.kind=function
-scope.2.startLine=35
-scope.2.endLine=44
-scope.2.semanticHash=e892030917147ab0
-scope.3.id=function:_emit_land_event
-scope.3.kind=function
-scope.3.startLine=46
-scope.3.endLine=51
-scope.3.semanticHash=f81370a2b5d6fb4e
-scope.4.id=function:land_events.apply
-scope.4.kind=function
-scope.4.startLine=53
-scope.4.endLine=67
-scope.4.semanticHash=432d11f8d614b25c
-]]

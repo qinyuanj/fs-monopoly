@@ -48,12 +48,3 @@ M.market_auto_skipped = "market_auto_skipped"
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=83c876f7337ddca8
-scope.0.id=chunk:src/config/gameplay/event_kinds.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=48
-scope.0.semanticHash=2b72870242dad2a7
-]]

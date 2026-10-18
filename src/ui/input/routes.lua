@@ -30,22 +30,3 @@ end
 
 return registry
 
---[[ mutate4lua-manifest
-version=4
-projectHash=2567f8abb8bda544
-scope.0.id=chunk:src/ui/input/routes.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=32
-scope.0.semanticHash=21ddd722a1de74d1
-scope.1.id=function:_append_specs
-scope.1.kind=function
-scope.1.startLine=16
-scope.1.endLine=20
-scope.1.semanticHash=416be15a177afa1b
-scope.2.id=function:registry.build_route_specs
-scope.2.kind=function
-scope.2.startLine=22
-scope.2.endLine=29
-scope.2.semanticHash=310ac9d4e9b89004
-]]

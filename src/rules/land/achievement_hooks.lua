@@ -28,27 +28,3 @@ end
 
 return achievement_hooks
 
---[[ mutate4lua-manifest
-version=4
-projectHash=7de5d987393674df
-scope.0.id=chunk:src/rules/land/achievement_hooks.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=30
-scope.0.semanticHash=8359e87c291977e1
-scope.1.id=function:_board_of
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=8
-scope.1.semanticHash=616a2ca60599c94f
-scope.2.id=function:_tile_index_of
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=15
-scope.2.semanticHash=23dfc848d88b0845
-scope.3.id=function:achievement_hooks.record_contiguous_if_reached
-scope.3.kind=function
-scope.3.startLine=17
-scope.3.endLine=27
-scope.3.semanticHash=2553a0886bd97b97
-]]

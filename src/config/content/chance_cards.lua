@@ -34,12 +34,3 @@ local chance_cards = {
 
 return chance_cards
 
---[[ mutate4lua-manifest
-version=4
-projectHash=91cfe9db7950848c
-scope.0.id=chunk:src/config/content/chance_cards.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=36
-scope.0.semanticHash=84a54a8a3b9a4cf5
-]]

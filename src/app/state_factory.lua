@@ -53,22 +53,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=c2640886bdb63490
-scope.0.id=chunk:src/app/state_factory.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=55
-scope.0.semanticHash=660b527f658f011b
-scope.1.id=function:_normalize_args
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=13
-scope.1.semanticHash=3ad65fb726ba27cd
-scope.2.id=function:M.build_state
-scope.2.kind=function
-scope.2.startLine=15
-scope.2.endLine=52
-scope.2.semanticHash=d165ba5cbe60c5e1
-]]

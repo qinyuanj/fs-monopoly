@@ -80,32 +80,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=fb3597225930c30e
-scope.0.id=chunk:src/ui/ports/ui_sync/camera_lock.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=82
-scope.0.semanticHash=5b5b80e8927c0298
-scope.1.id=function:_restore_camera_props
-scope.1.kind=function
-scope.1.startLine=21
-scope.1.endLine=37
-scope.1.semanticHash=dfa1a3cf3110e9cf
-scope.2.id=function:M.lock_to_position
-scope.2.kind=function
-scope.2.startLine=39
-scope.2.endLine=54
-scope.2.semanticHash=3906a7b0d9015e01
-scope.3.id=function:M.reset_to_self
-scope.3.kind=function
-scope.3.startLine=56
-scope.3.endLine=67
-scope.3.semanticHash=cc1d05396fb7cfed
-scope.4.id=function:M.sync_lock
-scope.4.kind=function
-scope.4.startLine=70
-scope.4.endLine=79
-scope.4.semanticHash=fc4097edae026c44
-]]

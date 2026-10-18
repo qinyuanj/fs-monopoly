@@ -44,32 +44,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=355f59ab5259dcdd
-scope.0.id=chunk:src/ui/screens/remote_choice.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=989b16a6f0f5304b
-scope.1.id=function:M.descriptor
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=21
-scope.1.semanticHash=cee80d17110e9a0c
-scope.2.id=function:M.open
-scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=25
-scope.2.semanticHash=a78865feb442dcda
-scope.3.id=function:M.build_route_specs
-scope.3.kind=function
-scope.3.startLine=27
-scope.3.endLine=43
-scope.3.semanticHash=a2ad56447fb5a97b
-scope.4.id=function:<anonymous>
-scope.4.kind=function
-scope.4.startLine=32
-scope.4.endLine=39
-scope.4.semanticHash=bf12c3b223fcc1e1
-]]

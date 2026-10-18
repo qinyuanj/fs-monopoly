@@ -62,27 +62,3 @@ end
 
 return obstacle_clear
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5687b5b2ec2938ea
-scope.0.id=chunk:src/rules/items/obstacle_clear.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=64
-scope.0.semanticHash=9636bd1dfc5376c6
-scope.1.id=function:_new_state
-scope.1.kind=function
-scope.1.startLine=11
-scope.1.endLine=22
-scope.1.semanticHash=22de69da9f7bffc2
-scope.2.id=function:_queue_anim
-scope.2.kind=function
-scope.2.startLine=24
-scope.2.endLine=47
-scope.2.semanticHash=1aee9c91136ac488
-scope.3.id=function:obstacle_clear.handle
-scope.3.kind=function
-scope.3.startLine=49
-scope.3.endLine=61
-scope.3.semanticHash=e52e9859d934b5d1
-]]

@@ -15,12 +15,3 @@ choice_resolution.install(M)
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=9f6a39b8cffd9696
-scope.0.id=chunk:src/turn/deadlines.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=17
-scope.0.semanticHash=e1e1c5749a8b267e
-]]

@@ -15,12 +15,3 @@ end
 
 return item_atlas
 
---[[ mutate4lua-manifest
-version=4
-projectHash=69427485150ab9a3
-scope.0.id=chunk:src/config/content/item_atlas.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=17
-scope.0.semanticHash=be9dc32c207422d9
-]]

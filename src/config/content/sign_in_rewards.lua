@@ -11,12 +11,3 @@ return {
   10000,
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=161676808f8813d6
-scope.0.id=chunk:src/config/content/sign_in_rewards.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=13
-scope.0.semanticHash=5ae718fb42dc8ba8
-]]

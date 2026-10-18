@@ -78,37 +78,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=1f94096a82b3d1bb
-scope.0.id=chunk:src/ui/render/board_feedback/sound_player.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=74
-scope.0.semanticHash=a6e697a4b92e4c17
-scope.1.id=function:_schedule_followup_sound
-scope.1.kind=function
-scope.1.startLine=11
-scope.1.endLine=36
-scope.1.semanticHash=e3089b4432da9f86
-scope.2.id=function:<anonymous>
-scope.2.kind=function
-scope.2.startLine=20
-scope.2.endLine=32
-scope.2.semanticHash=d77d2305b5a7de09
-scope.3.id=function:_resolve_sound_params
-scope.3.kind=function
-scope.3.startLine=38
-scope.3.endLine=48
-scope.3.semanticHash=cc1beb7dd903230b
-scope.4.id=function:M.play
-scope.4.kind=function
-scope.4.startLine=50
-scope.4.endLine=58
-scope.4.semanticHash=8c8afba92a74d4e7
-scope.5.id=function:M.play_followups
-scope.5.kind=function
-scope.5.startLine=60
-scope.5.endLine=71
-scope.5.semanticHash=dbf968c2df39f7e7
-]]

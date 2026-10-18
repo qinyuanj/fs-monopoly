@@ -58,32 +58,3 @@ end
 
 return panel_overlay
 
---[[ mutate4lua-manifest
-version=4
-projectHash=1f2a242e6ef37c9f
-scope.0.id=chunk:src/ui/state/panel_overlay.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=60
-scope.0.semanticHash=6e449b85fe728f86
-scope.1.id=function:panel_overlay.settlement_type
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=22
-scope.1.semanticHash=c44a7608017b8ff1
-scope.2.id=function:panel_overlay.settlement_type_excluding_choice
-scope.2.kind=function
-scope.2.startLine=26
-scope.2.endLine=36
-scope.2.semanticHash=f5c5e1d21b0eccf3
-scope.3.id=function:panel_overlay.is_settling
-scope.3.kind=function
-scope.3.startLine=38
-scope.3.endLine=41
-scope.3.semanticHash=5b10d83a884bb44b
-scope.4.id=function:panel_overlay.is_overlay_visible
-scope.4.kind=function
-scope.4.startLine=47
-scope.4.endLine=57
-scope.4.semanticHash=3f88860b4fc24a3d
-]]

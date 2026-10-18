@@ -9,12 +9,3 @@ return {
   },
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=26eb306cfd51f152
-scope.0.id=chunk:src/ui/schema/remote_choice.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=11
-scope.0.semanticHash=a355d9a996fd74b0
-]]

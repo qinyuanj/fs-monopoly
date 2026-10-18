@@ -40,27 +40,3 @@ end
 
 return use_skip_choice
 
---[[ mutate4lua-manifest
-version=4
-projectHash=93d2b1e686d99d80
-scope.0.id=chunk:src/rules/choice/use_skip_choice.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=42
-scope.0.semanticHash=71d1ade1df734cc3
-scope.1.id=function:_build_confirm_body
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=7
-scope.1.semanticHash=d76a4ff5b8cece45
-scope.2.id=function:_resolve_labels
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=17
-scope.2.semanticHash=fcbc739820e33a8b
-scope.3.id=function:use_skip_choice.build
-scope.3.kind=function
-scope.3.startLine=19
-scope.3.endLine=39
-scope.3.semanticHash=b99fa49a9d9379ec
-]]

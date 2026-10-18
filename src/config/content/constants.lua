@@ -13,12 +13,3 @@ return resettable_defaults.build({
   deity_duration_turns = 10,
 })
 
---[[ mutate4lua-manifest
-version=4
-projectHash=4cd428256bdf6506
-scope.0.id=chunk:src/config/content/constants.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=15
-scope.0.semanticHash=2cb8c16f354fa053
-]]

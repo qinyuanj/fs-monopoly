@@ -48,12 +48,3 @@ local tiles = {
 
 return tiles
 
---[[ mutate4lua-manifest
-version=4
-projectHash=c01bca503e80da0e
-scope.0.id=chunk:src/config/content/tiles.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=50
-scope.0.semanticHash=236193ce1de4c2a5
-]]

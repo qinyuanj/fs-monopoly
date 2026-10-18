@@ -24,17 +24,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=d8595db4bf2f9284
-scope.0.id=chunk:src/ui/render/status3d/specs.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=26
-scope.0.semanticHash=f815a909cd38a182
-scope.1.id=function:M.get_layout_id
-scope.1.kind=function
-scope.1.startLine=19
-scope.1.endLine=23
-scope.1.semanticHash=0aff0713175a56b1
-]]

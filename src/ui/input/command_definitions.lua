@@ -11,12 +11,3 @@ return {
   GENERIC_UI_BUTTON = buttons.GENERIC_UI_BUTTON,
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=3368c5116f43eac6
-scope.0.id=chunk:src/ui/input/command_definitions.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=13
-scope.0.semanticHash=eba29ec8ca01c076
-]]

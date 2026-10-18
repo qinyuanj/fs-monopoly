@@ -160,12 +160,3 @@ refs.synthetic_ai = {
 
 return refs
 
---[[ mutate4lua-manifest
-version=4
-projectHash=fc092c3a43417690
-scope.0.id=chunk:src/config/content/runtime_refs.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=162
-scope.0.semanticHash=56bb3a58d36ed29f
-]]

@@ -65,37 +65,3 @@ end
 
 return handle_ops
 
---[[ mutate4lua-manifest
-version=4
-projectHash=c3a0f60419fe2613
-scope.0.id=chunk:src/ui/render/anim/unit_overlay_handle.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=67
-scope.0.semanticHash=5ab0c91e0c3b3ce4
-scope.1.id=function:_access_field
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=10
-scope.1.semanticHash=2aa97b277475fba2
-scope.2.id=function:_call_handle_method
-scope.2.kind=function
-scope.2.startLine=12
-scope.2.endLine=18
-scope.2.semanticHash=8a21d26e256fe0e7
-scope.3.id=function:handle_ops.spawn
-scope.3.kind=function
-scope.3.startLine=20
-scope.3.endLine=38
-scope.3.semanticHash=936a94e384fba92a
-scope.4.id=function:handle_ops.destroy
-scope.4.kind=function
-scope.4.startLine=40
-scope.4.endLine=53
-scope.4.semanticHash=a1ef84253f2a378c
-scope.5.id=function:handle_ops.move
-scope.5.kind=function
-scope.5.startLine=55
-scope.5.endLine=64
-scope.5.semanticHash=61e36cec9e88813d
-]]

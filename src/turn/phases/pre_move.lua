@@ -49,27 +49,3 @@ end
 
 return _phase_pre_move
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b3361bc16f8e91bc
-scope.0.id=chunk:src/turn/phases/pre_move.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=8db4f04f775ea5f9
-scope.1.id=function:_resolve_phase_wait_result
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=8
-scope.1.semanticHash=406bfcaa2a0f654b
-scope.2.id=function:_run_pre_move_item_phase
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=25
-scope.2.semanticHash=fb83f59d54d01aeb
-scope.3.id=function:_phase_pre_move
-scope.3.kind=function
-scope.3.startLine=27
-scope.3.endLine=43
-scope.3.semanticHash=407a1a71990c9993
-]]

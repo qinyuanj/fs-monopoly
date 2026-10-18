@@ -7,12 +7,3 @@ return host_slot.new({
   { name = "unregister_custom_event", default = false },
 })
 
---[[ mutate4lua-manifest
-version=4
-projectHash=aadea42504192fdd
-scope.0.id=chunk:src/ui/seams/host_events.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=9
-scope.0.semanticHash=df567cff64f25991
-]]

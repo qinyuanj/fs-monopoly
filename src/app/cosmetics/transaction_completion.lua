@@ -48,32 +48,3 @@ end
 
 return completion
 
---[[ mutate4lua-manifest
-version=4
-projectHash=721c7fe6e3bb25f1
-scope.0.id=chunk:src/app/cosmetics/transaction_completion.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=50
-scope.0.semanticHash=5e02d6c6b9545145
-scope.1.id=function:_pending_or_rejection
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=17
-scope.1.semanticHash=d149ceb08c2ae1f4
-scope.2.id=function:_product_or_rejection
-scope.2.kind=function
-scope.2.startLine=19
-scope.2.endLine=21
-scope.2.semanticHash=65f10eefc59e4037
-scope.3.id=function:_accepted_purchase_complete
-scope.3.kind=function
-scope.3.startLine=23
-scope.3.endLine=29
-scope.3.semanticHash=d4a801d7f6a44731
-scope.4.id=function:completion.complete_skin_purchase
-scope.4.kind=function
-scope.4.startLine=31
-scope.4.endLine=47
-scope.4.semanticHash=1cc1b7642f445e12
-]]

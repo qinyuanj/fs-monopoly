@@ -83,37 +83,3 @@ end
 
 return weighted_draw
 
---[[ mutate4lua-manifest
-version=4
-projectHash=eda7767355753f71
-scope.0.id=chunk:src/rules/items/weighted_draw.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=85
-scope.0.semanticHash=a3b879c23baa1994
-scope.1.id=function:_compute_weights
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=17
-scope.1.semanticHash=268455fa95baf5c2
-scope.2.id=function:_draw_index
-scope.2.kind=function
-scope.2.startLine=22
-scope.2.endLine=32
-scope.2.semanticHash=23f5eb91e7cfc687
-scope.3.id=function:_pick_repeatable
-scope.3.kind=function
-scope.3.startLine=35
-scope.3.endLine=41
-scope.3.semanticHash=1aefd7dea051d47c
-scope.4.id=function:_pick_unique
-scope.4.kind=function
-scope.4.startLine=44
-scope.4.endLine=61
-scope.4.semanticHash=958402bfeeef043c
-scope.5.id=function:weighted_draw.pick
-scope.5.kind=function
-scope.5.startLine=69
-scope.5.endLine=82
-scope.5.semanticHash=c581557051225064
-]]

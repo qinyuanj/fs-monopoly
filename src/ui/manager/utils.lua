@@ -55,32 +55,3 @@ _G["UIManager"] = UIManager
 
 return UIManager
 
---[[ mutate4lua-manifest
-version=4
-projectHash=160594cb505b7a5a
-scope.0.id=chunk:src/ui/manager/utils.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=65
-scope.0.semanticHash=a92579c82cff9522
-scope.1.id=function:UIManager.get_first_node_by_name
-scope.1.kind=function
-scope.1.startLine=32
-scope.1.endLine=34
-scope.1.semanticHash=0450ebb91ed6c1d1
-scope.2.id=function:UIManager.query_nodes_by_name
-scope.2.kind=function
-scope.2.startLine=38
-scope.2.endLine=40
-scope.2.semanticHash=090df05bc74ca229
-scope.3.id=function:UIManager.query_node_by_id
-scope.3.kind=function
-scope.3.startLine=44
-scope.3.endLine=46
-scope.3.semanticHash=3ed9a36b04f855c4
-scope.4.id=function:UIManager.typeof
-scope.4.kind=function
-scope.4.startLine=57
-scope.4.endLine=59
-scope.4.semanticHash=59a634c03d1043c7
-]]

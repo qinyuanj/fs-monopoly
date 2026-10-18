@@ -52,27 +52,3 @@ end
 
 return item_slot_denial
 
---[[ mutate4lua-manifest
-version=4
-projectHash=37fbe4b5091a00ed
-scope.0.id=chunk:src/turn/actions/item_slot_denial.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=42
-scope.0.semanticHash=199a981dfe037c3e
-scope.1.id=function:item_slot_denial.choice_offers_item
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=18
-scope.1.semanticHash=60a681e476f077b7
-scope.2.id=function:item_slot_denial.unavailable_reason
-scope.2.kind=function
-scope.2.startLine=22
-scope.2.endLine=34
-scope.2.semanticHash=ccbe0c46db22b9cf
-scope.3.id=function:item_slot_denial.deny
-scope.3.kind=function
-scope.3.startLine=36
-scope.3.endLine=39
-scope.3.semanticHash=f3fe6bb3361fcbcd
-]]

@@ -31,22 +31,3 @@ end
 
 return skin_panel_view
 
---[[ mutate4lua-manifest
-version=4
-projectHash=1e7541ef5385aa20
-scope.0.id=chunk:src/ui/render/widgets/skin_panel.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=33
-scope.0.semanticHash=03ba42b6b1569365
-scope.1.id=function:_refresh_static_nodes
-scope.1.kind=function
-scope.1.startLine=13
-scope.1.endLine=16
-scope.1.semanticHash=35d94dbc224ce8b7
-scope.2.id=function:skin_panel_view.refresh_slots
-scope.2.kind=function
-scope.2.startLine=18
-scope.2.endLine=30
-scope.2.semanticHash=bedb95712fcee30c
-]]

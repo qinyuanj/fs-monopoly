@@ -82,37 +82,3 @@ M.sync_many = events.sync_many
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=c437382bcc6d9dbd
-scope.0.id=chunk:src/ui/render/board/init.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=86
-scope.0.semanticHash=f9be1e7618582d0f
-scope.1.id=function:_compute_suppress_sync
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=14
-scope.1.semanticHash=9e5f1582b817cdba
-scope.2.id=function:_log_suppress_sync
-scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=23
-scope.2.semanticHash=1585a565e000ccfb
-scope.3.id=function:_log_apply_sync
-scope.3.kind=function
-scope.3.startLine=25
-scope.3.endLine=31
-scope.3.semanticHash=368e9dbe24154a92
-scope.4.id=function:_skip_sync
-scope.4.kind=function
-scope.4.startLine=33
-scope.4.endLine=35
-scope.4.semanticHash=db218698b8572dad
-scope.5.id=function:M.refresh
-scope.5.kind=function
-scope.5.startLine=37
-scope.5.endLine=77
-scope.5.semanticHash=c0e663d6a8e884f2
-]]

@@ -38,22 +38,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=2d0b3aa4d9172fd4
-scope.0.id=chunk:src/ui/coord/item_slot_highlight_replay_coord.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=40
-scope.0.semanticHash=c1e4609462184dd6
-scope.1.id=function:_emit
-scope.1.kind=function
-scope.1.startLine=16
-scope.1.endLine=22
-scope.1.semanticHash=8879406726aa52c9
-scope.2.id=function:M.deliver
-scope.2.kind=function
-scope.2.startLine=25
-scope.2.endLine=37
-scope.2.semanticHash=69486d01ac7fb300
-]]

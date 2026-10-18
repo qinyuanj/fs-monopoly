@@ -36,27 +36,3 @@ end
 
 return game_state_turn
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b520a967658eb00c
-scope.0.id=chunk:src/state/turn_state.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=38
-scope.0.semanticHash=9d3b5d2c433cfcaf
-scope.1.id=function:game_state_turn.queue_action_anim
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=21
-scope.1.semanticHash=807aaab444aaed0f
-scope.2.id=function:game_state_turn.queue_move_anim
-scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=31
-scope.2.semanticHash=17343e236f5849e2
-scope.3.id=function:game_state_turn.pending_choice
-scope.3.kind=function
-scope.3.startLine=33
-scope.3.endLine=35
-scope.3.semanticHash=525c612c62352c4f
-]]

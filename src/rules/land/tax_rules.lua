@@ -45,22 +45,3 @@ end
 
 return tax_rules
 
---[[ mutate4lua-manifest
-version=4
-projectHash=9aa22ec75af1b5e6
-scope.0.id=chunk:src/rules/land/tax_rules.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=47
-scope.0.semanticHash=4226fb9984b82479
-scope.1.id=function:tax_rules.execute_tax_free_card
-scope.1.kind=function
-scope.1.startLine=11
-scope.1.endLine=21
-scope.1.semanticHash=e0ee116cfd0e17c9
-scope.2.id=function:tax_rules.execute_pay_tax
-scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=44
-scope.2.semanticHash=fd89322e5a09a063
-]]

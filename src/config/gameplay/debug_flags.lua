@@ -9,12 +9,3 @@ return resettable_defaults.build({
   debug_auto_all_roles = false,
 })
 
---[[ mutate4lua-manifest
-version=4
-projectHash=842eaabe342ddf7e
-scope.0.id=chunk:src/config/gameplay/debug_flags.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=11
-scope.0.semanticHash=d15d35954eff96e4
-]]

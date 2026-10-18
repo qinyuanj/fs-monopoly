@@ -55,8 +55,3 @@
 
 Lua 编译期 `LUA_IDSIZE` 是 60,长 chunk 名在错误消息里被截成 `...<尾部>`,所以 TAP 的 `# <src> @ <line>` **不保证是完整路径**——对账与归因按文件名(basename),不要拿它当绝对路径去拼。
 
-## 旧 mutate4lua manifest（已退役）
-
-- mutate4lua 与 `lua tools/cli.lua mutate` 已于 #94 退役；变异测试改走显式步骤 `lua tools/cli.lua uml mutate`（契约见 `tools/specs/uml_quality.prompt`）。
-- `src` 文件尾部残留的 `--[[ mutate4lua-manifest` 块注释是惰性历史产物：不再被任何工具读取，新文件不要添加，改动函数时也无需更新。
-- survived、timeout 或仅差分通过都不能证明全量基线。

@@ -56,37 +56,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=745a219bdba6c4de
-scope.0.id=chunk:src/ui/coord/item_slots_highlight.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=58
-scope.0.semanticHash=e681023e76cbe2cb
-scope.1.id=function:_replay_perspective
-scope.1.kind=function
-scope.1.startLine=9
-scope.1.endLine=11
-scope.1.semanticHash=cb2e5a8eaae1dcbb
-scope.2.id=function:_apply_queued_lifecycle
-scope.2.kind=function
-scope.2.startLine=17
-scope.2.endLine=25
-scope.2.semanticHash=db0349af764ab170
-scope.3.id=function:M.refresh_highlight_state
-scope.3.kind=function
-scope.3.startLine=32
-scope.3.endLine=38
-scope.3.semanticHash=cc6d73ea3eaa9e61
-scope.4.id=function:_current_turn
-scope.4.kind=function
-scope.4.startLine=40
-scope.4.endLine=42
-scope.4.semanticHash=c250138038aa193a
-scope.5.id=function:M.maybe_emit_phase_advance_reset
-scope.5.kind=function
-scope.5.startLine=48
-scope.5.endLine=55
-scope.5.semanticHash=df9eab26c27b7b47
-]]

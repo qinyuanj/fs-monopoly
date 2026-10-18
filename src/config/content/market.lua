@@ -22,12 +22,3 @@ local market = {
 
 return market
 
---[[ mutate4lua-manifest
-version=4
-projectHash=0c90e61b40e5cd34
-scope.0.id=chunk:src/config/content/market.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=24
-scope.0.semanticHash=0e006327a7885149
-]]

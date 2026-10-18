@@ -68,37 +68,3 @@ M.resolve_screen_key = choice_support.resolve_screen_key
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=23b2e6808cd0a044
-scope.0.id=chunk:src/ui/coord/choice_helpers.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=70
-scope.0.semanticHash=d4af314e0153728b
-scope.1.id=function:M.resolve_canvas_for_screen
-scope.1.kind=function
-scope.1.startLine=17
-scope.1.endLine=19
-scope.1.semanticHash=cd9797bd625574af
-scope.2.id=function:M.hide_choice_screens
-scope.2.kind=function
-scope.2.startLine=21
-scope.2.endLine=27
-scope.2.semanticHash=cf6c75a5510bbffd
-scope.3.id=function:M.set_option_node
-scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=44
-scope.3.semanticHash=791bae5c12d82ca8
-scope.4.id=function:M.switch_modal_canvas
-scope.4.kind=function
-scope.4.startLine=52
-scope.4.endLine=65
-scope.4.semanticHash=b31ce05d94f522c3
-scope.5.id=function:<anonymous>
-scope.5.kind=function
-scope.5.startLine=54
-scope.5.endLine=63
-scope.5.semanticHash=a9fc7211ad5e4299
-]]

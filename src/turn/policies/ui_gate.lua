@@ -13,17 +13,3 @@ end
 
 return ui_gate
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5c7fffbfc201a2b8
-scope.0.id=chunk:src/turn/policies/ui_gate.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=15
-scope.0.semanticHash=3602766acf8b8b7a
-scope.1.id=function:ui_gate.resolve
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=12
-scope.1.semanticHash=45f66a2f06b983ec
-]]

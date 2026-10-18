@@ -55,37 +55,3 @@ end
 
 return intent_output
 
---[[ mutate4lua-manifest
-version=4
-projectHash=8b08f78445637da5
-scope.0.id=chunk:src/rules/ports/intent_output.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=03304902740ae718
-scope.1.id=function:_call_optional
-scope.1.kind=function
-scope.1.startLine=4
-scope.1.endLine=8
-scope.1.semanticHash=c0adb2d80aa93455
-scope.2.id=function:intent_output.open_choice
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=12
-scope.2.semanticHash=1f86a7a73bccfed0
-scope.3.id=function:intent_output.push_popup
-scope.3.kind=function
-scope.3.startLine=14
-scope.3.endLine=16
-scope.3.semanticHash=b5230bf8769ee3f1
-scope.4.id=function:_resolve_intent
-scope.4.kind=function
-scope.4.startLine=19
-scope.4.endLine=28
-scope.4.semanticHash=3b1c9249040f53a7
-scope.5.id=function:intent_output.dispatch
-scope.5.kind=function
-scope.5.startLine=30
-scope.5.endLine=43
-scope.5.semanticHash=ba55061fbd8fa6e2
-]]

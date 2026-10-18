@@ -42,22 +42,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=58d7610093eac4cf
-scope.0.id=chunk:src/config/content/item_slot_denial.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=44
-scope.0.semanticHash=e1c3b422f5a949e0
-scope.1.id=function:M.text_for_reason
-scope.1.kind=function
-scope.1.startLine=28
-scope.1.endLine=30
-scope.1.semanticHash=df96686fe1384d54
-scope.2.id=function:M.dedupe_key
-scope.2.kind=function
-scope.2.startLine=34
-scope.2.endLine=41
-scope.2.semanticHash=b6613881a0a710b6
-]]

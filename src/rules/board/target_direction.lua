@@ -42,32 +42,3 @@ end
 
 return target_direction
 
---[[ mutate4lua-manifest
-version=4
-projectHash=518f7ca3c8165b20
-scope.0.id=chunk:src/rules/board/target_direction.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=44
-scope.0.semanticHash=97da7f8ec6bea082
-scope.1.id=function:target_direction.manhattan_distance
-scope.1.kind=function
-scope.1.startLine=3
-scope.1.endLine=5
-scope.1.semanticHash=4d142d3ea30a5f37
-scope.2.id=function:_geometry_is_backward
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=18
-scope.2.semanticHash=46498d5484d26bbb
-scope.3.id=function:_is_backward
-scope.3.kind=function
-scope.3.startLine=20
-scope.3.endLine=26
-scope.3.semanticHash=03b5e0c2b23b9375
-scope.4.id=function:target_direction.build_queues
-scope.4.kind=function
-scope.4.startLine=28
-scope.4.endLine=41
-scope.4.semanticHash=7beb738197910d4d
-]]

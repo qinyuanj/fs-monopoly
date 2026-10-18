@@ -56,22 +56,3 @@ end
 
 return lifecycle
 
---[[ mutate4lua-manifest
-version=4
-projectHash=6ab449a88ed78bb2
-scope.0.id=chunk:src/turn/choice/lifecycle.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=48
-scope.0.semanticHash=da188b73d2610289
-scope.1.id=function:_describe
-scope.1.kind=function
-scope.1.startLine=18
-scope.1.endLine=28
-scope.1.semanticHash=4b3da818f494cd87
-scope.2.id=function:lifecycle.assert_cleared_on_turn_advance
-scope.2.kind=function
-scope.2.startLine=30
-scope.2.endLine=45
-scope.2.semanticHash=3ced641dba914c24
-]]

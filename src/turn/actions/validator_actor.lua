@@ -52,37 +52,3 @@ end
 
 return validator_actor
 
---[[ mutate4lua-manifest
-version=4
-projectHash=733ebcc9dbe4e24b
-scope.0.id=chunk:src/turn/actions/validator_actor.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=54
-scope.0.semanticHash=ae654a50405317ea
-scope.1.id=function:_is_turn_bound_ui_button
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=10
-scope.1.semanticHash=df7a871d489ab136
-scope.2.id=function:_current_turn_player
-scope.2.kind=function
-scope.2.startLine=12
-scope.2.endLine=15
-scope.2.semanticHash=34a4ab2ade92c639
-scope.3.id=function:_resolve_current_turn_role_id
-scope.3.kind=function
-scope.3.startLine=17
-scope.3.endLine=20
-scope.3.semanticHash=de9a31a38aa6519d
-scope.4.id=function:_validate_actor_matches_current
-scope.4.kind=function
-scope.4.startLine=22
-scope.4.endLine=41
-scope.4.semanticHash=98b001d1f3e3eef6
-scope.5.id=function:validator_actor.validate_actor_role
-scope.5.kind=function
-scope.5.startLine=43
-scope.5.endLine=51
-scope.5.semanticHash=ae95b2c041925fc4
-]]

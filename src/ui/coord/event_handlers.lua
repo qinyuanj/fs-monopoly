@@ -57,37 +57,3 @@ end
 
 return event_handlers
 
---[[ mutate4lua-manifest
-version=4
-projectHash=ec28e881a887d7a7
-scope.0.id=chunk:src/ui/coord/event_handlers.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=59
-scope.0.semanticHash=a120a19117e84195
-scope.1.id=function:event_handlers.install
-scope.1.kind=function
-scope.1.startLine=15
-scope.1.endLine=56
-scope.1.semanticHash=13084d782d966157
-scope.2.id=function:_dispatch_or_defer
-scope.2.kind=function
-scope.2.startLine=26
-scope.2.endLine=36
-scope.2.semanticHash=8bb1ac8df9f0edf8
-scope.3.id=function:<anonymous>
-scope.3.kind=function
-scope.3.startLine=32
-scope.3.endLine=34
-scope.3.semanticHash=149ac28041462fed
-scope.4.id=function:_register_handler
-scope.4.kind=function
-scope.4.startLine=40
-scope.4.endLine=48
-scope.4.semanticHash=ac7abbffccc296b9
-scope.5.id=function:<anonymous>#2
-scope.5.kind=function
-scope.5.startLine=45
-scope.5.endLine=47
-scope.5.semanticHash=d590c542c8c308c5
-]]

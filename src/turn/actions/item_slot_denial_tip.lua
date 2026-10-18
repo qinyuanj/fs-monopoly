@@ -27,22 +27,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f04e42d02c99fcef
-scope.0.id=chunk:src/turn/actions/item_slot_denial_tip.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=29
-scope.0.semanticHash=e546e23aa1af7025
-scope.1.id=function:_enqueue
-scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=16
-scope.1.semanticHash=04ba2e555f7470a6
-scope.2.id=function:M.emit
-scope.2.kind=function
-scope.2.startLine=18
-scope.2.endLine=26
-scope.2.semanticHash=fd65c58c24fd5e15
-]]

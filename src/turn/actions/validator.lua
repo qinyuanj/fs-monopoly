@@ -64,27 +64,3 @@ end
 
 return validator
 
---[[ mutate4lua-manifest
-version=4
-projectHash=26c0adb47180b013
-scope.0.id=chunk:src/turn/actions/validator.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=66
-scope.0.semanticHash=89cdf5c80abba95b
-scope.1.id=function:_validate_ui_button
-scope.1.kind=function
-scope.1.startLine=29
-scope.1.endLine=34
-scope.1.semanticHash=c2fe23d4945d2fca
-scope.2.id=function:_reject_reason
-scope.2.kind=function
-scope.2.startLine=37
-scope.2.endLine=45
-scope.2.semanticHash=e9d04f66868114b0
-scope.3.id=function:validator.validate
-scope.3.kind=function
-scope.3.startLine=49
-scope.3.endLine=63
-scope.3.semanticHash=ca5cb735e5ae78de
-]]

@@ -63,37 +63,3 @@ seconds.seconds = _seconds
 
 return seconds
 
---[[ mutate4lua-manifest
-version=4
-projectHash=e2756229be8eb862
-scope.0.id=chunk:src/turn/waits/await_seconds.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=65
-scope.0.semanticHash=30433de842a9ffd8
-scope.1.id=function:_resolve_seconds_wait
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=14
-scope.1.semanticHash=b178fa3a2498841a
-scope.2.id=function:_resolve_seconds_now
-scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=25
-scope.2.semanticHash=638b0f9e177ed5eb
-scope.3.id=function:_resolve_seconds_key
-scope.3.kind=function
-scope.3.startLine=27
-scope.3.endLine=32
-scope.3.semanticHash=aa0b309bbeb1c02a
-scope.4.id=function:_await_seconds_step
-scope.4.kind=function
-scope.4.startLine=34
-scope.4.endLine=49
-scope.4.semanticHash=6989852db771f167
-scope.5.id=function:_seconds
-scope.5.kind=function
-scope.5.startLine=51
-scope.5.endLine=58
-scope.5.semanticHash=1b801a33f212e554
-]]

@@ -47,12 +47,3 @@ local timing = {
 
 return timing
 
---[[ mutate4lua-manifest
-version=4
-projectHash=75819c6e3b3f8170
-scope.0.id=chunk:src/config/gameplay/timing.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=49
-scope.0.semanticHash=59a3a3c7f2a7f991
-]]

@@ -100,37 +100,3 @@ end
 
 return turn_phase_registry
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b3361bc16f8e91bc
-scope.0.id=chunk:src/turn/phases/registry.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=91
-scope.0.semanticHash=a84f7707fccc89df
-scope.1.id=function:_resolve_tile_name
-scope.1.kind=function
-scope.1.startLine=19
-scope.1.endLine=28
-scope.1.semanticHash=71f4c8496c95afc9
-scope.2.id=function:_resolve_post_phase_wait
-scope.2.kind=function
-scope.2.startLine=30
-scope.2.endLine=32
-scope.2.semanticHash=9ae0d7098f2d7ecb
-scope.3.id=function:_phase_post
-scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=46
-scope.3.semanticHash=9d5bd1200290cbfd
-scope.4.id=function:_phase_end
-scope.4.kind=function
-scope.4.startLine=48
-scope.4.endLine=75
-scope.4.semanticHash=bb82ecc3ccf89461
-scope.5.id=function:turn_phase_registry.build_default_phases
-scope.5.kind=function
-scope.5.startLine=77
-scope.5.endLine=88
-scope.5.semanticHash=f7a1930ef1ebd60f
-]]

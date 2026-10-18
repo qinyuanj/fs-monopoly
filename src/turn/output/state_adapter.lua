@@ -60,32 +60,3 @@ end
 
 return state_adapter
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5c958723569d1853
-scope.0.id=chunk:src/turn/output/state_adapter.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=62
-scope.0.semanticHash=22f9a14ab50efa04
-scope.1.id=function:state_adapter.invalidate_ui_model
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=11
-scope.1.semanticHash=0b28d3d23140fdb5
-scope.2.id=function:state_adapter.clear_ui_dirty
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=19
-scope.2.semanticHash=02b8c4e9c94d847f
-scope.3.id=function:state_adapter.clear_pending_choice
-scope.3.kind=function
-scope.3.startLine=28
-scope.3.endLine=30
-scope.3.semanticHash=092a4fac74e4866e
-scope.4.id=function:state_adapter.build_runtime_output_ports
-scope.4.kind=function
-scope.4.startLine=41
-scope.4.endLine=59
-scope.4.semanticHash=b89a3f6f36fc1847
-]]

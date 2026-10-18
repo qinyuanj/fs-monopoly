@@ -44,32 +44,3 @@ end
 
 return turn_decision
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5c34292eb9d0dcd9
-scope.0.id=chunk:src/turn/waits/decision.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=532a333a407f2fdc
-scope.1.id=function:turn_decision.decide_choice_action
-scope.1.kind=function
-scope.1.startLine=17
-scope.1.endLine=25
-scope.1.semanticHash=568c31f97280bffe
-scope.2.id=function:turn_decision.resolve_choice
-scope.2.kind=function
-scope.2.startLine=27
-scope.2.endLine=33
-scope.2.semanticHash=4296d3c1dc11c5e8
-scope.3.id=function:<anonymous>
-scope.3.kind=function
-scope.3.startLine=29
-scope.3.endLine=31
-scope.3.semanticHash=4bb2db60adbd91f3
-scope.4.id=function:turn_decision.log_turn_start
-scope.4.kind=function
-scope.4.startLine=35
-scope.4.endLine=43
-scope.4.semanticHash=ebbd46fac695335e
-]]

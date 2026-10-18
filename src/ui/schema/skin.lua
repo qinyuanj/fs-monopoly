@@ -33,12 +33,3 @@ end
 
 return nodes
 
---[[ mutate4lua-manifest
-version=4
-projectHash=a36c39399379cb48
-scope.0.id=chunk:src/ui/schema/skin.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=35
-scope.0.semanticHash=37b77f84fb5b5eb4
-]]

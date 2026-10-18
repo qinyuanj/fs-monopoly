@@ -44,27 +44,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=302babb4c517b320
-scope.0.id=chunk:src/ui/input/item_slot_overlay.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=6e4113eea4d12f5a
-scope.1.id=function:_broadcast_popup_covering
-scope.1.kind=function
-scope.1.startLine=21
-scope.1.endLine=23
-scope.1.semanticHash=033f4b4d26e597f2
-scope.2.id=function:_unknown_actor_covered
-scope.2.kind=function
-scope.2.startLine=26
-scope.2.endLine=28
-scope.2.semanticHash=6b512fca059698ff
-scope.3.id=function:M.blocks_click
-scope.3.kind=function
-scope.3.startLine=30
-scope.3.endLine=43
-scope.3.semanticHash=06e88d25f4adc0e6
-]]

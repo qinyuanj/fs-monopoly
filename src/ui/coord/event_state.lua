@@ -31,37 +31,3 @@ end
 
 return ui_event_state
 
---[[ mutate4lua-manifest
-version=4
-projectHash=baacd93da53c172b
-scope.0.id=chunk:src/ui/coord/event_state.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=48
-scope.0.semanticHash=a5b38db0e202e97b
-scope.1.id=function:_has_active_modal
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=8
-scope.1.semanticHash=24b9d911627e97ee
-scope.2.id=function:ui_event_state.is_base_screen_active
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=19
-scope.2.semanticHash=e6147e51d749d6af
-scope.3.id=function:_resolve_client_role_id
-scope.3.kind=function
-scope.3.startLine=21
-scope.3.endLine=24
-scope.3.semanticHash=f62ee5af98cbc6a1
-scope.4.id=function:_read_event_log_flag
-scope.4.kind=function
-scope.4.startLine=26
-scope.4.endLine=32
-scope.4.semanticHash=2c14530507c8d8df
-scope.5.id=function:ui_event_state.resolve_event_log_enabled
-scope.5.kind=function
-scope.5.startLine=35
-scope.5.endLine=45
-scope.5.semanticHash=f185084f57734972
-]]

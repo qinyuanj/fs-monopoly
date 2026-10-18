@@ -34,12 +34,3 @@ return {
   GENERIC_UI_BUTTON = GENERIC_UI_BUTTON,
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=831700aec9c45776
-scope.0.id=chunk:src/ui/input/command_definitions_buttons.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=36
-scope.0.semanticHash=2f104cea480229a9
-]]

@@ -37,17 +37,3 @@ runtime_assets.reset_for_tests = state.reset_for_tests
 
 return runtime_assets
 
---[[ mutate4lua-manifest
-version=4
-projectHash=aa1b4610500365a9
-scope.0.id=chunk:src/config/runtime_assets.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=39
-scope.0.semanticHash=6e702694f54545d4
-scope.1.id=function:_copy_exports
-scope.1.kind=function
-scope.1.startLine=9
-scope.1.endLine=13
-scope.1.semanticHash=c869976d29e706c8
-]]

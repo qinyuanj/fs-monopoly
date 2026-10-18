@@ -89,32 +89,3 @@ end
 
 return composition_root
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f8e6a626bc24334f
-scope.0.id=chunk:src/app/compose_game.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=91
-scope.0.semanticHash=a333e5298942f2ca
-scope.1.id=function:_install_class_mixin
-scope.1.kind=function
-scope.1.startLine=17
-scope.1.endLine=22
-scope.1.semanticHash=3994960082292d32
-scope.2.id=function:_assemble
-scope.2.kind=function
-scope.2.startLine=46
-scope.2.endLine=79
-scope.2.semanticHash=6893c0120e013a29
-scope.3.id=function:p.inventory._on_change
-scope.3.kind=function
-scope.3.startLine=57
-scope.3.endLine=59
-scope.3.semanticHash=600a75ce96a391b3
-scope.4.id=function:composition_root.new_game
-scope.4.kind=function
-scope.4.startLine=81
-scope.4.endLine=88
-scope.4.semanticHash=7ed2ccc2449650ce
-]]

@@ -39,37 +39,3 @@ end
 
 return event_feed
 
---[[ mutate4lua-manifest
-version=4
-projectHash=d0a8e60de7c926e6
-scope.0.id=chunk:src/rules/ports/event_feed.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=41
-scope.0.semanticHash=3396b4a3d25a17bd
-scope.1.id=function:_has_event_inputs
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=8
-scope.1.semanticHash=a17812a9544dad33
-scope.2.id=function:_valid_event
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=12
-scope.2.semanticHash=51fe5cf5ea831c5e
-scope.3.id=function:_publish_port
-scope.3.kind=function
-scope.3.startLine=14
-scope.3.endLine=20
-scope.3.semanticHash=f272543e202f5632
-scope.4.id=function:_bool_or_false
-scope.4.kind=function
-scope.4.startLine=22
-scope.4.endLine=24
-scope.4.semanticHash=9db1a72ec97cc3d1
-scope.5.id=function:event_feed.publish
-scope.5.kind=function
-scope.5.startLine=26
-scope.5.endLine=38
-scope.5.semanticHash=b42f18342eccf8c7
-]]

@@ -51,37 +51,3 @@ end
 
 return result
 
---[[ mutate4lua-manifest
-version=4
-projectHash=27fdcec36b835fb6
-scope.0.id=chunk:src/rules/items/use_flow_result.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=53
-scope.0.semanticHash=e5904a0f6added9e
-scope.1.id=function:_build_result
-scope.1.kind=function
-scope.1.startLine=3
-scope.1.endLine=8
-scope.1.semanticHash=59da1e18edb63b17
-scope.2.id=function:result.rejected
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=16
-scope.2.semanticHash=09406f3b4f544288
-scope.3.id=function:_choice_spec_from_result
-scope.3.kind=function
-scope.3.startLine=18
-scope.3.endLine=21
-scope.3.semanticHash=5fa87d247c07b91d
-scope.4.id=function:_waiting_choice
-scope.4.kind=function
-scope.4.startLine=23
-scope.4.endLine=38
-scope.4.semanticHash=d07e140d3d8ca565
-scope.5.id=function:result.normalize_effect
-scope.5.kind=function
-scope.5.startLine=42
-scope.5.endLine=50
-scope.5.semanticHash=5d2f391f18f59cf5
-]]

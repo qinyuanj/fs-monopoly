@@ -85,37 +85,3 @@ end
 
 return Class
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f53e32e59f3a289c
-scope.0.id=chunk:src/ui/manager/class.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=87
-scope.0.semanticHash=cf2a56cf3d3f525d
-scope.1.id=function:Class
-scope.1.kind=function
-scope.1.startLine=13
-scope.1.endLine=84
-scope.1.semanticHash=b21fb29b0680a111
-scope.2.id=function:<anonymous>
-scope.2.kind=function
-scope.2.startLine=24
-scope.2.endLine=31
-scope.2.semanticHash=39bde97af76cb8bd
-scope.3.id=function:class_table:new
-scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=81
-scope.3.semanticHash=f8cd6bc6c6edfabf
-scope.4.id=function:<anonymous>#2
-scope.4.kind=function
-scope.4.startLine=38
-scope.4.endLine=59
-scope.4.semanticHash=f7fd6f2cedff1a63
-scope.5.id=function:<anonymous>#3
-scope.5.kind=function
-scope.5.startLine=61
-scope.5.endLine=68
-scope.5.semanticHash=54e51b3963d02370
-]]

@@ -62,37 +62,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=8eef50b8dd4b1051
-scope.0.id=chunk:src/ui/input/pre_confirm_gate.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=64
-scope.0.semanticHash=8373f8da19ef13cc
-scope.1.id=function:_resolve_choice_owner_role_id
-scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=17
-scope.1.semanticHash=88a5d46b24028c4c
-scope.2.id=function:M.can_actor_open
-scope.2.kind=function
-scope.2.startLine=22
-scope.2.endLine=29
-scope.2.semanticHash=6cdaaa2af37426de
-scope.3.id=function:_exempt_screen
-scope.3.kind=function
-scope.3.startLine=32
-scope.3.endLine=34
-scope.3.semanticHash=a4a0a479bd348de2
-scope.4.id=function:_requires_choice_select_pre_confirm
-scope.4.kind=function
-scope.4.startLine=36
-scope.4.endLine=44
-scope.4.semanticHash=80e092c9dcd53ae4
-scope.5.id=function:M.needs_pre_confirm
-scope.5.kind=function
-scope.5.startLine=46
-scope.5.endLine=61
-scope.5.semanticHash=ff6550ef436d9624
-]]

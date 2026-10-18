@@ -11,12 +11,3 @@ board_utils.find_best_tile = target_query.find_best_tile
 
 return board_utils
 
---[[ mutate4lua-manifest
-version=4
-projectHash=831294b03ce2a41e
-scope.0.id=chunk:src/rules/land/board_utils.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=13
-scope.0.semanticHash=081994de67194b4f
-]]

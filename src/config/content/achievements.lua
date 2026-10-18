@@ -49,12 +49,3 @@ return {
   { id = 43, category = "传奇", name = "水豚嘟嘟", description = "我们不一样", condition = "使用水豚嘟嘟皮肤1次", target_progress = 1 },
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=99500625de2a735e
-scope.0.id=chunk:src/config/content/achievements.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=51
-scope.0.semanticHash=eb65b7e8094a1195
-]]

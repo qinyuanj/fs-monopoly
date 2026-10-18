@@ -24,12 +24,3 @@ end
 
 return nodes
 
---[[ mutate4lua-manifest
-version=4
-projectHash=da5a4b96bf7964f1
-scope.0.id=chunk:src/ui/schema/market.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=26
-scope.0.semanticHash=9f104242f98f664f
-]]

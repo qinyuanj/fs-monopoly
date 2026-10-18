@@ -27,12 +27,3 @@ local runtime_constants = {
 
 return runtime_constants
 
---[[ mutate4lua-manifest
-version=4
-projectHash=a2896cdc2c33c8df
-scope.0.id=chunk:src/config/gameplay/runtime_constants.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=29
-scope.0.semanticHash=244fca5c87983707
-]]

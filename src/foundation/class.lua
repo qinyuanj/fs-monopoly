@@ -28,22 +28,3 @@ end
 
 return Class
 
---[[ mutate4lua-manifest
-version=4
-projectHash=c5ce283d75d85231
-scope.0.id=chunk:src/foundation/class.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=30
-scope.0.semanticHash=7c135e5bb7e56c21
-scope.1.id=function:Class
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=27
-scope.1.semanticHash=2f8b314e7b27b92b
-scope.2.id=function:class_table:new
-scope.2.kind=function
-scope.2.startLine=18
-scope.2.endLine=24
-scope.2.semanticHash=548a5ea5dd307a8a
-]]
