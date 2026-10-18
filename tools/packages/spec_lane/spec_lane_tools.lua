@@ -2,7 +2,7 @@ local proc = require("foundation.proc")
 
 local spec_lane_tools = {}
 
--- 各 profile 不再预装任何工具(#147 退役 acceptance4lua);dry 集成用例按需自行 ensure dry4lua。
+-- 各 profile 不再预装任何工具(#147 退役 acceptance4lua,#148 退役 dry4lua);dry 集成用例按需自行检查邻接 dryer 检出。
 local _PROFILE_TOOLS = {}
 
 -- #298 的发现式包结构：tooling 车道 33 行

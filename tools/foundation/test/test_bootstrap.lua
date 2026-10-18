@@ -79,7 +79,7 @@ local function _temp_tool_repo(cache_line)
     check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, ".toolcache")))
     check.is_true(fs_lib.write_file(path_lib.join_path(root, ".toolcache/resolved-tools.tsv"), cache_line .. "\n"))
   end
-  return { repo_root = root, tool_cache_dir = path_lib.join_path(root, ".toolcache") }
+  return { repo_root = root, tool_cache_dir = path_lib.join_path(root, ".toolcache"), tool_defs = { dry4lua = {} } }
 end
 
 -- 断网替身:工具未装(luarocks list 失败),git 远端一律解析不到主机。
@@ -106,14 +106,14 @@ describe("bootstrap", function()
 it("parses the repo url lockfile format", function()
   local lock, err = tool_lockfile.parse_contents(table.concat({
     "# comment",
-    "dry4lua http://example.invalid/eggy/dry4lua.git",
+    "fixture http://example.invalid/eggy/fixture.git",
     "",
-  }, "\n"))
+  }, "\n"), { fixture = {} })
 
   check.is_nil(err)
   check.is_not_nil(lock)
-  check.equal("http://example.invalid/eggy/dry4lua.git", lock.tools.dry4lua.url)
-  check.same({ "dry4lua" }, lock.ordered)
+  check.equal("http://example.invalid/eggy/fixture.git", lock.tools.fixture.url)
+  check.same({ "fixture" }, lock.ordered)
 end)
 
 it("rejects unknown tools", function()
@@ -125,9 +125,9 @@ it("rejects unknown tools", function()
   check.truthy(tostring(err):find("unknown tool", 1, true) ~= nil)
 end)
 
--- #94:旧 CRAP/变异/架构工具退场后,锁文件白名单不再接受它们。
+-- #94/#147/#148:旧 CRAP/变异/架构/验收/dry 工具退场后,锁文件白名单不再接受它们。
 it("rejects retired quality tools", function()
-  for _, name in ipairs({ "arch_view", "crap4lua", "mutate4lua" }) do
+  for _, name in ipairs({ "arch_view", "crap4lua", "mutate4lua", "dry4lua", "acceptance4lua" }) do
     local lock, err = tool_lockfile.parse_contents(name .. " http://example.invalid/eggy/" .. name .. "\n")
     check.is_nil(lock)
     check.truthy(tostring(err):find("unknown tool", 1, true) ~= nil, name)
@@ -362,6 +362,7 @@ if kind == "dry4lua" then
   ok, err, unavailable = bootstrap.ensure_tool(kind, {
     repo_root = root,
     tool_cache_dir = root .. "/.toolcache",
+    tool_defs = { dry4lua = {} },
   })
 else
   ok, err, unavailable = bootstrap.ensure_busted_tree(root)

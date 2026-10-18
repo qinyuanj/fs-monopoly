@@ -44,10 +44,10 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 
 ## 平台保证边界（#96 / ADR 0066）
 
-原生 Windows 是唯一受支持的开发平台。`dry` 支持真实扫描（#122）。
+原生 Windows 是唯一受支持的开发平台。`dry` 由邻接 `.uml-viewer/dryer` 承接并真实扫描（#148；检出与 venv 按契约手动准备，缺失退 3，有效结果须候选文件数 > 0 且新写出入库的 `.metrics/dry.edn`）。
 
 - `tools/foundation/platform_boundary.lua` 保留平台声明与显式跳过的通用协议；当前无 POSIX 专用能力。不可用（退 3）/ 显式跳过（退 0，`status=skipped`）/ 真实失败（退 1 或用法错误退 2）互相区分，跳过不计通过。
-- 默认硬门禁不包含完整 dry 软车道；tooling 中相关探针实际执行。契约见 `tools/specs/dry4lua.prompt`。
+- 默认硬门禁不包含完整 dry 软车道；tooling 中相关探针实际执行。契约见 `tools/specs/dryer.prompt`。
 - 工具自举的网络/下载类失败（#112：解析上游 HEAD、拉源码、luarocks 构建/安装时下载失败）沿用同一「不可用」：`spec-lane` 与 `behavior_parallel`（含 test runner 自举 busted，#131：contract/guards/behavior/tooling 等 busted 车道同口径）、`lint` 入口（#114）退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查网络再重跑，不要当测试回归排查；锁文件缺项、上游仓库不存在、编译/构建错误与认不出的报错仍退 1。分类真源是 `tools/foundation/tool_availability.lua`。
 
 ## 操作边界

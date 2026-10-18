@@ -22,15 +22,8 @@ local recorder = repo_root .. "/tools/foundation/test/fixtures/skip_flag_contrac
 -- 定义处(含 evaluate 内部调用)不是入口。
 local definition = "tools/foundation/platform_boundary.lua"
 
-local entries = {
-  {
-    script = "tools/packages/dry/runner.lua",
-    upstream = "module:dry4lua.cli.run",
-    argv = function()
-      return { "tools/packages/dry/test/fixtures/duplicate_pair" }
-    end,
-  },
-}
+-- #147/#148 退役 acceptance-mutate 与 dry4lua 后暂无保留开关的入口;清单为空,新增入口时在此登记。
+local entries = {}
 
 -- 按标识符出现判调用点,而不是逐行找 strip_skip_flag(:别名调用或函数名与
 -- 左括号跨行同样算入口,不能靠换写法绕开清单。

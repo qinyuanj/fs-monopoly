@@ -4,9 +4,7 @@ local fs_lib = require("foundation.fs")
 
 local tool_lockfile = {}
 
-local _TOOL_DEFS = {
-  dry4lua = {},
-}
+local _TOOL_DEFS = {}
 
 local function _split_fields(line)
   local fields = {}
@@ -24,7 +22,9 @@ function tool_lockfile.definition(name)
   return _TOOL_DEFS[name]
 end
 
-function tool_lockfile.parse_contents(content)
+-- defs 可注入:#147/#148 退役最后两个工具后白名单为空,ensure_tool 机制测试靠注入夹具工具覆盖。
+function tool_lockfile.parse_contents(content, defs)
+  defs = defs or _TOOL_DEFS
   local tools = {}
   local ordered = {}
   local errors = {}
@@ -38,7 +38,7 @@ function tool_lockfile.parse_contents(content)
       local name, url = fields[1], fields[2]
       if #fields < 2 then
         errors[#errors + 1] = "line " .. tostring(line_no) .. ": expected <name> <url>"
-      elseif _TOOL_DEFS[name] == nil then
+      elseif defs[name] == nil then
         errors[#errors + 1] = "line " .. tostring(line_no) .. ": unknown tool " .. tostring(name)
       elseif tools[name] ~= nil then
         errors[#errors + 1] = "line " .. tostring(line_no) .. ": duplicate tool " .. tostring(name)
@@ -70,7 +70,7 @@ function tool_lockfile.read_lock(env)
   if content == nil then
     return nil, err
   end
-  return tool_lockfile.parse_contents(content)
+  return tool_lockfile.parse_contents(content, (env or {}).tool_defs)
 end
 
 return tool_lockfile

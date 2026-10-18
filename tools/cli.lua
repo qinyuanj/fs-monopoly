@@ -19,7 +19,7 @@
 local commands = {
   { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },
-  { name = "dry",               pkg = "dry",                summary = "结构重复检测(dry4lua;报 candidate_files=N)" },
+  { name = "dry",               pkg = "dry",                summary = "结构重复检测(邻接 .uml-viewer/dryer;写 .metrics/dry.edn)" },
   { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 入口(check/crap/mutate/ir/view;项目缓存钉死)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
   { name = "deploy",            pkg = "ops",                summary = "部署到本地 Eggy 目录(原生 Windows;零参数)" },
