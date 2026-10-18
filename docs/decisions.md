@@ -8,14 +8,6 @@
 
 state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化纯算法，由状态持有层包装“取状态 + 调算法”；装配和 mixin 安装归 `src/app`，不为单点需求开反向依赖例外。
 
-## ADR 0012 / 0017 — Acceptance、Behavior 与 driver/port 边界
-
-> 已被 #147 / 母规格 #146 取代：中文 Gherkin 验收管线（cceptance / cceptance-mutate、eatures/**、步骤与相关 guard）整体删除，不保留 .feature 作文档；玩家可观察行为改由 	est/behavior/** 承担。以下为历史记录。
-
-Acceptance 是玩家可观察行为真源，按玩法主题组织，经真实 driver、UI facade 或产品级边界替身观察。Behavior 是实现回归网，覆盖端口 fallback、装配、异常分支与内部协作，不机械翻译成 Gherkin。
-
-Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；step handler 和 driver 不复制业务常量、不访问私有字段、不平行实现规则。`features/steps/**` 只通过公开接缝、driver 和 per-feature context 组合行为，具体准入由 acceptance seam guard 执行。
-
 ## ADR 0018 — 局内金币以角色 Fixed 属性为真源
 
 局内金币唯一真源是角色 Fixed 属性 `coin_count`；不建立 `player.cash` 缓存或镜像。读写统一经 `src/player/actions/balance.lua`，规则层不直调宿主属性接口。金额只接受有限整数，余额不得为负；缺失属性、角色不可读写或写入失败都硬失败并可诊断。转账先验证双方能力与付款余额，再写双方，部分失败时尽力回滚。
@@ -61,16 +53,6 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 席位身份与控制模式是两个正交事实：补位电脑身份继续由 `player.is_ai` 表示，托管模式收敛为 `direct` / `manual_delegation` / `afk_delegation` 三态，以扁平字段 `player.control_mode` 保存。该字段只允许 `src/player/control.lua` 解释或修改；对外只有领域命令（`toggle_manual_delegation`、`enable_afk_delegation`）和窄查询（`is_replacement_computer`、`is_delegated`、`is_afk_delegated`、`is_computer_controlled`），模块本身不执行分享面板、广播或提示副作用。
 
 「当前是否由电脑执行」只有 `is_computer_controlled` 一处派生语义：补位电脑身份或任一托管模式任一成立即为 true。规则层继续经既有 `auto_play_port` 查询，端口谓词更名为 `is_computer_controlled`；允许依赖玩家层的回合与电脑决策直接使用控制模块。UI 不依赖玩家层：回合输出侧物化不可变玩家控制快照（至少 `is_delegated` 与 `is_computer_controlled`），选择门控与托管特效消费同一快照。旧的 `auto` / `auto_source` / `ai` 字段与 `is_auto_player` / `by_ai` 标识一次性删除，不保留镜像或兼容层，并由架构 guard 阻止复现。分享面板锁存、AFK 超时计数与恢复提示节流仍归各自交互/回合流程，不属于控制模块。本决定遵循 ADR 0018 的唯一真源先例，并保持 ADR 0054 的本机角色可见性与行动者授权边界。
-
-## ADR 0062 — 验收步骤绑定行数预算调升为 5500
-
-> 已随 #147 失效：steps_budget_guard 与验收步骤绑定一并删除。以下为历史记录。
-
-`steps_budget_guard` 的 5000 行预算设于 2026-07-20（#192 DSL 重写基线 4,050 行 + ~23% 生长余量）。到 #594 时既有 29 个绑定域已占 4,993 行，余量实际耗尽：任何新验收域——哪怕收敛到极限——都会触门，而预算的本意是防复胖，不是冻结验收面。
-
-因此预算调升为 5500 行，语义不变：仍是「先参数化合并与句面收敛，再谈调升」。#594 的 `item_slot_highlight_replay` 绑定在收敛后为 270 行（重复句面对折为 pattern handler、两侧身份解析与两个发送出口各自合一、逐槽事件断言合一），总计 5,263 行，留约 4% 余量。
-
-调升不是「按需加数」的先例：下一次触门仍须先证明本域已收敛，且优先收敛存量大域（当前 `base_screen.lua` 618 行、`turn_flow.lua` 435 行、`card_reveal_broadcast.lua` 354 行）而非再次抬数。若绑定层再次逼近预算而存量大域仍未收敛，重议本决策。
 
 ## ADR 0063 — 超时外壳退役：选择/弹层超时模块各自自持
 
@@ -168,4 +150,4 @@ CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的�
 4. **uml 子进程**。`uml` 预检把每个受控 tree 的 `share/lua/5.4` 与 `lib/lua/5.4` 写进子进程的 `LUA_PATH(_5_4)` / `LUA_CPATH(_5_4)`（另加仓根），模块探针按同一组根判定来源；`./uml` 安装器拷贝仍不是入口，因为它不钉装载面、也不做预检。
 5. **清理边界**。项目工具缓存路径从 bootstrap、package_path_helper、`.gitignore`、`clean` / `distclean` 与 uml 契约文本中移除；`distclean` 与 `clean` 同义。spec_lane 的实测时长缓存移到仓内 `tmp/`（gitignored，由 `clean` 清理）。
 
-代价与边界：worktree 不再需要复制或冷装缓存，并发写坏共享缓存的问题随之消失；换来的是每台开发机/CI 必须自行提供满足口径的机器 tree。缺失或版本越界是真实失败，不再归类为「网络不可用」；退 3 只保留给平台/工具显式不可用。真身校验不因缓存退役而放宽：模块来源、版本、worker 绑定与 uml 探针仍在每次运行时核对。
+代价与边界：worktree 不再需要复制或冷装缓存，并发写坏共享缓存的问题随之消失；换来的是每台开发机/CI 必须自行提供满足口径的机器 tree（CI 的供给在 `.github/scripts/setup-lua.ps1`：构建完 LuaRocks 后预装五个钉定 rock）。缺失或版本越界是真实失败，不再归类为「网络不可用」；退 3 只保留给平台/工具显式不可用。真身校验不因缓存退役而放宽：模块来源、版本、worker 绑定与 uml 探针仍在每次运行时核对。
