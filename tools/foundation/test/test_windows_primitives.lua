@@ -98,30 +98,12 @@ it("empty registered suite fails", function()
   check.truthy(not result.ok and result.output:find("cases=0", 1, true), result.output)
 end)
 
-it("spec lane accepts serial configuration", function()
-  local opts, err = require("packages.spec_lane.spec_lane_args").parse({ "--profile", "guards", "--serial" })
-  check.truthy(opts and opts.serial, err)
-end)
-
 it("controlled lua environment exposes native DLL modules", function()
   local original = package.cpath
   require("foundation.lua_env").install_paths({ "C:/controlled/tree" })
   local cpath = package.cpath
   package.cpath = original
   check.truthy(cpath:find("C:/controlled/tree/lib/lua/5.4/?.dll", 1, true))
-end)
-
-it("selected interpreter rejects non Lua override", function()
-  local result = proc.run_command('set "LUA54_BIN=cmd.exe" && lua -e "package.path=package.path..\';./tools/?.lua\'; assert(require(\'packages.test_runner.lua54\').detect_lua54()==nil)"')
-  check.truthy(result.ok, result.output)
-end)
-
-it("tooling discovers retained native test roots", function()
-  local roots, err = require("packages.spec_lane.spec_lane_tools").discover_test_roots()
-  check.truthy(roots and #roots > 0, err)
-  local found = {}
-  for _, root in ipairs(roots) do found[root] = true end
-  check.is_true(found["tools/foundation/test"] and found["tools/packages/clean/test"])
 end)
 
 it("verify forwards native flags without literal quotes", function()
