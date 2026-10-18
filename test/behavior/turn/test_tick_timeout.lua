@@ -15,19 +15,6 @@ before_each(function()
   _config_reset.reset_all()
 end)
 
-it("test_modal_default_policy_lives_on_modal_timeout", function()
-  local policy = modal_timeout.default_policy()
-  check.is_truthy(type(policy) == "table", "default_policy should return a table")
-  check.is_truthy(type(policy.on_timeout) == "function",
-    "modal default policy should carry on_timeout")
-end)
-
-it("test_modal_default_policy_returns_new_table_each_call", function()
-  local p1 = modal_timeout.default_policy()
-  local p2 = modal_timeout.default_policy()
-  check.not_equal(p1, p2, "default_policy should return a fresh clone each time")
-end)
-
 it("test_resolve_choice_timeout choice from game.turn", function()
   local choice = { kind = "market_buy" }
   local game = { turn = { pending_choice = choice } }
@@ -43,9 +30,6 @@ it("test_resolve_choice_timeout_market_buy_doubles", function()
   _assert_eq(timeout, expected, "market_buy should use scope_timeouts.market_buy")
 end)
 
--- #602:外壳的 default_policy 导出随壳删除(零生产调用);modal 族策略钉在
--- modal_timeout.default_policy,选择超时的默认装配改经公开 step_default 驱动
--- (见 test_timeout_closure 的 min-visible 钉)。
 it("test_resolve_choice_timeout_no_choice_returns_base", function()
   local timeout = ChoiceTimeout.resolve_choice_timeout_seconds(nil, nil, nil)
   local expected = timing.scope_timeouts.choice

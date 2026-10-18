@@ -535,7 +535,9 @@ function gameplay_loop.tick(game, state, dt)
     afk_signal.prune(game, state)
   end
 end
+-- 行为测试接缝：场景与 test_auto_runner_policies 观察缺失自动动作的告警节流。
 gameplay_loop._log_missing_auto_choice_action = _log_missing_auto_choice_action
+-- 行为测试接缝：test_loop_fallback_ports 观察已有注入端口保留和缺失能力补齐。
 gameplay_loop._M_test = {
   ensure_fallback_ports = _ensure_fallback_ports,
 }

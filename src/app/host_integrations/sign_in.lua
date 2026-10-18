@@ -12,6 +12,7 @@ local sign_in = {
   event_prefix = EVENT_PREFIX,
 }
 
+-- 行为测试公共查询：test_sign_in 按宿主签到日观察已配置的奖励金额。
 function sign_in.amount_for_day(day)
   return rewards[day]
 end

@@ -1,7 +1,6 @@
 -- 端口组合并原语(#602 拆分,自 loop/ports.lua 移出,行为保持):
 -- noop 组构造、必填/额外键合并、override 形态判定与组表拷贝。
 -- 「有哪些端口组」的数据仍归 ports.lua,这里只回答「怎么并」。
-local tables = require("src.foundation.tables")
 
 local M = {}
 
@@ -63,24 +62,6 @@ function M.copy_group_ports(base_group, override_group, required_keys)
   _merge_extra_ports(merged, override_group)
   return merged
 end
-
--- 浅拷贝收敛到 foundation.tables.copy_table(同为 nil 容错的浅拷贝原语),
--- 与 #601 ensure_* 归并同向:拷贝循环不再各自拼写。
-function M.copy_array(values)
-  return tables.copy_table(values)
-end
-
-function M.copy_port_groups(port_groups)
-  local copied = {}
-  for group_name, keys in pairs(port_groups) do
-    copied[group_name] = M.copy_array(keys)
-  end
-  return copied
-end
-
--- 内部守卫的直驱口:base 漂移告警「missing base port」在公开 resolve 路径
--- 不可达(base builders 覆盖全部必填键),经 ports.lua _M_test 转发钉住其契约。
-M._merge_required_ports = _merge_required_ports
 
 return M
 

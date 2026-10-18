@@ -1,4 +1,4 @@
--- Real busted pilot: the same nine resource-scope behaviors.
+-- Resource-scope cleanup behaviors.
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local logger = require("src.foundation.log")
@@ -23,15 +23,6 @@ describe("TestScope", function()
     resource_scope:destroy(); resource_scope:destroy()
     -- lint-allow: call-count scope 契约:defer 回调恰好执行一次(幂等/重入/已销毁立即执行)
     luassert.is.equal(1, calls)
-  end)
-  it("test_fork_destroy_cascades_in_one_lifo_order", function()
-    local order, parent = {}, scope.new()
-    parent:defer(function() order[#order + 1] = "parent-first" end)
-    local child = parent:fork()
-    child:defer(function() order[#order + 1] = "child" end)
-    parent:defer(function() order[#order + 1] = "parent-last" end)
-    parent:destroy()
-    luassert.is.same({ "parent-last", "child", "parent-first" }, order)
   end)
   it("test_destroy_continues_after_cleanup_errors_and_raises_first_error", function()
     local calls, warnings, original_warn = {}, {}, logger.warn

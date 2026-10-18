@@ -3,6 +3,7 @@ local target_direction = require("src.rules.board.target_direction")
 
 local board_query = {}
 
+-- 行为测试公共接缝：test_board_query 观察队列扩展后的广度优先访问顺序。
 function board_query.queue_walk(queue, visit)
   local pending = queue or {}
   local head = 1
@@ -84,11 +85,6 @@ function board_query.indices_in_range(board, start, distance)
 end
 
 board_query.arrange_target_options = target_layout.arrange_target_options
-
--- Export helpers for testability
-board_query._manhattan_distance = target_direction.manhattan_distance
-board_query._collect_indices_by_distance = _collect_indices_by_distance
-board_query._flatten_by_distance = _flatten_by_distance
 
 return board_query
 

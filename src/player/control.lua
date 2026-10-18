@@ -42,6 +42,7 @@ function control.is_delegated(player)
   return mode == MANUAL_DELEGATION or mode == AFK_DELEGATION
 end
 
+-- ADR 0061 点名的领域窄查询；消费者无需解释 control_mode 枚举。
 function control.is_afk_delegated(player)
   return _mode(player) == AFK_DELEGATION
 end

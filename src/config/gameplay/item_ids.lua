@@ -12,6 +12,7 @@ for _, cfg in ipairs(items_cfg) do
   _register_item(item_ids, cfg)
 end
 
+-- 行为测试接缝：test_item_ids_register 以独立配置验证 ID 登记与重复 key 拒绝。
 item_ids._register_item = _register_item
 
 return item_ids

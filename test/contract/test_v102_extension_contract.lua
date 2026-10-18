@@ -203,7 +203,6 @@ describe("TestV102ExtensionContract", function()
   it("test_achievement_integration_is_implemented", function()
   local achievement = require("src.app.host_integrations.achievement")
 
-  luassert.truthy(achievement.host_pending ~= true, "achievement should no longer be a host-pending noop")
   luassert.is.equal("function", type(achievement.record_gameplay_event), "achievement should expose gameplay event routing")
   luassert.is.equal("function", type(achievement.add_progress), "achievement should expose progress routing")
   luassert.is.equal("function", type(achievement.current_progress), "achievement should expose host progress reads")

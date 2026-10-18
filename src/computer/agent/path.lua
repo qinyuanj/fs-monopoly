@@ -59,6 +59,8 @@ local function _simulate_landing(game, player, steps)
   return { idx = index, tile = game.board:get_tile(index), steps = steps }
 end
 
+-- 行为测试公共接缝：test_predict_real_move 比较电脑预测与真实移动的黑市恢复、
+-- 自雷宽限和朝向落点；生产遥控骰预测共用 movement.predict_landing。
 function path_planner.predict_landing(game, player, steps)
   return movement.predict_landing(game, player, steps)
 end

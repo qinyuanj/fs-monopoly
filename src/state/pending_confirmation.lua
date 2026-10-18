@@ -115,6 +115,8 @@ function pending_confirmation.is_source_active(state, source)
   return record ~= nil and record.source == source
 end
 
+-- 行为测试公共查询接缝：test_pending_confirmation 经这些查询观测来源替换、
+-- 载荷保留和 confirm/cancel 的清理结果，不读取私有存放字段。
 function pending_confirmation.active_source(state)
   local record = _active(state)
   return record and record.source or nil

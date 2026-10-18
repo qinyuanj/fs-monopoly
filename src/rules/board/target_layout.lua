@@ -133,11 +133,6 @@ function target_layout.arrange_target_options(board, player, options)
   return _densify_slots(slots, index_by_id)
 end
 
-target_layout._M_test = {
-  _max_key = _max_key,
-  _center_out_order = _center_out_order,
-}
-
 return target_layout
 
 --[[ mutate4lua-manifest

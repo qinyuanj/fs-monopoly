@@ -63,6 +63,7 @@ local function _prime_first_turn(game)
   return true
 end
 
+-- 行为测试公共接缝：test_gameplay_start 验证只有无待决选择的首次 start 才推进回合。
 M.prime_first_turn = _prime_first_turn
 
 function M.start(state, current_game_ref)

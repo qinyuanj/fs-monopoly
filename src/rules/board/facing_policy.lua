@@ -135,10 +135,6 @@ function facing_policy.resolve_initial_facing(mode, player, opts)
   return _relative_facing(player, opts)
 end
 
-facing_policy._M_test = {
-  _set_move_dir = _set_move_dir,
-}
-
 return facing_policy
 
 --[[ mutate4lua-manifest

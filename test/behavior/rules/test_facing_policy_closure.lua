@@ -124,16 +124,6 @@ describe("TestFacingPolicyClosure", function()
     end, "missing game")
   end)
 
-  it("test_set_move_dir_rejects_a_nil_game_with_its_own_guard_message", function()
-    -- kills _set_move_dir's `game ~= nil and ...` `and` -> `or`: the `or`
-    -- mutant indexes nil before the guard can fire with its own message.
-    -- (_require_sync_context always fires first via the public entry, so this
-    -- nil-game arm is only reachable through _M_test.)
-    luassert.has_error(function()
-      facing_policy._M_test._set_move_dir(nil, _player("left"), "right")
-    end, "missing game.set_player_status")
-  end)
-
   it("test_set_move_dir_rejects_a_game_without_set_player_status", function()
     -- same sites: with a truthy game the `or` mutant passes the guard and the
     -- later method call raises a different error, not the guard message.

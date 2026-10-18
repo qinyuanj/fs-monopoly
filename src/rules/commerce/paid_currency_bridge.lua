@@ -18,6 +18,8 @@ local function _currency_entry(currency)
   return currencies[key]
 end
 
+-- 行为测试公共查询：test_paid_currency 区分宿主管理的 commodity 与外部付费货币，
+-- 并通过真实商品购买流程验证外部货币仍可唤起购买面板。
 function bridge.is_managed_currency(_, currency)
   local entry = _currency_entry(currency)
   if not entry then
@@ -28,14 +30,6 @@ end
 
 function bridge.is_paid_currency(currency)
   return _currency_entry(currency) ~= nil
-end
-
-function bridge.is_currency_channel_ready(_, _currency)
-  return true
-end
-
-function bridge.unavailable_reason(_, _currency)
-  return nil
 end
 
 function bridge.setup_for_game(_)

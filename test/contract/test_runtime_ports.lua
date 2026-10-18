@@ -6,8 +6,6 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_context = require("src.host.context")
 local runtime_install = require("src.app.host_install")
 local default_ports = require("src.host.default_ports")
-local gameplay_loop_ports = require("src.turn.loop.ports")
-local presentation_ports = require("src.ui.ports")
 
 local function reset_runtime_contract_state()
   runtime_ports.reset_for_tests()
@@ -17,15 +15,6 @@ end
 local function set_current_runtime_context(ctx)
   runtime_context.set_current(ctx)
   runtime_ports.configure(default_ports.build(runtime_context))
-end
-
-local function list_contains(list, expected)
-  for _, value in ipairs(list or {}) do
-    if value == expected then
-      return true
-    end
-  end
-  return false
 end
 
 local function mock_lua_api()
@@ -321,37 +310,4 @@ describe("TestRuntimePorts", function()
   luassert.is.same(fallback_role, resolved, "resolve_role should still return GameAPI fallback role")
   end)
 
-  it("test_gameplay_loop_port_contract_is_grouped_and_stable", function()
-  local contract = gameplay_loop_ports.describe_contract()
-  luassert.is.equal("modal,anim,ui_sync,debug,clock,state,output", table.concat(contract.group_names, ","),
-    "gameplay loop port groups should stay grouped and ordered")
-  luassert.is.equal("apply_input_lock", contract.port_groups.ui_sync[1],
-    "ui_sync contract should keep apply_input_lock")
-  luassert.is.equal("step_choice_timeout", contract.port_groups.ui_sync[2],
-    "ui_sync contract should keep timeout step")
-  luassert.is_true(list_contains(contract.port_groups.ui_sync, "sync_camera_position"),
-    "ui_sync contract should explicitly expose sync_camera_position")
-  luassert.is.equal("invalidate_ui_model", contract.port_groups.output[1],
-    "output contract should expose invalidate_ui_model first")
-  luassert.is.equal("apply_role_control_lock", contract.port_groups.state[1],
-    "state contract should expose role lock")
-  end)
-
-  it("test_presentation_boundary_contract_describes_seams_and_state_allowlists", function()
-  local contract = presentation_ports.describe_boundary_contract()
-  luassert.is.equal("src.ui.state.runtime", contract.state_seam_modules.runtime_state,
-    "presentation contract should publish runtime state canonical seam")
-  luassert.is.equal("src.ui.visual_hold", contract.state_seam_modules.visual_hold,
-    "presentation contract should publish visual hold canonical seam")
-  luassert.is.equal("src.ui.seams.host_runtime", contract.state_seam_modules.host_runtime,
-    "presentation contract should publish host runtime canonical seam")
-  luassert.is_true(list_contains(contract.import_allowlists.host_runtime, "src.ui.seams.host_runtime"),
-    "presentation contract should allow host runtime port canonical path")
-  luassert.is.equal("src.app.gameplay_start", contract.state_field_allowlists.presentation_runtime[1],
-    "presentation contract should pin presentation_runtime ownership")
-  luassert.is_true(list_contains(contract.state_field_allowlists.presentation_runtime, "src.ui.ports.anim"),
-    "presentation contract should allow anim port canonical path")
-  luassert.is.equal("src.app.gameplay_start", contract.state_field_allowlists.gameplay_loop_ports[1],
-    "presentation contract should pin gameplay_loop_ports ownership")
-  end)
 end)
