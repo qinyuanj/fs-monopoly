@@ -47,15 +47,6 @@ local function _equip_skin(role_id, skin)
   return equipped
 end
 
-local function _reject_removed_options(opts)
-  if opts.context_policy ~= nil then
-    error("context_policy option removed; runtime install is strict-only")
-  end
-  if opts.enable_legacy_helper_fallback ~= nil then
-    error("enable_legacy_helper_fallback option removed; runtime install is strict-only")
-  end
-end
-
 local function _install_context(install_globals)
   local runtime_ctx = runtime_context.new({
     GameAPI = GameAPI,
@@ -131,7 +122,6 @@ end
 function M.install(opts)
   opts = opts or {}
   config_sanity.validate()
-  _reject_removed_options(opts)
   runtime_ports.reset_for_tests()
   paid_purchase_port.reset_for_tests()
   achievement_progress_port.reset_for_tests()

@@ -60,9 +60,6 @@ local function _seed_escrow(ledger, opts)
     ledger.escrowed = true
     return
   end
-  if opts.context_preconsumed == true then
-    ledger.escrowed = true
-  end
 end
 
 local function _make_commit(player, item_id, ledger)

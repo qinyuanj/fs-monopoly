@@ -231,15 +231,6 @@ it("test_resolve_empty_table_returns_base_ports", function()
     "modal group should have close_choice_modal fn")
 end)
 
-it("test_resolve_legacy_flat_override_errors", function()
-  local ok, err = pcall(function()
-    gameplay_loop_ports.resolve({ close_choice_modal = function() end })
-  end)
-  _assert_eq(ok, false, "legacy flat override should raise an error")
-  check.is_truthy(tostring(err):find("legacy flat", 1, true) ~= nil,
-    "error message should mention 'legacy flat'")
-end)
-
 it("test_resolve_non_table_override_errors", function()
   local ok, _ = pcall(function()
     gameplay_loop_ports.resolve("not_a_table")

@@ -35,6 +35,10 @@ local function replay_seed(seed)
   local state = fixtures.build_loop_state()
   local now = 0
   state.gameplay_loop_ports = loop_ports.resolve({
+    ui_sync = {
+      on_pending_choice = state.gameplay_loop_ports.ui_sync.on_pending_choice,
+      resolve_choice_ui_state = state.gameplay_loop_ports.ui_sync.resolve_choice_ui_state,
+    },
     clock = {
       wall_now_seconds = function() return now end,
       wall_diff_seconds = function(a, b) return (a or 0) - (b or 0) end,

@@ -8,14 +8,6 @@ local _panel_routes = {
   gallery = { state_key = "item_atlas", target = item_atlas },
 }
 
-local function _clear_legacy_fields(route)
-  route.open = nil
-  route.page_index = nil
-  route.role_id = nil
-  route.owned_by_role = nil
-  route.selected_by_role = nil
-end
-
 local function _is_panel_open(ui, mode)
   local panel_route = _panel_routes[mode]
   local panel_state = panel_route and ui[panel_route.state_key] or nil
@@ -26,7 +18,6 @@ local function _ensure_route_state(state)
   local ui = assert(assert(state, "missing state").ui, "missing state.ui")
   ui.skin_gallery = ui.skin_gallery or {}
   local route = ui.skin_gallery
-  _clear_legacy_fields(route)
   if not _is_panel_open(ui, route.mode) then
     route.mode = nil
   end

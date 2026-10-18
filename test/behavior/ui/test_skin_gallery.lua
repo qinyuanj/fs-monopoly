@@ -45,42 +45,17 @@ it("test_equip_keeps_selection_in_skin_panel_and_only_routes_close", function()
   end)
 end)
 
-it("test_existing_route_drops_legacy_mirrored_fields", function()
-  local state = {
-    ui = {
-      item_atlas = { open = true },
-      skin_gallery = {
-        mode = "gallery",
-        open = true,
-        page_index = 2,
-        role_id = 1,
-        owned_by_role = { ["1"] = {} },
-        selected_by_role = { ["1"] = 101 },
-      },
-    },
-  }
-
-  local route = skin_gallery.handle_action(state, "bogus", 1)
-
-  _assert_eq(route.mode, "gallery", "legacy cleanup should preserve the active close route")
-  _assert_eq(route.open, nil, "legacy cleanup should drop mirrored visibility")
-  _assert_eq(route.page_index, nil, "legacy cleanup should drop mirrored pagination")
-  _assert_eq(route.role_id, nil, "legacy cleanup should drop mirrored role")
-  _assert_eq(route.owned_by_role, nil, "legacy cleanup should drop mirrored ownership")
-  _assert_eq(route.selected_by_role, nil, "legacy cleanup should drop mirrored selection")
-end)
-
 it("test_existing_route_drops_stale_skin_mode_after_equip_closed_panel", function()
   local state = {
     ui = {
       skin_panel = { open = false },
-      skin_gallery = { mode = "skin", open = false },
+      skin_gallery = { mode = "skin" },
     },
   }
 
   local route = skin_gallery.handle_action(state, "bogus", 1)
 
-  _assert_eq(route.mode, nil, "legacy cleanup should drop a route to an already closed skin panel")
+  _assert_eq(route.mode, nil, "a closed skin panel should clear its close route")
 end)
 
 end)

@@ -5,11 +5,11 @@ local modal_state = require("src.ui.state.modal")
 local intents = {}
 
 local function _resolve_option_id_from_payload(payload)
-  return payload.option_id or payload.option or nil
+  return payload.option_id
 end
 
 local function _resolve_index_from_payload(payload)
-  return payload.index or payload.option_index or payload.card_index or payload.choice_index
+  return payload.index
 end
 
 local function _resolve_mapped_from_runtime(state, index)

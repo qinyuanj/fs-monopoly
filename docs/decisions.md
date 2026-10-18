@@ -66,13 +66,13 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 **测试通路随之切换**：不变量不可再注入，观测型测试改用仓库既有模块字段补丁通路（`with_patches` 替换 `src.turn.deadlines` 字段），输出端口经 `state.gameplay_loop_ports.output` 注入（与生产 `resolve_port` 路径一致）；min-visible 等策略钉改经公开 `step_default` 驱动默认装配，不再触碰策略表导出。
 
-## ADR 0064 — 选择超时默认装配的 no-op 回落：三透传键与 modal 收屏缓存保留
+## ADR 0064 — 选择超时默认装配：ui_sync 三透传键与 modal 收屏缓存
 
-#603 收尾 #602 的两处余留并钉 no-op 回落：验收车道的超时驱动态是裸 runtime state（`ensure_all` 不注入 `gameplay_loop_ports`），默认装配若在 ui_sync 端口缺位时直接调键会崩在 arm 帧。现三键全部带回落，缺端口不崩，超时自动代答/分阶段警告/收屏链路照常。
+选择超时默认装配依赖完整的回合端口。生产装配提供 `ui_sync` 的 `on_pending_choice` / `is_choice_active` / `resolve_choice_ui_state` 三键，默认装配直接委派；使用 `step_default` 的测试也应通过同一端口接缝提供它们。定制策略继续通过 `ChoiceTimeout.new` 的必填构造键注入。
 
-1. **ui_sync 三透传键保留（不收窄）**。`on_pending_choice` / `is_choice_active` / `resolve_choice_ui_state` 保持必填构造键与端口在场时的一比一委派；端口缺位时分别回落：arm 帧静默 no-op、`is_choice_active` 回落运行时待决、`resolve_choice_ui_state` 回落 `should_warn=false` gate。收窄不可行：生产路径端口恒在场，委派是真实行为而非虚胖注入；缺位回落只服务无端口车道，两者都由 `type(ports[key]) == "function"` 守卫切换。
+1. **ui_sync 三透传键保留（不收窄）**。三个构造键均有真实生产委派行为，端口缺失属于装配错误，调用时直接暴露错误。
 2. **modal 收屏引用缓存保留（不逐次重建）**。`_dispatch_close_opts` 与 `_cached_dispatch_modal_ref` 按端口引用比较重绑，`on_close_choice` 在 `dispatch_action` 内同步消费（当次派单即读），共享表不会跨局残留，两局端口引用交替不串；每次重建无观测收益，予以保留。
-3. **缺屏告警不在默认装配承担**。引擎步进只取 `active` 判定做跟踪清算，gate 回落的结果即弃（#523 注释）；缺屏探针与告警经生产 ui_sync 端口在 dirty 刷新后采样（#524 时序），默认装配的 `should_warn=false` 只保证裸车道不误报。
+3. **缺屏告警不在默认装配承担**。引擎步进只取 `active` 判定做跟踪清算；缺屏探针与告警经生产 ui_sync 端口在 dirty 刷新后采样。
 
 ## ADR 0065 — 终局收尾：胜负标记后显式 game_end，终态事件不参与落地 hold 延迟
 

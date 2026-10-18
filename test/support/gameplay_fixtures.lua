@@ -26,6 +26,10 @@ local function build_test_ports(overrides)
     },
     ui_sync = {
       apply_input_lock = overrides.apply_input_lock or function() end,
+      on_pending_choice = overrides.on_pending_choice or function() end,
+      resolve_choice_ui_state = overrides.resolve_choice_ui_state or function(_, _, choice)
+        return { route_key = choice and choice.route_key or nil, should_warn = false }
+      end,
       step_choice_timeout = overrides.step_choice_timeout or function() end,
       step_modal_timeout = overrides.step_modal_timeout or function() end,
       update_countdown = overrides.update_countdown or function() end,

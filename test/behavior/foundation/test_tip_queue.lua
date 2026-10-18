@@ -121,22 +121,6 @@ describe("TestTipQueue", function()
     _reset()
   end)
 
-  it("test_configure_runtime show_tip alias", function()
-    _reset()
-    local fn = function() end
-    tip_queue.configure_runtime({ show_tip = fn })
-    _assert_eq(tip_queue.runtime.presenter, fn, "show_tip should alias presenter")
-    _reset()
-  end)
-
-  it("test_configure_runtime tip_presenter alias", function()
-    _reset()
-    local fn = function() end
-    tip_queue.configure_runtime({ tip_presenter = fn })
-    _assert_eq(tip_queue.runtime.presenter, fn, "tip_presenter should alias presenter")
-    _reset()
-  end)
-
   -- 调度三分支的释放语义(批次4 提取 _immediate_release/_wrapped_release/
   -- _invoked_ok/_handled_ok 后,这三条分支没有测试直接驱动):
   -- 无调度器立即释放 / 调度器同步回调只释放一次 / 调度器不认领时回退立即释放。
@@ -184,14 +168,6 @@ describe("TestTipQueue", function()
     tip_queue.configure_runtime({ scheduler = function() end })
     tip_queue.configure_runtime({ clear_scheduler = true })
     _assert_eq(tip_queue.runtime.scheduler, nil, "clear_scheduler should remove scheduler")
-    _reset()
-  end)
-
-  it("test_configure_runtime schedule alias", function()
-    _reset()
-    local fn = function() end
-    tip_queue.configure_runtime({ schedule = fn })
-    _assert_eq(tip_queue.runtime.scheduler, fn, "schedule should alias scheduler")
     _reset()
   end)
 

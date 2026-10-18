@@ -38,26 +38,6 @@ local function _test_host_ports_lists_five_capability_slots_in_fixed_order()
   _assert_eq(require("src.ui.seams.host_scene_ui"), refired[5], "slot 5 is host_scene_ui")
 end
 
-local function _test_rejects_removed_runtime_options()
-  local host_install = require("src.app.host_install")
-
-  local context_ok, context_err = pcall(host_install.install, {
-    context_policy = {},
-    skip_context_install = true,
-  })
-  _assert_eq(context_ok, false, "context_policy should be rejected")
-  luassert.truthy(tostring(context_err):find("context_policy option removed", 1, true) ~= nil,
-    "context_policy error should identify removed option")
-
-  local fallback_ok, fallback_err = pcall(host_install.install, {
-    enable_legacy_helper_fallback = true,
-    skip_context_install = true,
-  })
-  _assert_eq(fallback_ok, false, "legacy helper fallback should be rejected")
-  luassert.truthy(tostring(fallback_err):find("enable_legacy_helper_fallback option removed", 1, true) ~= nil,
-    "legacy fallback error should identify removed option")
-end
-
 local function _test_skip_context_install_wires_purchase_skins_to_paid_port()
   local host_install = require("src.app.host_install")
   local paid_purchase_port = require("src.rules.ports.paid_purchase")
@@ -656,7 +636,6 @@ end
 
 
 it("test_host_ports_lists_five_capability_slots_in_fixed_order", _test_host_ports_lists_five_capability_slots_in_fixed_order)
-it("test_rejects_removed_runtime_options", _test_rejects_removed_runtime_options)
 it("test_skip_context_install_wires_purchase_skins_to_paid_port", _test_skip_context_install_wires_purchase_skins_to_paid_port)
 it("test_install_subscribes_reward_day_events_and_grants_the_resolved_player", _test_install_subscribes_reward_day_events_and_grants_the_resolved_player)
 it("test_reward_day_events_refresh_player_ui_from_dirty_immediately", _test_reward_day_events_refresh_player_ui_from_dirty_immediately)

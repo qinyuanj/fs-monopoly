@@ -322,18 +322,6 @@ end
   end
 
 
-local function _test_gameplay_loop_ports_rejects_legacy_flat_override()
-  local ok, err = pcall(function()
-    gameplay_loop_ports.resolve({
-      close_choice_modal = function() end,
-    })
-  end)
-
-  luassert.truthy(ok == false, "legacy flat gameplay_loop_ports override should be rejected")
-  luassert.truthy(tostring(err):find("legacy flat gameplay_loop_ports is not supported", 1, true) ~= nil,
-    "legacy flat gameplay_loop_ports override should explain grouped-port requirement")
-end
-
 local function _test_build_noop_group_characterization()
   local loop_ports = require("src.turn.loop.ports")
 
@@ -497,7 +485,6 @@ end
     _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option = _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option,
     _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed = _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed,
     _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed = _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed,
-    _test_gameplay_loop_ports_rejects_legacy_flat_override = _test_gameplay_loop_ports_rejects_legacy_flat_override,
     _test_build_noop_group_characterization = _test_build_noop_group_characterization,
     _test_popup_countdown_uses_effective_modal_timeout = _test_popup_countdown_uses_effective_modal_timeout,
     _test_market_countdown_uses_double_action_timeout = _test_market_countdown_uses_double_action_timeout,

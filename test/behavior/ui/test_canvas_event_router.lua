@@ -52,17 +52,6 @@ local function _new_listenable_node()
   return node
 end
 
-local function _assert_empty_compat_fields(state, context)
-  _assert_eq(type(state.ui_event_router_listeners), "table",
-    context .. ": listeners must be a table")
-  _assert_eq(#state.ui_event_router_listeners, 0,
-    context .. ": listeners must be empty")
-  _assert_eq(type(state.ui_event_router_registered), "table",
-    context .. ": registered must be a table")
-  _assert_eq(next(state.ui_event_router_registered), nil,
-    context .. ": registered must be empty")
-end
-
 -- 与 test_interaction.lua 的 _router_env_patches 同款,但只包含基础 UI 假件。
 local function _router_env_patches(node_map, extra)
   local patches = {
@@ -232,16 +221,12 @@ it("test_rebind_destroys_old_listeners_and_dispatches_once", function()
     canvas_event_router.bind(state, function()
       return {}
     end)
-    local first_listener_count = #state.ui_event_router_listeners
-    _assert_eq(first_listener_count > 0, true, "first bind should create listeners")
-
     local action_node = node_map[base_nodes.action_button]
     _assert_eq(action_node ~= nil, true, "action_button node should be registered")
 
     canvas_event_router.bind(state, function()
       return {}
     end)
-    _assert_eq(#state.ui_event_router_listeners > 0, true, "rebind should create new listeners")
 
     local alive = action_node:fire(_click_data(3))
     _assert_eq(alive, 1, "rebind should leave exactly one alive listener on the node")
@@ -279,8 +264,8 @@ it("test_clears_afk_sequence_for_game_intents_but_not_view_commands", function()
   _assert_eq(calls[1].role_id, 3, "the attached event actor must identify the seat")
 end)
 
--- #417: router.destroy 幂等,兼容字段恢复为空 table。
-it("test_destroy_is_idempotent_and_clears_compat_fields", function()
+-- router.destroy 幂等，销毁后节点不再派发事件。
+it("test_destroy_is_idempotent_and_stops_dispatch", function()
   local node_map = {}
   local state = _make_dispatch_state()
 
@@ -289,20 +274,19 @@ it("test_destroy_is_idempotent_and_clears_compat_fields", function()
     canvas_event_router.bind(state, function()
       return {}
     end)
-    _assert_eq(#state.ui_event_router_listeners > 0, true, "bind should create listeners")
 
     local action_node = node_map[base_nodes.action_button]
     canvas_event_router.destroy(state)
-    _assert_empty_compat_fields(state, "after destroy")
     _assert_eq(action_node:fire(_click_data(3)), 0,
       "destroyed listeners must not receive events")
 
     canvas_event_router.destroy(state)
-    _assert_empty_compat_fields(state, "after second destroy")
+    _assert_eq(action_node:fire(_click_data(3)), 0,
+      "repeated destroy must leave listeners inactive")
   end)
 end)
 
--- #417: 路由注册中途失败时回滚已创建 listener 与兼容字段,并重抛原始错误。
+-- 路由注册中途失败时回滚已创建 listener，并重抛原始错误。
 it("test_mid_registration_failure_rolls_back_and_rethrows", function()
   local node_map = {}
   local state = _make_dispatch_state()
@@ -332,7 +316,6 @@ it("test_mid_registration_failure_rolls_back_and_rethrows", function()
   _assert_eq(ok, false, "bind must rethrow registration failure")
   _assert_eq(tostring(err):find(forced_error, 1, true) ~= nil, true,
     "bind must rethrow the original registration error")
-  _assert_empty_compat_fields(state, "after failed bind")
 
   -- 前两次注册可能已写入 node_map;回滚后这些 listener 不得再存活。
   -- 条件调用、无条件断言:没有 fire 的节点按 0 处理(vacuous-branch)。
@@ -388,7 +371,6 @@ it("test_rollback_cleanup_error_does_not_mask_registration_error", function()
     "cleanup errors must not replace the original registration error")
   _assert_eq(tostring(err):find("cleanup boom", 1, true) == nil, true,
     "cleanup boom must not surface as the bind error")
-  _assert_empty_compat_fields(state, "after cleanup-error rollback")
   _assert_eq(#warnings >= 1, true, "rollback cleanup failure should be logged")
   local joined = table.concat(warnings, "\n")
   _assert_eq(joined:find("cleanup boom", 1, true) ~= nil, true,

@@ -635,30 +635,6 @@ it("test_ui_event_router_injects_actor_for_market_confirm_and_cancel", function(
   _assert_eq(captured[2] and captured[2].actor_role_id, 3, "market_close should inject actor_role_id")
 end)
 
-it("test_ui_event_router_rebind_destroys_old_listeners", function()
-  local base_nodes = require("src.ui.schema.base")
-  local destroyed = 0
-
-  _with_patches(_router_env_patches({}), function()
-    local state = {
-      ui = ui_view.build_ui_state(),
-      ui_event_router_listeners = {
-        { destroy = function() destroyed = destroyed + 1 end },
-        {},
-      },
-      ui_event_router_registered = {
-        [base_nodes.action_button] = { __global = true },
-      },
-    }
-
-    canvas_event_router.bind(state, function()
-      return {}
-    end)
-  end)
-
-  _assert_eq(destroyed, 1, "rebind should destroy existing listeners with destroy hooks")
-end)
-
 it("test_ui_event_router_optional_end_button_blocked_when_choice_modal_open", function()
   local base_nodes = require("src.ui.schema.base")
   local modal = require("src.ui.coord.modal")

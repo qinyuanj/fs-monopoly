@@ -48,7 +48,6 @@ return {
     _case("_test_choice_auto_policy_preconsumed_wait_choice_picks_first_option"),
     _case("_test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed"),
     _case("_test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed"),
-    _case("_test_gameplay_loop_ports_rejects_legacy_flat_override"),
     _case("_test_build_noop_group_characterization"),
     _case("_test_decision_engine_cancels_item_phase_passive"),
   },

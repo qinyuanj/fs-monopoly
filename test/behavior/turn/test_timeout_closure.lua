@@ -158,26 +158,6 @@ it("test_asserts_when_the_modal_ref_cannot_be_resolved", function()
   end)
 end)
 
-it("test_bare_state_without_ui_sync_ports_runs_the_full_timeout_chain", function()
-  local dispatched
-  local game, state, ports = _choice_state({})
-  ports.ui_sync = nil
-  state._resolved_gameplay_loop_ports = nil
-  _with_patches({
-    { target = timing, key = "auto_decision_delay_seconds", value = 0 }, -- force the timeout path
-    { target = choice_auto_policy, key = "decide", value = function() return { type = "auto_skip", actor_role_id = 1 } end },
-    { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action, opts)
-        dispatched = { action = action, opts = opts }
-        return true
-      end },
-  }, function()
-    ChoiceTimeout.step_default(game, state, 999.0) -- huge dt clears the min-visible gate and the timeout
-  end)
-  check.is_not_nil(dispatched, "the auto-answer chain completes without ui_sync ports")
-  _assert_eq(dispatched.action.type, "auto_skip", "the decided action is forwarded verbatim")
-  check.is_not_nil(dispatched.opts, "the close-choice wiring still resolves modal ports in the bare lane")
-end)
-
 it("test_closes the popup when only close_popup is present (the or-guard)", function()
   local closed = false
   local ctx = _ctx_with_modal({ close_popup = function() closed = true end })
@@ -449,18 +429,6 @@ it("test_the choice min-visible reads the configured auto-decision delay", funct
   check.is_truthy(#dispatched >= 1, "crossing the configured delay must dispatch a min-visible action")
 end)
 
-it("test_tolerates_a_ui_sync_port_table_without_the_optional_choice_callbacks", function()
-  local game = support.new_game()
-  local state = fixtures.build_loop_state()
-  local ports = fixtures.build_test_ports()
-  ports.ui_sync = {} -- no on_pending_choice / is_choice_active / resolve_choice_ui_state
-  state._resolved_gameplay_loop_ports = ports
-  state.gameplay_loop_ports = ports
-  game.turn.pending_choice = { id = 1, kind = "test", route_key = "r" }
-  local ok = pcall(function() ChoiceTimeout.step_default(game, state, 0.01) end)
-  check.is_truthy(ok, "absent ui_sync callbacks fall back without crashing")
-end)
-
 it("test_treats_a_negative_scoped_timeout_as_unset", function()
   _with_patches({
     { target = timing, key = "scope_timeouts", value = { choice = 15.0, neg_kind = -5.0 } },
@@ -481,10 +449,6 @@ it("test_treats_a_nil_dt_as_a_zero_increment", function()
   end)
 end)
 
--- #603 no-op 回落钉:验收车道的超时驱动态是裸 runtime state(无 ui_sync 键),
--- 三键全部走默认回落——arm 帧 on_pending_choice 静默 no-op、is_choice_active
--- 回落运行时待决、resolve_choice_ui_state 回落 should_warn=false gate。缺端口
--- 不崩,超时自动代答链路照常走到 dispatch(「缺端口即崩/早退/干扰链路」即被击红)。
 it("test_treats_a_non_numeric_scoped_timeout_as_unset", function()
   _with_patches({
     { target = timing, key = "scope_timeouts", value = { choice = 15.0, bad_kind = "soon" } },
@@ -495,8 +459,7 @@ it("test_treats_a_non_numeric_scoped_timeout_as_unset", function()
 end)
 
 -- #603 modal 引用缓存钉:dispatch 时挂的 on_close_choice 必须绑定当局 modal
--- 端口。模块级缓存按端口引用比较重绑,两局端口引用交替不得串局(缓存分支
--- 不在验收车道运行,由本测试承担)。
+-- 端口。模块级缓存按端口引用比较重绑，两局端口引用交替不得串局。
 it("test_treats_a_zero_scoped_timeout_as_unset_and_falls_back_to_the_choice_scope", function()
   -- _positive_numeric's `> 0` boundary: a kind whose scope value is 0 must
   -- fall through to scope_timeouts.choice rather than returning 0.

@@ -41,13 +41,10 @@ function tip_runtime.configure(tip_queue_ref, adapter, dispatch_next_tip)
     runtime.presenter = nil
   end
   _try_set_presenter_field(adapter, "presenter")
-  _try_set_presenter_field(adapter, "show_tip")
-  _try_set_presenter_field(adapter, "tip_presenter")
   if adapter.clear_scheduler == true then
     runtime.scheduler = nil
   end
   _try_set_scheduler_field(adapter, "scheduler")
-  _try_set_scheduler_field(adapter, "schedule")
 
   if adapter.test_mode ~= nil then
     runtime.test_mode = adapter.test_mode == true
