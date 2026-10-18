@@ -45,9 +45,7 @@ function M.run()
     return { ok = false, error = "repo_hygiene error: " .. tostring(gitlinks_err) }
   end
   for _, path in ipairs(gitlinks) do
-    if path:match("^vendor/") == nil then
-      violations[#violations + 1] = "repo_hygiene: non-vendor gitlink " .. tostring(path)
-    end
+    violations[#violations + 1] = "repo_hygiene: gitlink " .. tostring(path)
   end
 
   if #violations > 0 then

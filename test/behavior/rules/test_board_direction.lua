@@ -328,10 +328,4 @@ describe("TestBoardDirectionResolverCharacterization", function()
     _assert_eq(dir, "portal", "unknown dirs should order by name (portal before warp)")
     _assert_eq(id, 1, "should return id for the name-first dir")
   end)
-
-
--- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
--- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
--- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
--- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
 end)
