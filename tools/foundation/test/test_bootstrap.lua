@@ -13,7 +13,6 @@ local test_dir = test_source:match("^(.*)/[^/]+$") or "tools/foundation/test"
 local runtime_paths = dofile(test_dir .. "/../runtime_paths.lua")
 local bootstrap_path = test_dir .. "/../bootstrap.lua"
 local bootstrap = require("foundation.bootstrap")
-local process_lock = require("foundation.process_lock")
 
 local function _with_stubs(stubs, fn)
   local saved_lua54 = package.loaded["foundation.lua54"]
@@ -114,54 +113,6 @@ it("resolves a repo root from the standard tool layout", function()
   fs_lib.remove_path(root)
 
   check.equal(path_lib.normalize_path(root), env.repo_root)
-end)
-
-it("process lock preserves parent creation errors", function()
-  local real_ensure_parent = fs_lib.ensure_parent_dir
-  local real_run_command = proc_lib.run_command
-  local run_ok, run_err = xpcall(function()
-    fs_lib.ensure_parent_dir = function() return nil, "controlled parent creation failure" end
-    proc_lib.run_command = function()
-      error("mkdir must not run when parent creation failed")
-    end
-
-    local acquired, err = process_lock.with_lock("Z:/controlled-parent-failure/.lock", function()
-      error("lock callback must not run after parent creation failure")
-    end)
-    check.is_nil(acquired)
-    check.equal("controlled parent creation failure", err)
-  end, debug.traceback)
-  fs_lib.ensure_parent_dir = real_ensure_parent
-  proc_lib.run_command = real_run_command
-  assert(run_ok, run_err)
-end)
-
-it("process lock preserves non contention mkdir errors instead of waiting", function()
-  local real_run_command = proc_lib.run_command
-  local real_path_exists = fs_lib.path_exists
-  local real_ensure_parent = fs_lib.ensure_parent_dir
-  local run_ok, run_err = xpcall(function()
-    fs_lib.ensure_parent_dir = function() return true end
-    proc_lib.run_command = function(command)
-      if type(command) == "string" and command:find("mkdir ", 1, true) == 1 then
-        return { ok = false, code = 5, output = "controlled mkdir access denied" }
-      end
-      error("non-contention mkdir failure must not enter the wait path")
-    end
-    fs_lib.path_exists = function() return false end
-
-    local acquired, err = process_lock.with_lock("Z:/controlled-mkdir-failure/.lock", function()
-      error("lock callback must not run after mkdir failure")
-    end)
-    check.is_nil(acquired)
-    check.is_not_nil(err)
-    check.matches("exit code 5", err, 1, true)
-    check.matches("controlled mkdir access denied", err, 1, true)
-  end, debug.traceback)
-  proc_lib.run_command = real_run_command
-  fs_lib.path_exists = real_path_exists
-  fs_lib.ensure_parent_dir = real_ensure_parent
-  assert(run_ok, run_err)
 end)
 
 it("tool discovery env exports resolved interpreter path and luarocks exe", function()

@@ -1,7 +1,7 @@
 -- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0066)。
 --
 -- dry 已在 #122/#123 恢复原生 Windows,当前声明表为空。
--- 保留不可用/显式跳过的通用演算,工具网络不可用诊断也复用渲染器。
+-- 保留不可用/显式跳过的通用演算,工具不可用诊断也复用渲染器。
 --
 -- 三态必须互相可辨(工单验收):不可用 / 显式跳过 / 真实失败。
 --   * 不可用:本平台不在能力的保证面内 → stderr 诊断 + 退出码 3,不安装、不 spawn、
@@ -58,8 +58,8 @@ function boundary.declared_ids()
   return ids
 end
 
--- 剥掉跳过开关,返回 (剩余 argv, 是否带了开关)。撤出边界的工具(#122/#123)
--- 仍兼容接受该开关,入口统一经此消费,不漏给上游。
+-- 剥掉跳过开关,返回 (剩余 argv, 是否带了开关)。evaluate 统一消费,
+-- 调用方继续执行时只向工具传递剩余 argv。
 function boundary.strip_skip_flag(args)
   local argv, skip = {}, false
   for _, value in ipairs(args or {}) do
@@ -73,7 +73,7 @@ function boundary.strip_skip_flag(args)
 end
 
 -- 不可用诊断的唯一渲染:首行 `[tag] status=unavailable<fields>`,其余每行带同一前缀。
--- 平台声明与工具自举(#112)共用,两处不再各写一份格式。
+-- 平台声明与工具预检共用,两处不再各写一份格式。
 local function _unavailable_text(tag, fields, lines)
   local prefix = "[" .. tostring(tag) .. "] "
   local out = { prefix .. "status=" .. boundary.UNAVAILABLE .. (fields or "") }
@@ -149,23 +149,6 @@ function boundary.evaluate(id, args, platform, declarations)
   verdict.args = argv
   verdict.entry = entry
   return verdict
-end
-
--- Retained actual engine regressions are explicit capability tests, not native gates.
-boundary.test_capabilities = {}
-
-function boundary.test_verdict(path)
-  local normalized = tostring(path):gsub("\\", "/")
-  for identity, capability in pairs(boundary.test_capabilities) do
-    if normalized == identity or normalized:sub(-#identity - 1) == "/" .. identity then
-      local verdict = boundary.evaluate(capability, {})
-      if verdict.status then
-        verdict.identity = identity
-        verdict.cases = identity:match("test_mutator_level%.lua$") and 12 or 2
-        return verdict
-      end
-    end
-  end
 end
 
 -- 写诊断。stream 由 evaluate 给定,调用点不再各自挑输出流。

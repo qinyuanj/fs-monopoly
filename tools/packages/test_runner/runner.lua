@@ -1,11 +1,5 @@
--- Windows capability rejection must precede dependency installation.
 local source = debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")
 local root = source:match("^(.*)/tools/packages/test_runner/runner.lua$") or "."
-local boundary = dofile(root .. "/tools/foundation/platform_boundary.lua")
-for _, value in ipairs(arg) do
-  local verdict = boundary.test_verdict and boundary.test_verdict(value)
-  if verdict then os.exit(boundary.emit(verdict)) end
-end
 -- #139: lanes merge stderr into stdout. Redirected Windows stdout can still
 -- flush a "line" buffer in chunks, so finish every write before later stderr.
 io.stdout:setvbuf("no")
@@ -83,15 +77,9 @@ local ok, err = pcall(function()
     local identity = file:gsub("\\", "/"):gsub("^%./", "")
     assert(not seen[identity], "duplicate file identity: " .. identity)
     seen[identity] = true
-    local verdict = boundary.test_verdict(file)
-    if verdict then
-      if opts.run ~= "tooling" then os.exit(boundary.emit(verdict)) end
-      io.write(string.format("# EXCLUDED: %s cases=%d reason=%s\n", file, verdict.cases, verdict.message:gsub("\n", " ")))
-    else
-      local handle = assert(io.open(file, "rb"), "missing file identity: " .. file)
-      handle:close()
-      files[#files + 1] = file
-    end
+    local handle = assert(io.open(file, "rb"), "missing file identity: " .. file)
+    handle:close()
+    files[#files + 1] = file
   end
   assert(#files > 0, "no available spec files selected")
   -- 受控 Lua 环境预检(#151):busted / luassert 只从机器 LuaRocks tree 装载,
