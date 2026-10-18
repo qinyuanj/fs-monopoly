@@ -31,7 +31,6 @@ local function _build_session(opts)
     choice_elapsed_seconds = 0,
     _pending_action = nil,
     _seconds_wait = {},
-    _phase_observers = {},
   }
 
   function s:set_pending_action(action)
@@ -54,25 +53,6 @@ local function _build_session(opts)
 
   function s:mark_phase(phase)
     _mark_phase_default(self.game, phase)
-    local list = self._phase_observers
-    for i = 1, #list do
-      list[i](phase)
-    end
-  end
-
-  -- 注册 phase 观察者（#513）；返回 unsubscribe 闭包，调用后解除注册。
-  -- 每次 mark_phase 触发时，所有已注册观察者按注册顺序被调用。
-  function s:on_phase(observer)
-    local list = self._phase_observers
-    list[#list + 1] = observer
-    return function()
-      for i, obs in ipairs(list) do
-        if obs == observer then
-          table.remove(list, i)
-          break
-        end
-      end
-    end
   end
 
   function s:create_script()

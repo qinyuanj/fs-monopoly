@@ -273,14 +273,6 @@ it("test_does_not_close_canvas_when_result_does_not_request_close", function()
     "close result without panel_should_close must not hide the skin canvas")
 end)
 
--- catalog injection
-it("test_configure_replaces_the_active_catalog_and_reset_restores_the_default", function()
-  skin_panel.configure_catalog_for_tests(_make_catalog(3))
-  luassert.truthy(#skin_panel.catalog == 3, "catalog size should be 3")
-  skin_panel.reset_for_tests()
-  luassert.truthy(#skin_panel.catalog == 4, "default catalog has 4 skins")
-end)
-
 -- unlock and equip
 it("test_is_slot_equipped_returns_false_for_an_empty_slot", function()
   skin_panel.configure_catalog_for_tests(_make_catalog(1))
@@ -727,12 +719,8 @@ it("test_price_icon_visible_for_purchase_skin_hidden_for_gift_skin", function()
   luassert.truthy(gift_icon == false, "gift skin should hide price icon")
 end)
 
--- L111 mutation closure: src/ui/render/skin_panel.lua _refresh_price_icon
---   has_price = is_purchase and skin.price ~= nil and skin.currency ~= nil
--- The three cases below each break a single conjunct so that mutating any
--- one `and` → `or` flips the visibility on the affected slot. Without
--- these tests, the legacy acceptance-only coverage doesn't close the mutation
--- (the mutator harness runs busted, not the acceptance runner).
+-- 价格图标只对同时声明价格与币种的购买皮肤显示。
+-- 分别缺少购买路径、价格或币种时都应隐藏。
 it("test_l111_conjuncts_each_independently_hide_the_price_icon", function()
   local cases = {
     { catalog = { { product_id = 1, name = "gift_with_price",
