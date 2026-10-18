@@ -585,6 +585,19 @@ end
 
 
 describe("spec lane public contracts", function()
+  it("spec lane accepts serial configuration", function()
+    local opts, err = require("packages.spec_lane.spec_lane_args").parse({ "--profile", "guards", "--serial" })
+    check.truthy(opts and opts.serial, err)
+  end)
+
+  it("tooling discovers retained native test roots", function()
+    local roots, err = require("packages.spec_lane.spec_lane_tools").discover_test_roots()
+    check.truthy(roots and #roots > 0, err)
+    local found = {}
+    for _, root in ipairs(roots) do found[root] = true end
+    check.is_true(found["tools/foundation/test"] and found["tools/packages/clean/test"])
+  end)
+
   it("parse_args_requires_profile", parse_args_requires_profile)
   it("parse_args_parses_profile", parse_args_parses_profile)
   it("parse_args_defaults_to_sharding_eligible", parse_args_defaults_to_sharding_eligible)

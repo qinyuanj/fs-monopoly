@@ -23,6 +23,10 @@ local function _is_whitelisted_line(relpath, line)
 end
 
 local function _scan_rule(rule)
+  if rule.forbidden_call_paths then
+    local result = require("test.guards.lib.dep_rules").run({ rules = { rule } })
+    return result.violation, result.error
+  end
   return guard_support.find_line_violation({
     roots = rule.roots,
     find_violation = function(_, relpath, line, line_number)
