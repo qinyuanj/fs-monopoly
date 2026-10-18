@@ -4,8 +4,8 @@
 -- 而且这个重复是故意的,别合并**(工单 #126)。
 --
 -- 原因:本文件是 bootstrap 的**第一块砖**,被 `dofile` 而非 `require` 加载 ——
---   tools/foundation/bootstrap.lua:25
---   test/bootstrap.lua:22
+--   tools/foundation/bootstrap.lua:29
+--   test/bootstrap.lua:20 (经 bootstrap.install 间接加载)
 -- 在它跑完之前,package.path 还没装好,`require("foundation.fs")` 这类 require **根本不可用**。
 -- 也就是说它不可能复用 foundation —— 它正是那个让 foundation 变得可 require 的东西。
 --
@@ -47,8 +47,6 @@ function package_path_helper.install_eggy_package_paths(opts)
   local canonical_patterns = {
     _join(repo_root, "tools/?.lua"),
     _join(repo_root, "tools/?/init.lua"),
-    _join(repo_root, "tools/bridge/?.lua"),
-    _join(repo_root, "tools/bridge/?/init.lua"),
     _join(repo_root, "test/?.lua"),
     _join(repo_root, "test/?/init.lua"),
     _join(repo_root, "test/fixtures/?.lua"),

@@ -4,11 +4,12 @@ local proc_lib = require("foundation.proc")
 local parallel_lanes = require("foundation.parallel_lanes")
 local sharding = require("foundation.spec_sharding")
 local runner_bin = require("packages.test_runner.lua54")
+local lane_tools = require("packages.spec_lane.spec_lane_tools")
 local availability = require("foundation.tool_availability")
 
 local M = {}
 
--- worker 自举不可用(#131):退 3,诊断由 CLI 写 stderr;不计 failed。
+-- worker 工具/平台不可用:退 3,诊断由 CLI 写 stderr;不计 failed。
 local function _unavailable_result(diagnostic)
   return { passed = 0, failed = 0, ok = false, exit_code = availability.EXIT_CODE, diagnostic = diagnostic }
 end
@@ -20,24 +21,7 @@ local function _discover_spec_files(root)
   return sharding.discover_spec_files(root)
 end
 
-local function _profile_roots(profile)
-  if profile == nil or profile == "" then
-    return nil, "missing profile"
-  end
-  local profiles = dofile("tools/packages/spec_lane/spec_profiles.lua")
-  local config = profiles[profile]
-  if config == nil then
-    return nil, "unknown profile: " .. tostring(profile)
-  end
-  local root = config.ROOT
-  if root == nil then
-    return nil, "profile has no ROOT: " .. tostring(profile)
-  end
-  if type(root) == "table" then
-    return root
-  end
-  return { root }
-end
+local _profile_roots = lane_tools.profile_roots
 
 local function _resolve_roots(opts)
   if opts.profile ~= nil then
@@ -49,24 +33,7 @@ local function _resolve_roots(opts)
   return { opts.root or _BEHAVIOR_ROOT }
 end
 
-local function _discover_spec_files_for_roots(roots)
-  local files = {}
-  local seen = {}
-  for _, root in ipairs(roots or {}) do
-    for _, path in ipairs(_discover_spec_files(root)) do
-      if not seen[path] then
-        local verdict = require("foundation.platform_boundary").test_verdict(path)
-        if verdict then
-          io.write("[tooling] excluded status=unavailable file=" .. verdict.identity
-            .. " cases=" .. verdict.cases .. " capability=acceptance-mutate reason=" .. verdict.entry.reason .. "\n")
-        else files[#files + 1] = path end
-        seen[path] = true
-      end
-    end
-  end
-  table.sort(files)
-  return files
-end
+local _discover_spec_files_for_roots = sharding.discover_files
 
 local function _file_cost(path)
   return sharding.file_cost(path)
@@ -295,7 +262,7 @@ function M.run(opts)
     slow_lines = {},
   }
 
-  -- 自举不可用的 worker(#131)不解析、不计 failed,诊断只留一份。
+  -- 不可用的 worker 不解析、不计 failed,诊断只留一份。
   local diagnostic
   for i, r in ipairs(results) do
     local worker_diagnostic = availability.child_diagnostic(r.exit_code, r.output)

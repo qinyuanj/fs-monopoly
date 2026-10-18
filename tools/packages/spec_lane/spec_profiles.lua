@@ -20,11 +20,6 @@ return {
     output = "TAP",
     pattern = "test_",
   },
-  ci = {
-    output = "junit",
-    ["Xoutput"] = "junit-output.xml",
-    pattern = "test_",
-  },
   behavior = {
     ROOT = {"test/behavior"},
     helper = "test/helper.lua",
