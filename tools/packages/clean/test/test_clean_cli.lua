@@ -4,7 +4,7 @@ if arg then rawset(arg, 0, "tools/packages/clean/test/test_clean_cli.lua") end
 require("test.bootstrap").install_package_paths()
 
 -- clean / distclean 的原生 Windows 窄反馈(#69 / ADR 0066)。清单与旧 Makefile 同口径:
--- 仓根的 build/ tmp/ acceptance generated/ 整树删,junit-output.xml 与 luacov 的
+-- 仓根的 build/ tmp/ 整树删,junit-output.xml 与 luacov 的
 -- stats/report 残留(含 luacov.<名>.stats.out 一类)删文件,未命中静默忽略;
 -- clean 保留 .toolcache/,distclean 连它一起清。
 --
@@ -36,7 +36,7 @@ local KEPT_FILES = {
   "src/luacov.stats.out",
 }
 
-local TARGET_DIRS = { "build", "tmp", "tools/packages/acceptance/generated" }
+local TARGET_DIRS = { "build", "tmp" }
 
 local function _with_fixture(fn)
   local root = env_lib.make_temp_path("clean_cli_spec", "")
@@ -70,8 +70,6 @@ local function _assert_cleaned(root)
   for _, name in ipairs(KEPT_FILES) do
     check.is_true(fs_lib.path_exists(path_lib.join_path(root, name)), "不该删除: " .. name)
   end
-  check.is_true(fs_lib.is_dir(path_lib.join_path(root, "tools/packages/acceptance")),
-    "只删 generated/,不删其父目录")
 end
 
 describe("clean cli", function()

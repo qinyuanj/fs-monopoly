@@ -9,8 +9,7 @@
 -- ("clean" / "distclean")分流(顶层 cli.lua 按 commands 表条目注入)。
 --
 -- 清单与生产者对应：build/ tmp/ 为本地
--- 构建产物;tools/packages/acceptance/generated/ 由 acceptance regenerate
--- 生成;junit-output.xml 由 spec_lane 生成;luacov.* 是 luacov 默认落点的残留
+-- 构建产物;junit-output.xml 由 spec_lane 生成;luacov.* 是 luacov 默认落点的残留
 -- (uml crap 的 crapper 经 luacov 采集覆盖率)。
 -- clean 保留 .toolcache/；distclean 连工具缓存一起清。
 --
@@ -25,7 +24,7 @@ local path_lib = require("foundation.path")
 local proc = require("foundation.proc")
 local shell_lib = require("foundation.shell")
 
-local _CLEAN_DIRS = { "build", "tmp", "tools/packages/acceptance/generated" }
+local _CLEAN_DIRS = { "build", "tmp" }
 local _CLEAN_FILES = {
   "junit-output.xml",
   "luacov.stats.out",
@@ -42,7 +41,7 @@ function M.usage()
   return table.concat({
     "用法: lua tools/cli.lua clean | distclean",
     "",
-    "clean     清生成物:build/ tmp/ acceptance generated/、",
+    "clean     清生成物:build/ tmp/、",
     "          junit-output.xml、luacov 残留。保留 .toolcache/。",
     "distclean clean 之上再清 .toolcache/(工具缓存)。",
     "",

@@ -27,8 +27,7 @@
 
 - 测试观察公共接缝和可见行为，不钉私有函数或内部调用次数；mock 只放在宿主、时间、随机数等系统边界。机械判据是 guards 车道 `test_lint_guard` 的 `call-count` 规则：计数变量在 stub/回调里自增（`n = n + 1`）、又被测试体的断言引用（`check.equal(N, n)`、`assert.is_true(n == 0)` 等）即判红。计数本身是公共契约（注入端口的出站次数、memo 重算次数、宿主边界的副作用等）时，在断言行或上一行写 `-- lint-allow: call-count <理由>` 豁免，理由必填。
 - 测试体的每条执行路径至少经过一次断言；机械判据是 guards 车道 `test_lint_guard` 的 `vacuous-branch` 规则：含断言的 `if` 存在不经断言的穿越路径（无 `else` 而断言只在 then 分支、`if/else` 一侧无断言）即判红，即便同测试体别处有无条件断言——被条件挡住的断言本身即是空转检查。确属合理的条件断言（按数据子集扫描、平台分支等），在判红行或上一行写 `-- lint-allow: vacuous-branch <理由>` 豁免，理由必填。
-- 改 `src/rules/**` 前先补或调整 behavior spec；产品外显行为放 `features/**/*.feature`，实现回归留在 `test/behavior/`。
-- Acceptance step/driver 调真实 `src` 公共面，不复制业务常量或平行实现规则。
+- 改 `src/rules/**` 前先补或调整 behavior spec；行为回归放 `test/behavior/`。
 - 期望值来自规格、字面例子或独立真源，不用与实现相同的算法重算期望值。
 
 ## 断言层与运行后端(#74 / #90,ADR 0069)

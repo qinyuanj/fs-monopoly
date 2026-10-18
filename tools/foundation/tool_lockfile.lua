@@ -5,7 +5,6 @@ local fs_lib = require("foundation.fs")
 local tool_lockfile = {}
 
 local _TOOL_DEFS = {
-  acceptance4lua = {},
   dry4lua = {},
 }
 

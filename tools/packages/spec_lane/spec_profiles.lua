@@ -45,7 +45,4 @@ return {
     output = "TAP",
     pattern = "test_",
   },
-  -- acceptance profile 已退役:acceptance4lua 新架构的生成物是独立 lua 脚本
-  -- (自带 harness、结尾 os.exit),挂进运行器会半路杀掉 runner。验收套件统一
-  -- 走 `lua tools/cli.lua acceptance`(regenerate + tools/packages/acceptance/run_all.lua)。
 }

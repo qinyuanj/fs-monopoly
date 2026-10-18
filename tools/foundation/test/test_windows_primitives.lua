@@ -119,7 +119,7 @@ it("tooling discovers retained native test roots", function()
   check.truthy(roots and #roots > 0, err)
   local found = {}
   for _, root in ipairs(roots) do found[root] = true end
-  check.is_true(found["tools/foundation/test"] and found["tools/packages/acceptance/test"])
+  check.is_true(found["tools/foundation/test"] and found["tools/packages/clean/test"])
 end)
 
 it("verify forwards native flags without literal quotes", function()

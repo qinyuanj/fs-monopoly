@@ -10,6 +10,8 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 ## ADR 0012 / 0017 — Acceptance、Behavior 与 driver/port 边界
 
+> 已被 #147 / 母规格 #146 取代：中文 Gherkin 验收管线（cceptance / cceptance-mutate、eatures/**、步骤与相关 guard）整体删除，不保留 .feature 作文档；玩家可观察行为改由 	est/behavior/** 承担。以下为历史记录。
+
 Acceptance 是玩家可观察行为真源，按玩法主题组织，经真实 driver、UI facade 或产品级边界替身观察。Behavior 是实现回归网，覆盖端口 fallback、装配、异常分支与内部协作，不机械翻译成 Gherkin。
 
 Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；step handler 和 driver 不复制业务常量、不访问私有字段、不平行实现规则。`features/steps/**` 只通过公开接缝、driver 和 per-feature context 组合行为，具体准入由 acceptance seam guard 执行。
@@ -61,6 +63,8 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 「当前是否由电脑执行」只有 `is_computer_controlled` 一处派生语义：补位电脑身份或任一托管模式任一成立即为 true。规则层继续经既有 `auto_play_port` 查询，端口谓词更名为 `is_computer_controlled`；允许依赖玩家层的回合与电脑决策直接使用控制模块。UI 不依赖玩家层：回合输出侧物化不可变玩家控制快照（至少 `is_delegated` 与 `is_computer_controlled`），选择门控与托管特效消费同一快照。旧的 `auto` / `auto_source` / `ai` 字段与 `is_auto_player` / `by_ai` 标识一次性删除，不保留镜像或兼容层，并由架构 guard 阻止复现。分享面板锁存、AFK 超时计数与恢复提示节流仍归各自交互/回合流程，不属于控制模块。本决定遵循 ADR 0018 的唯一真源先例，并保持 ADR 0054 的本机角色可见性与行动者授权边界。
 
 ## ADR 0062 — 验收步骤绑定行数预算调升为 5500
+
+> 已随 #147 失效：steps_budget_guard 与验收步骤绑定一并删除。以下为历史记录。
 
 `steps_budget_guard` 的 5000 行预算设于 2026-07-20（#192 DSL 重写基线 4,050 行 + ~23% 生长余量）。到 #594 时既有 29 个绑定域已占 4,993 行，余量实际耗尽：任何新验收域——哪怕收敛到极限——都会触门，而预算的本意是防复胖，不是冻结验收面。
 
@@ -119,7 +123,7 @@ APS 三件（`gherkin-parser` / `ir-dry-checker` / `gherkin-mutator`）的 PATH 
 
 CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异经 `./uml crap` / `./uml mutate` 走 crapper / mutator 的 Lua 路径，架构面经 `./uml ir` 走 policy 与 IR。`tools/tools.lock` 的 `crap4lua` / `mutate4lua` / `arch_view` 三钉、`tools/packages/{crap,mutate,coverage,arch_view}` 与对应 verify 车道随之退场。`docs/architecture.md` 与 `test/guards/` 仍是「人能读懂、机器能拦」的层边界执行真源，policy 是同一份边界在 uml-viewer 侧的表达式，不构成第二真源。
 
-理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。留下的是 uml-viewer 没有对应物的两件：`dry4lua`（结构重复检测）与 `acceptance4lua`（中文 Gherkin 验收管线），仍按 `tools/tools.lock` 跟随上游主干装载。
+理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。留下的是 uml-viewer 没有对应物的 `dry4lua`（结构重复检测），仍按 `tools/tools.lock` 跟随上游主干装载；`acceptance4lua` 连同中文 Gherkin 验收管线已由 #147 整体删除（母规格 #146）。
 
 落地（#93）：本仓的受支持入口是 `lua tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 cmd 批处理里调用同一个 `uml-command.ps1`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，会从全局 `%APPDATA%\luarocks` tree 解析出假绿。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。契约见 `tools/specs/uml_quality.prompt`。
 

@@ -344,7 +344,7 @@ function bootstrap.ensure_tool(name, env_or_opts)
     return { name = name, root = tree, commit = resolved.commit, version = _installed_version(tree, name) }
   end
 
-  -- #140:acceptance4lua / dry4lua 的 remove/make 与 busted、lint 写同一 tree,
+  -- #140:dry4lua 的 remove/make 与 busted、lint 写同一 tree,
   -- 必须使用同一把跨进程锁。获锁后重读 installed 标记,同工具等待者不重复构建;
   -- 源码刷新也放入锁内,避免同名工具并发 remove/clone 同一 src_dir。
   return _with_luarocks_write_lock(tree, function()

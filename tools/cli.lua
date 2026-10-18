@@ -19,8 +19,6 @@
 local commands = {
   { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },
-  { name = "acceptance",        pkg = "acceptance",         summary = "验收套件:重生成 generated specs 后全量跑(按需)" },
-  { name = "acceptance-mutate", pkg = "acceptance_mutate",  summary = "验收突变软车道(原生 Windows;真实 worker job)" },
   { name = "dry",               pkg = "dry",                summary = "结构重复检测(dry4lua;报 candidate_files=N)" },
   { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 入口(check/crap/mutate/ir/view;项目缓存钉死)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },

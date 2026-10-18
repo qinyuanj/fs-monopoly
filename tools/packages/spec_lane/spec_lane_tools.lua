@@ -2,11 +2,8 @@ local proc = require("foundation.proc")
 
 local spec_lane_tools = {}
 
-local _PROFILE_TOOLS = {
-  acceptance = { "acceptance4lua" },
-  -- dry 集成用例按需自行 ensure dry4lua。
-  tooling = { "acceptance4lua" },
-}
+-- 各 profile 不再预装任何工具(#147 退役 acceptance4lua);dry 集成用例按需自行 ensure dry4lua。
+local _PROFILE_TOOLS = {}
 
 -- #298 的发现式包结构：tooling 车道 33 行
 -- 手维护 ROOT 清单废除,塌缩为 tools/**/test/ + test/support/**/test/ 双口径

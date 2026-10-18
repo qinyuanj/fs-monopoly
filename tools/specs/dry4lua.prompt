@@ -15,7 +15,7 @@ Native Windows contract (#122, ADR 0066):
 - The runner reports `[dry] candidate_files=N` on stderr before scanning, preserving upstream text/JSON stdout. An effective result requires N > 0 and a completed scan. Missing paths and targets with zero Lua files exit 1; they never produce a successful no-duplicates report. Duplicate findings remain advisory and exit 0.
 - Tool bootstrap network/download failures use `foundation.tool_availability` (#112): exit 3, stderr `status=unavailable tool=dry4lua step=<resolve|fetch|build>`, no scan. Other bootstrap failures exit 1. The platform boundary module and its skip mechanism remain available to other capabilities; dry has no platform skip.
 - `tools/tools.lock` follows upstream HEAD. Ensure resolves the GitHub URL and reclones when the installed commit differs; `.toolcache/resolved-tools.tsv` caches HEAD for 24 hours. Invalidate the dry4lua row to force a refresh after an upstream fix. Stale source checkouts pointing at the old Gitea are replaced on reinstall.
-- Dry is a soft lane, never part of a hard gate: slim `verify`, `verify --tooling` and `lua tools/cli.lua acceptance` do not depend on its findings. Tooling tests exercise real scans, including a fixed duplicate pair under `tools/packages/dry/test/fixtures/duplicate_pair` and a non-empty `src/` candidate set.
+- Dry is a soft lane, never part of a hard gate: slim `verify` and `verify --tooling` do not depend on its findings. Tooling tests exercise real scans, including a fixed duplicate pair under `tools/packages/dry/test/fixtures/duplicate_pair` and a non-empty `src/` candidate set.
 
 Algorithm requirements:
 - Parse Lua source into an AST.
