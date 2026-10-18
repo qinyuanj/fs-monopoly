@@ -53,11 +53,8 @@ end
 -- descriptor 是**选择屏**的契约,不是所有屏的契约。market / skin_panel / item_atlas
 -- 是 canvas 面:有 route specs,没有 option_buttons / confirm / cancel,给不出 descriptor。
 -- 因此这里只收得出 descriptor 的屏 —— node_ops_spec 钉死的 4 个 key 不受影响。
---
--- 同理它们也不给 open / canvas:canvas_for 的唯一消费者
--- choice_helpers.resolve_canvas_for_screen 会 `canvas_for(key) or CANVAS_BASE`,
--- 给这三个 key 填上 canvas 会把它的返回值从 CANVAS_BASE 改成各自的画布 —— 那是行为
--- 变更,不是搬家。它们本来就不经这条开屏路径(open_choice_modal 对 market 直接 return false)。
+-- choice_helpers.resolve_canvas_for_screen 独立维护选择屏画布映射；
+-- open_choice_modal 对 market 直接返回 false，商店开屏由自身流程负责。
 function registry.build_choice_screens()
   _ensure_loaded()
   local out = {}
@@ -73,12 +70,6 @@ function registry.opener_for(key)
   _ensure_loaded()
   local s = _by_key[key]
   return s and s.open or nil
-end
-
-function registry.canvas_for(key)
-  _ensure_loaded()
-  local s = _by_key[key]
-  return s and s.canvas or nil
 end
 
 function registry.build_route_specs(state)

@@ -47,7 +47,6 @@ end)
 
 it("test_registers_itself_into_the_registry_under_its_key", function()
   luassert.is_not_nil(registry.build_choice_screens().target, "registry aggregates target descriptor")
-  luassert.truthy(registry.canvas_for("target") == target_screen.canvas, "registry maps target canvas")
   luassert.truthy(registry.opener_for("target") == target_screen.open, "registry maps target opener")
 end)
 
