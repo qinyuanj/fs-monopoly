@@ -12,8 +12,6 @@ for _, cfg in ipairs(items_cfg) do
   _register_item(item_ids, cfg)
 end
 
-item_ids._register_item = _register_item
-
 return item_ids
 
 --[[ mutate4lua-manifest

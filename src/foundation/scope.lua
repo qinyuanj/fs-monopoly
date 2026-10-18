@@ -28,15 +28,6 @@ function Scope:defer(cleanup)
   return cleanup
 end
 
-function Scope:fork()
-  assert(self._state == "active", "cannot fork from inactive scope")
-  local child = Scope.new()
-  self:defer(function()
-    child:destroy()
-  end)
-  return child
-end
-
 -- 倒序清空 cleanups 数组,聚合首个错误(CRAP 门禁 #452:循环与错误聚合
 -- 从 destroy 提出来,各自复杂度落在小函数上)。后续错误只记日志。
 local function _drain_cleanups(cleanups)

@@ -1,7 +1,4 @@
--- modal 超时步进核心(自 timeout.lua 拆分,行为保持)。
--- #602 外壳退役:modal 默认接线(step_default/default_policy)从 timeout.lua
--- 迁回本源模块——弹层超时的事实来源只有这里与 ui_gate,选择超时外壳不再
--- 代为转发。
+-- 弹层超时步进与默认装配；超时策略由本模块与 ui_gate 共同提供。
 local constants = require("src.config.content.constants")
 local number_utils = require("src.foundation.number")
 -- #329:端口组解析 accessor 归 turn.output(中立归属),waits 不再反向
@@ -104,7 +101,7 @@ function modal_timeout.step(state, dt, opts)
   end
 end
 
--- 默认 modal 策略(自 timeout.lua default_policy.modal 迁移,行为保持):
+-- 默认弹层策略：
 -- 超时时长走 ui_gate(宿主弹层可覆写),超时动作走 modal 端口收屏。
 local _default_policy = {
   get_timeout_seconds = function(_, state)
@@ -118,14 +115,6 @@ local _default_policy = {
     end
   end,
 }
-
--- 每次调用返回新表,外部覆写不污染默认策略(与 timeout.lua 同款克隆纪律)。
-function modal_timeout.default_policy()
-  return {
-    get_timeout_seconds = _default_policy.get_timeout_seconds,
-    on_timeout = _default_policy.on_timeout,
-  }
-end
 
 local _default_opts = {
   _game = nil,
@@ -148,7 +137,7 @@ _default_opts.get_timeout_seconds = function(state_ctx)
   return _default_policy.get_timeout_seconds(_default_opts._game, state_ctx)
 end
 
--- 默认弹层超时步进(自 timeout.lua step_default_modal 迁移,行为保持):
+-- 默认弹层超时步进：
 -- game 只经 opts 透传给 get_timeout_seconds,步进结束即清,不留跨调用状态。
 function modal_timeout.step_default(game, state, dt)
   _default_opts._game = game

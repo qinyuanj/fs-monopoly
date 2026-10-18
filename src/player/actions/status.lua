@@ -103,6 +103,7 @@ local function _consume_status_flag(self, player, key)
   return true
 end
 
+-- 行为测试公共查询：test_land_actions 观察免租结算是否消费或保留一次性效果。
 function status_ops.has_pending_free_rent(_self, player)
   return _peek_status_flag(player, "pending_free_rent")
 end
@@ -112,6 +113,7 @@ function status_ops.consume_pending_free_rent(self, player)
   return _consume_status_flag(self, player, "pending_free_rent")
 end
 
+-- 行为测试公共查询：test_land_tax_detention 观察税务结算后的免税效果状态。
 function status_ops.has_pending_tax_free(_self, player)
   return _peek_status_flag(player, "pending_tax_free")
 end

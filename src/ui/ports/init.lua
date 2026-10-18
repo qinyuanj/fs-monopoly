@@ -9,75 +9,6 @@ local view_command_ports = require("src.ui.ports.view_command")
 local actor_context_ports = require("src.ui.ports.actor_context")
 
 local presentation_ports = {}
-local boundary_contract = {
-  state_seam_modules = {
-    runtime_state = "src.ui.state.runtime",
-    visual_hold = "src.ui.visual_hold",
-    host_runtime = "src.ui.seams.host_runtime",
-  },
-  import_allowlists = {
-    runtime_state = {
-      "src.ui.state.runtime",
-    },
-    visual_hold = {
-      "src.ui.visual_hold",
-    },
-    host_runtime = {
-      "src.ui.seams.host_runtime",
-      "src.ui.ports.state",
-      "src.app.ui_bootstrap",
-      "src.app.event_bridge",
-    },
-  },
-  state_field_allowlists = {
-    presentation_runtime = {
-      "src.app.gameplay_start",
-      "src.turn.loop",
-      "src.ui.render.anim",
-       "src.ui.render.anim.overlay_runtime",
-      "src.ui.render.board.building_effects",
-      "src.ui.render.board.visual_sync",
-       "src.ui.render.board_feedback.service",
-       "src.ui.render.market",
-       "src.ui.render.market.controls",
-      "src.ui.render.status3d",
-       "src.ui.render.anim.unit_overlay",
-      "src.ui.render.widgets.presenter",
-      "src.ui.render.widgets.turn_effects",
-      "src.ui.ports.anim",
-    },
-    gameplay_loop_ports = {
-      "src.app.gameplay_start",
-      "src.turn.loop",
-      "src.turn.actions.action_dispatcher",
-      "src.turn.waits.choice_timeout",
-      "src.turn.waits.modal_timeout",
-      "src.turn.waits.ui_gate",
-      "src.ui.input.item_phase_ask",
-      "src.ui.input.pre_confirm",
-      "src.ui.input.turn_action",
-      "src.ui.input.view_command",
-    },
-    resolved_gameplay_loop_ports = {
-      "src.turn.loop",
-      "src.turn.actions.action_dispatcher",
-      "src.turn.waits.choice_timeout",
-      "src.turn.waits.modal_timeout",
-    },
-    game = {
-      "src.app.event_bridge",
-      "src.turn.loop",
-      "src.turn.loop.runtime",
-      "src.turn.actions.validator",
-      "src.ui.coord.event_handlers",
-      "src.ui.coord.modal",
-      "src.ui.render.anim.overlay_compute",
-      "src.ui.render.anim.tip_text",
-      "src.ui.render.board_feedback.service",
-      "src.ui.render.board.visual_sync",
-    },
-  },
-}
 
 function presentation_ports.build()
   local debug = event_log_ports.build()
@@ -91,10 +22,6 @@ function presentation_ports.build()
     view_command = view_command_ports.build({ sync_event_log = debug.sync_event_log }),
     actor_context = actor_context_ports.build(),
   }
-end
-
-function presentation_ports.describe_boundary_contract()
-  return boundary_contract
 end
 
 return presentation_ports

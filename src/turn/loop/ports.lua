@@ -187,21 +187,6 @@ function gameplay_loop_ports.resolve(override_ports)
   return _build_resolved_ports(nil)
 end
 
-function gameplay_loop_ports.describe_contract()
-  return {
-    group_names = ports_merge.copy_array(group_names),
-    port_groups = ports_merge.copy_port_groups(port_groups),
-  }
-end
-
-gameplay_loop_ports._build_noop_group = ports_merge.build_noop_group
-
--- 内部守卫的直驱口:base 漂移告警「missing base port」在公开 resolve 路径
--- 不可达(base builders 覆盖全部必填键),经 _M_test 钉住其契约。
-gameplay_loop_ports._M_test = {
-  _merge_required_ports = ports_merge._merge_required_ports,
-}
-
 return gameplay_loop_ports
 
 --[[ mutate4lua-manifest

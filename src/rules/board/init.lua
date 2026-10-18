@@ -86,18 +86,6 @@ function board:get_mine(index)
   return self.overlays.mines[index]
 end
 
-function board:arm_mine(index)
-  local mine = self.overlays.mines[index]
-  if type(mine) ~= "table" then
-    return false
-  end
-  if mine.armed == true then
-    return false
-  end
-  mine.armed = true
-  return true
-end
-
 function board:clear_mine(index)
   self.overlays.mines[index] = nil
 end
@@ -121,6 +109,7 @@ local function _advance_one_step(self, current, branch_parity)
 end
 
 ---按步数推进棋盘位置（考虑分支和绕圈）
+-- 行为测试公共接缝：test_item 的分支落点与跨起点场景通过此入口验证导航结果。
 function board:advance(index, steps, branch_parity)
   local length = self:length()
   if length == 0 then

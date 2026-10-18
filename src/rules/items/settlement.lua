@@ -211,6 +211,8 @@ local function _seed_escrow_meta(choice_spec, player, item_id)
   meta.player_id = meta.player_id or player.id
 end
 
+-- 行为测试公共接缝：test_item_use_flow / test_force_skip_refund_pin 经此入口建立托管，
+-- 再由真实选择解析或强制跳过验证仅消费一次、退还幂等与背包容量约束。
 function settlement.escrow(player, item_id, choice_spec)
   assert(type(choice_spec) == "table", "escrow needs a choice spec")
   assert(inventory.consume(player, item_id) == true, "escrow consume failed: " .. tostring(item_id))

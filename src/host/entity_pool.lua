@@ -108,6 +108,7 @@ function entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
   _fill_prewarm(unit_key, b, count, sample_pos or runtime_constants.entity_pool_park_pos, rotation, scale)
 end
 
+-- 行为测试公共接缝：test_entity_pool 通过快照观测复用、容量上限和 reset 的资源结果。
 function entity_pool.stats()
   local snapshot = {}
   for unit_key, b in pairs(_buckets) do

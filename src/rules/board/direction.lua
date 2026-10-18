@@ -282,8 +282,6 @@ function direction.resolve_backward_next_source(map, current_id, neigh, facing)
 end
 
 direction._M_test = {
-  _sorted_dirs_comparator = _sorted_dirs_comparator,
-  _pick_any_dir = _pick_any_dir,
   _resolve_outer_next = _resolve_outer_next,
   _resolve_fresh_forward_next = _resolve_fresh_forward_next,
   _resolve_facing_next = _resolve_facing_next,

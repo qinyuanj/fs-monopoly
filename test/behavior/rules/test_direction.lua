@@ -1,7 +1,6 @@
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
 local direction = require("src.rules.board.direction")
-
 local _M = direction._M_test
 
 local function _assert_eq(a, b, msg)
@@ -29,46 +28,6 @@ do
     before_each(function()
       _config_reset.reset_all()
     end)
-    it("test_sorted_dirs_comparator_known_priority", function()
-      _assert_eq(_M._sorted_dirs_comparator("up", "down"), true, "up < down by priority")
-      _assert_eq(_M._sorted_dirs_comparator("down", "up"), false, "down not < up")
-    end)
-
-    it("test_sorted_dirs_comparator_equal_priority_falls_back_to_string", function()
-      _assert_eq(_M._sorted_dirs_comparator("custom_a", "custom_b"), true,
-        "same (unknown) priority falls back to string compare")
-      _assert_eq(_M._sorted_dirs_comparator("custom_b", "custom_a"), false,
-        "string compare: b > a")
-    end)
-
-    it("test_sorted_dirs_comparator_unknown_vs_known", function()
-      _assert_eq(_M._sorted_dirs_comparator("up", "custom"), true,
-        "known priority 1 < unknown 100")
-      _assert_eq(_M._sorted_dirs_comparator("custom", "up"), false,
-        "unknown 100 not < known 1")
-    end)
-
-    it("test_pick_any_dir_returns_first_non_avoided", function()
-      local neigh = { up = 10, right = 20 }
-      local dir, id = _M._pick_any_dir(neigh, "up")
-      _assert_eq(dir, "right", "should pick right when up is avoided")
-      _assert_eq(id, 20, "should return tile id")
-    end)
-
-    it("test_pick_any_dir_nil_avoid_returns_first", function()
-      local neigh = { up = 5 }
-      local dir, id = _M._pick_any_dir(neigh, nil)
-      _assert_eq(dir, "up", "nil avoid should allow picking up")
-      _assert_eq(id, 5, "should return correct id")
-    end)
-
-    it("test_pick_any_dir_all_avoided_returns_nil", function()
-      local neigh = { up = 5 }
-      local dir, id = _M._pick_any_dir(neigh, "up")
-      _assert_eq(dir, nil, "all dirs avoided should return nil")
-      _assert_eq(id, nil, "all dirs avoided should return nil id")
-    end)
-
     it("test_resolve_forward_next_id_outer_next_path", function()
       local map = _make_simple_map({ [1] = { up = 2 } }, { [1] = 3 })
       local next_id, entered = direction.resolve_forward_next_id(map, 1, { up = 2 }, "up", nil, true, nil)

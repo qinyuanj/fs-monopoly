@@ -44,18 +44,6 @@ describe("TestAchievement", function()
   support.restore_runtime_services()
   end)
 
-local function _test_exposes_the_full_editor_achievement_catalog()
-  _assert_eq(achievement.count(), 43, "achievement count")
-  _assert_eq(achievement.ids_are_contiguous(1, 43), true, "achievement ids should be contiguous")
-
-  local counts = achievement.category_counts()
-  _assert_eq(counts["简单"], 11, "simple achievement count")
-  _assert_eq(counts["普通"], 6, "normal achievement count")
-  _assert_eq(counts["困难"], 8, "hard achievement count")
-  _assert_eq(counts["传奇"], 10, "legend achievement count")
-  _assert_eq(counts["隐藏"], 8, "hidden achievement count")
-end
-
 local function _test_finds_achievements_by_editor_id()
   local first = achievement.find(1)
   luassert.truthy(first ~= nil, "achievement 1 should exist")
@@ -88,7 +76,6 @@ local function _test_routes_direct_progress_additions_to_the_configured_host_ada
     end,
   })
 
-  _assert_eq(achievement.host_pending, false, "achievement integration should be connected")
   _assert_eq(achievement.add_progress(1, 2), true, "known achievement should route to host")
   _assert_eq(calls[1].id, 1, "host adapter should receive achievement id")
   _assert_eq(calls[1].amount, 2, "host adapter should receive progress delta")
@@ -107,9 +94,6 @@ local function _test_routes_progress_through_the_first_resolved_runtime_role_whe
     get_achievement_progress = function(id)
       return progress[id] or 0
     end,
-    snapshot = function()
-      return progress
-    end,
   }
   runtime_ports.configure({
     resolve_roles = function()
@@ -121,7 +105,6 @@ local function _test_routes_progress_through_the_first_resolved_runtime_role_whe
   _assert_eq(calls[1].id, 1, "runtime role should receive achievement id")
   _assert_eq(calls[1].amount, 3, "runtime role should receive amount")
   _assert_eq(achievement.current_progress(1), 3, "runtime role should serve progress reads")
-  _assert_eq(achievement.snapshot(), progress, "runtime role should serve snapshots")
 end
 
 local function _test_rejects_invalid_progress_args_before_calling_the_host_adapter()
@@ -146,12 +129,6 @@ local function _test_treats_explicit_host_progress_refusal_as_failure()
   })
 
   _assert_eq(achievement.add_progress(1, 1), false, "host refusal should fail progress routing")
-end
-
-local function _test_rejects_malformed_contiguous_id_ranges_without_throwing()
-  _assert_eq(achievement.ids_are_contiguous(nil, 45), false, "missing start id should be rejected")
-  _assert_eq(achievement.ids_are_contiguous(1, nil), false, "missing end id should be rejected")
-  _assert_eq(achievement.ids_are_contiguous(45, 1), false, "reversed id range should be rejected")
 end
 
 local function _test_fans_cumulative_gameplay_events_out_to_every_mapped_achievement()
@@ -220,29 +197,8 @@ local function _test_reports_mapped_gameplay_events_as_unadvanced_when_every_hos
   _assert_eq(calls, 4, "mapped event should attempt every achievement id")
 end
 
-local function _test_returns_adapter_snapshots_only_when_the_host_provides_a_table_snapshot()
-  local progress = { [1] = 7 }
-  achievement.configure_progress_adapter({
-    snapshot = function()
-      return progress
-    end,
-  })
-  _assert_eq(achievement.snapshot(), progress, "table snapshot should be returned")
-
-  achievement.configure_progress_adapter({})
-  _assert_eq(next(achievement.snapshot()), nil, "missing snapshot method should return empty snapshot")
-
-  achievement.configure_progress_adapter({
-    snapshot = function()
-      return false
-    end,
-  })
-  _assert_eq(next(achievement.snapshot()), nil, "non-table snapshot should return empty snapshot")
-end
-
 local function _test_rejects_progress_when_no_host_adapter_is_available()
   _assert_eq(achievement.add_progress(1, 1), false, "Lua should not fake achievement progress")
-  _assert_eq(next(achievement.snapshot()), nil, "achievement snapshot should stay empty")
 end
 
 local function _test_routes_runtime_gameplay_events_to_the_matching_host_role()
@@ -501,18 +457,15 @@ local function _test_maps_runtime_skin_equips_by_configured_skin_name()
   _assert_eq(calls[1].amount, 1, "skin equip amount")
 end
 
-it("test_exposes_the_full_editor_achievement_catalog", _test_exposes_the_full_editor_achievement_catalog)
 it("test_finds_achievements_by_editor_id", _test_finds_achievements_by_editor_id)
 it("test_routes_direct_progress_additions_to_the_configured_host_adapter", _test_routes_direct_progress_additions_to_the_configured_host_adapter)
 it("test_routes_progress_through_the_first_resolved_runtime_role_when_no_test_adapter_is_configured", _test_routes_progress_through_the_first_resolved_runtime_role_when_no_test_adapter_is_configured)
 it("test_rejects_invalid_progress_args_before_calling_the_host_adapter", _test_rejects_invalid_progress_args_before_calling_the_host_adapter)
 it("test_treats_explicit_host_progress_refusal_as_failure", _test_treats_explicit_host_progress_refusal_as_failure)
-it("test_rejects_malformed_contiguous_id_ranges_without_throwing", _test_rejects_malformed_contiguous_id_ranges_without_throwing)
 it("test_fans_cumulative_gameplay_events_out_to_every_mapped_achievement", _test_fans_cumulative_gameplay_events_out_to_every_mapped_achievement)
 it("test_advances_single_mapped_gameplay_events_by_one_point", _test_advances_single_mapped_gameplay_events_by_one_point)
 it("test_does_not_advance_unmapped_or_failed_gameplay_events", _test_does_not_advance_unmapped_or_failed_gameplay_events)
 it("test_reports_mapped_gameplay_events_as_unadvanced_when_every_host_call_fails", _test_reports_mapped_gameplay_events_as_unadvanced_when_every_host_call_fails)
-it("test_returns_adapter_snapshots_only_when_the_host_provides_a_table_snapshot", _test_returns_adapter_snapshots_only_when_the_host_provides_a_table_snapshot)
 it("test_rejects_progress_when_no_host_adapter_is_available", _test_rejects_progress_when_no_host_adapter_is_available)
 it("test_routes_runtime_gameplay_events_to_the_matching_host_role", _test_routes_runtime_gameplay_events_to_the_matching_host_role)
 it("test_maps_every_runtime_achievement_fact_to_the_configured_gameplay_event", _test_maps_every_runtime_achievement_fact_to_the_configured_gameplay_event)

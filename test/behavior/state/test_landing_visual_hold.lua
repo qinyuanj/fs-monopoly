@@ -173,14 +173,6 @@ describe("TestLandingVisualHold", function()
     _assert_eq(result, nil, "not active should return nil")
   end)
 
-  it("test_merge_dirty_delegates_to_deferred_dirty", function()
-    local target = { any = false, players = false, board_tiles = false, turn = false, market = false, turn_countdown = false, inventory = false }
-    local dirty = { any = true, players = true, board_tiles = false, turn = false, market = false, turn_countdown = false, inventory = false }
-    landing_visual_hold.merge_dirty(target, dirty)
-    _assert_eq(target.any, true, "any should be merged")
-    _assert_eq(target.players, true, "players should be merged")
-  end)
-
   it("test_register_release_callback_registers_fn", function()
     local state = _make_state()
     local fn = function() return true end

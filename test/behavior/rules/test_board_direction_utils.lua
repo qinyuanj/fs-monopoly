@@ -1,68 +1,38 @@
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
-local board = require("src.rules.board.init")
-local _config_reset = require("test.support.config_reset")
+local direction = require("src.rules.board.direction")
 
-local _pick_any_dir = board._M_test._pick_any_dir
-
-local function _assert_eq(a, b, msg)
-  luassert.is.same(b, a, msg)
+local function next_id(neighbors, facing)
+  return direction.resolve_forward_next_id({ outer_next = {}, entry_points = {} },
+    1, neighbors, facing, nil, false, nil)
 end
 
-
-
-describe("TestBoardDirectionUtils", function()
-  before_each(function()
-    _config_reset.reset_all()
-  end)
-  it("test_pick_any_dir_all_four_dirs_no_avoid", function()
-    local neigh = { up = 1, right = 2, down = 3, left = 4 }
-    local dir, id = _pick_any_dir(neigh, nil)
-    _assert_eq(dir, "up", "all dirs: picks up (highest priority)")
-    _assert_eq(id, 1, "all dirs: returns correct neighbor id")
+describe("TestBoardForwardFallback", function()
+  it("chooses_known_directions_in_navigation_priority_order", function()
+    luassert.equal(10, next_id({ up = 10, right = 20, down = 30, left = 40 }))
+    luassert.equal(20, next_id({ right = 20, down = 30, left = 40 }))
+    luassert.equal(30, next_id({ down = 30, left = 40 }))
+    luassert.equal(40, next_id({ left = 40 }))
   end)
 
-  it("test_pick_any_dir_avoid_up_picks_right", function()
-    local neigh = { up = 1, right = 2, down = 3, left = 4 }
-    local dir, id = _pick_any_dir(neigh, "up")
-    _assert_eq(dir, "right", "avoid up: should pick right")
-    _assert_eq(id, 2, "avoid up: correct id for right")
+  it("prefers_a_non_returning_neighbor_when_facing_is_unavailable", function()
+    luassert.equal(20, next_id({ up = 10, right = 20 }, "down"))
   end)
 
-  it("test_pick_any_dir_avoid_right_picks_up", function()
-    local neigh = { up = 10, right = 20 }
-    local dir, id = _pick_any_dir(neigh, "right")
-    _assert_eq(dir, "up", "avoid right: should pick up")
-    _assert_eq(id, 10, "avoid right: correct id")
+  it("returns_back_when_it_is_the_only_neighbor", function()
+    luassert.equal(10, next_id({ up = 10 }, "down"))
   end)
 
-  it("test_pick_any_dir_only_left_no_avoid", function()
-    local neigh = { left = 99 }
-    local dir, id = _pick_any_dir(neigh, nil)
-    _assert_eq(dir, "left", "only left: picks left")
-    _assert_eq(id, 99, "only left: correct id")
+  it("returns_no_destination_for_an_empty_neighborhood", function()
+    luassert.is_nil(next_id({}))
   end)
 
-  it("test_pick_any_dir_only_left_avoid_left_returns_nil", function()
-    local neigh = { left = 99 }
-    local dir, id = _pick_any_dir(neigh, "left")
-    _assert_eq(dir, nil, "avoid only dir: returns nil dir")
-    _assert_eq(id, nil, "avoid only dir: returns nil id")
+  it("prefers_known_directions_to_unknown_names", function()
+    luassert.equal(10, next_id({ down = 10, aardvark = 20 }))
+    luassert.equal(30, next_id({ left = 30, aardvark = 40 }))
   end)
 
-  it("test_pick_any_dir_down_vs_left_picks_down", function()
-    local neigh = { down = 30, left = 40 }
-    local dir, id = _pick_any_dir(neigh, nil)
-    _assert_eq(dir, "down", "down vs left: picks down (priority 3 < 4)")
-    _assert_eq(id, 30, "down vs left: correct id")
+  it("orders_unknown_directions_by_name", function()
+    luassert.equal(10, next_id({ warp = 20, portal = 10 }))
   end)
-
-  it("test_pick_any_dir_empty_neigh_returns_nil", function()
-    local neigh = {}
-    local dir, id = _pick_any_dir(neigh, nil)
-    _assert_eq(dir, nil, "empty neigh: returns nil dir")
-    _assert_eq(id, nil, "empty neigh: returns nil id")
-  end)
-
-
 end)

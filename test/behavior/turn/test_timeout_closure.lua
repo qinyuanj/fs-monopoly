@@ -1,5 +1,4 @@
--- Mutation-closure pins for src/turn/waits/timeout.lua 与 modal_timeout.lua
--- (#602 外壳退役后,modal 步进/默认接线的钉点直读 modal_timeout)。
+-- 选择与弹层超时的配置回退、边界和默认收屏行为。
 -- tick_timeout_spec covers the resolve_choice happy paths and the modal-timer
 -- state machine, leaving the config-fallback / type-guard / boundary survivors
 -- alive. This spec drives the exported surface directly, patching timing and
@@ -26,8 +25,17 @@ local function _resolve_choice(game, state, choice)
   return ChoiceTimeout.resolve_choice_timeout_seconds(game, state, choice)
 end
 
-local function _ctx_with_modal(modal)
-  return { gameplay_loop_ports = { modal = modal } }
+local function _step_modal_timeout(modal)
+  local game = support.new_game()
+  local state = fixtures.build_loop_state()
+  local ports = fixtures.build_test_ports()
+  ports.modal = modal
+  state.gameplay_loop_ports = ports
+  state._resolved_gameplay_loop_ports = ports
+  state.ui.popup_active = true
+  state.ui.popup_seq = 7
+  state.ui.popup_payload = { auto_close_seconds = 5.0 }
+  modal_timeout.step_default(game, state, 999.0)
 end
 
 -- Output-port stub: records the synced timer payloads.
@@ -160,14 +168,11 @@ end)
 
 it("test_closes the popup when only close_popup is present (the or-guard)", function()
   local closed = false
-  local ctx = _ctx_with_modal({ close_popup = function() closed = true end })
-  modal_timeout.default_policy().on_timeout(ctx)
+  _step_modal_timeout({ close_popup = function() closed = true end })
   _assert_eq(closed, true,
     "close_popup alone resolves the modal ports (close_choice_modal OR close_popup)")
 end)
 
--- #602:外壳的 default_policy 导出已删(零生产调用),默认装配改经公开
--- step_default 驱动;modal 策略的克隆纪律由 modal_timeout.default_policy 承接。
 it("test_delegates the ui-sync choice callbacks when the ports expose them", function()
   local calls = { pending = 0, active = 0, resolve = 0 }
   local game, state = _choice_state({
@@ -221,22 +226,21 @@ end)
 
 it("test_does_nothing_when_neither_modal_close_function_is_present", function()
   local ok = pcall(function()
-    modal_timeout.default_policy().on_timeout(_ctx_with_modal({}))
+    _step_modal_timeout({})
   end)
   check.is_truthy(ok, "modal ports without either close function resolve to nil and no-op")
 end)
 
 it("test_does_nothing_when_the_modal_ports_are_not_a_table", function()
   local ok = pcall(function()
-    modal_timeout.default_policy().on_timeout(_ctx_with_modal("not-a-table"))
+    _step_modal_timeout("not-a-table")
   end)
   check.is_truthy(ok, "a non-table modal port resolves to nil and is a no-op")
 end)
 
 it("test_does_nothing_when_the_modal_ports_expose_only_close_choice_modal", function()
-  local ctx = _ctx_with_modal({ close_choice_modal = function() end })
-  -- ports resolve, but on_timeout only acts when close_popup exists.
-  local ok = pcall(function() modal_timeout.default_policy().on_timeout(ctx) end)
+  -- 超时收屏只消费 close_popup，单独提供 close_choice_modal 不应报错。
+  local ok = pcall(function() _step_modal_timeout({ close_choice_modal = function() end }) end)
   check.is_truthy(ok, "on_timeout must not crash when close_popup is absent")
 end)
 
@@ -304,12 +308,6 @@ it("test_fires_the_modal_popup_auto_close_once_the_gate_timeout_elapses", functi
   modal_timeout.step_default(game, state, 999.0)
 
   _assert_eq(closed, true, "an active popup past its auto-close window closes the popup")
-end)
-
-it("test_modal default_policy returns a fresh table per call", function()
-  local m1 = modal_timeout.default_policy()
-  local m2 = modal_timeout.default_policy()
-  check.is_truthy(m1 ~= m2, "the modal default policy must be a fresh table per call")
 end)
 
 it("test_modal_close_cache_rebinds_when_modal_ports_switch_between_games", function()

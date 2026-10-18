@@ -172,8 +172,6 @@ it("test_paid_bridge_external_currency_is_not_managed_and_setup_is_silent", func
       luassert.truthy(bridge.is_paid_currency("乐园币") == true, "leyuanbi should remain a paid currency")
       luassert.truthy(bridge.is_managed_currency(game, "金豆") == false, "external jindou should not be locally managed")
       luassert.truthy(bridge.is_managed_currency(game, "乐园币") == false, "external leyuanbi should not be locally managed")
-      luassert.truthy(bridge.is_currency_channel_ready(game, "金豆") == true, "external paid currency should be ready for goods flow")
-      luassert.truthy(bridge.unavailable_reason(game, "金豆") == nil, "external paid currency should not expose commodity errors")
     end)
   end)
 

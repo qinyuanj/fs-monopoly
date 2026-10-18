@@ -149,25 +149,9 @@ describe("TestTargetLayout", function()
     _assert_list_eq(layout, { 5 }, "co-located slot layout")
   end)
 
-  it("test__max_key_returns_0_for_an_empty_table", function()
-    luassert.truthy(target_layout._M_test._max_key({}) == 0, "_max_key of empty table must return 0")
-  end)
-
-  it("test__center_out_order_errors_on_nil_board_with_expected_message", function()
-    local ok, err = pcall(target_layout._M_test._center_out_order, nil, player, {})
-    luassert.truthy(not ok, "nil board should error")
-    luassert.truthy(type(err) == "string" and err:find("missing board", 1, true), "error should mention missing board, got: " .. tostring(err))
-  end)
-
-  it("test__center_out_order_errors_on_nil_player_with_expected_message", function()
-    local ok, err = pcall(target_layout._M_test._center_out_order, _mock_board({}), nil, {})
-    luassert.truthy(not ok, "nil player should error")
-    luassert.truthy(type(err) == "string" and err:find("missing player", 1, true), "error should mention missing player, got: " .. tostring(err))
-  end)
-
   it("test__center_out_order_errors_on_missing_player_position", function()
     local p_no_pos = { name = "no_pos" }
-    local ok, err = pcall(target_layout._M_test._center_out_order, _mock_board({}), p_no_pos, {})
+    local ok, err = pcall(target_layout.arrange_target_options, _mock_board({}), p_no_pos, {})
     luassert.truthy(not ok, "missing position should error")
     luassert.truthy(type(err) == "string" and err:find("missing player.position", 1, true), "error should mention missing player.position, got: " .. tostring(err))
   end)

@@ -1,42 +1,41 @@
 require("test.bootstrap").install_package_paths()
--- busted injects the extensible assertion object into each file environment.
--- luacheck: ignore 143
 local luassert = assert
-local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local item_ids = require("src.config.gameplay.item_ids")
+local items = require("src.config.content.items")
+local support = require("test.support.shared_support")
 
-describe("TestItemIdsRegister", function()
+-- 每次经模块装载边界重建完整映射；生产模块身份由 with_patches 在异常时恢复。
+local function load_with_catalog(catalog)
+  local loaded
+  support.with_patches({
+    { target = package.loaded, key = "src.config.content.items", value = catalog },
+    { target = package.loaded, key = "src.config.gameplay.item_ids", value = nil },
+  }, function()
+    loaded = require("src.config.gameplay.item_ids")
+  end, { skip_runtime_context_refresh = true })
+  return loaded
+end
 
-  it("test_registers_valid_item", function()
-    local map = {}
-    item_ids._register_item(map, { key = "test_item", id = 42 })
-    _assert_eq(map["test_item"], 42, "item registered with correct id")
+describe("TestItemIdsCatalogLoading", function()
+  it("publishes_the_configured_gameplay_ids", function()
+    luassert.equal(2001, item_ids.free_rent)
+    luassert.equal(2002, item_ids.remote_dice)
+    luassert.equal(2004, item_ids.roadblock)
   end)
 
-  it("test_skips_nil_config", function()
-    local map = {}
-    item_ids._register_item(map, nil)
-    _assert_eq(next(map), nil, "nil config is skipped")
+  it("ignores_entries_without_a_usable_key_when_loading_a_catalog", function()
+    local ids = load_with_catalog({
+      { id = 41 }, { key = "", id = 42 }, { key = "configured_item", id = 43 },
+    })
+    luassert.same({ configured_item = 43 }, ids)
   end)
 
-  it("test_skips_empty_key", function()
-    local map = {}
-    item_ids._register_item(map, { key = "", id = 1 })
-    _assert_eq(next(map), nil, "empty key is skipped")
+  it("rejects_duplicate_keys_in_the_loaded_catalog", function()
+    local catalog = {}
+    for index, entry in ipairs(items) do catalog[index] = entry end
+    catalog[#catalog + 1] = { key = "free_rent", id = 9999 }
+    local ok, err = pcall(load_with_catalog, catalog)
+    luassert.is_false(ok)
+    luassert.truthy(tostring(err):find("duplicate item key in items config: free_rent", 1, true))
   end)
-
-  it("test_skips_nil_key", function()
-    local map = {}
-    item_ids._register_item(map, { id = 1 })
-    _assert_eq(next(map), nil, "nil key is skipped")
-  end)
-
-  it("test_errors_on_duplicate_key", function()
-    local map = { existing = 1 }
-    local ok, err = pcall(item_ids._register_item, map, { key = "existing", id = 2 })
-    _assert_eq(ok, false, "duplicate key errors")
-    luassert.truthy(err:find("duplicate"), "error mentions duplicate")
-  end)
-
-
 end)
