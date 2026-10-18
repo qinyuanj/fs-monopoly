@@ -8,8 +8,8 @@
 -- 路由约定:clean 与 distclean 两个子命令都路由到本包,经 env.action
 -- ("clean" / "distclean")分流(顶层 cli.lua 按 commands 表条目注入)。
 --
--- 清单与生产者对应：build/ tmp/ 为本地
--- 构建产物;junit-output.xml 由 spec_lane 生成;luacov.* 是 luacov 默认落点的残留
+-- 清单与生产者对应:build/ tmp/ 为本地构建产物;
+-- luacov.* 是 luacov 默认落点的残留
 -- (uml crap 的 crapper 经 luacov 采集覆盖率)。
 -- 仓内不再有项目工具缓存:工具模块一律从受控 Lua 环境装载,clean 与 distclean
 -- 只清仓内生成物。
@@ -27,7 +27,6 @@ local shell_lib = require("foundation.shell")
 
 local _CLEAN_DIRS = { "build", "tmp" }
 local _CLEAN_FILES = {
-  "junit-output.xml",
   "luacov.stats.out",
   "luacov.report.out",
 }
@@ -41,8 +40,7 @@ function M.usage()
   return table.concat({
     "用法: lua tools/cli.lua clean | distclean",
     "",
-    "clean     清生成物:build/ tmp/、",
-    "          junit-output.xml、luacov 残留。",
+    "clean     清生成物:build/ tmp/、luacov 残留。",
     "distclean 与 clean 同义(项目工具缓存已退役,不再有仓内工具 tree)。",
     "",
   }, "\n") .. "\n"

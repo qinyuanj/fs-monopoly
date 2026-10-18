@@ -4,7 +4,7 @@ if arg then rawset(arg, 0, "tools/packages/clean/test/test_clean_cli.lua") end
 require("test.bootstrap").install_package_paths()
 
 -- clean / distclean 的原生 Windows 窄反馈(#69 / ADR 0066)。清单与旧 Makefile 同口径:
--- 仓根的 build/ tmp/ 整树删,junit-output.xml 与 luacov 的
+-- 仓根的 build/ tmp/ 整树删,luacov 的
 -- stats/report 残留(含 luacov.<名>.stats.out 一类)删文件,未命中静默忽略;
 -- 项目工具缓存退役后 clean 与 distclean 同义,都不碰非清单目录。
 --
@@ -18,7 +18,6 @@ local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
 
 local TARGET_FILES = {
-  "junit-output.xml",
   "luacov.stats.out",
   "luacov.report.out",
   "luacov.spec_lane.stats.out",
@@ -146,7 +145,7 @@ end)
 it("unknown arguments are a usage error and touch nothing", function()
   _with_fixture(function(root)
     check.equal(2, clean_cli.main({ "--bogus" }, { repo_root = root, action = "clean" }))
-    check.is_true(fs_lib.path_exists(path_lib.join_path(root, "junit-output.xml")))
+    check.is_true(fs_lib.path_exists(path_lib.join_path(root, "luacov.stats.out")))
     check.is_true(fs_lib.is_dir(path_lib.join_path(root, "build")))
   end)
 end)

@@ -2,15 +2,23 @@
 local proc = require("foundation.proc")
 local number = require("src.foundation.number")
 local M = {}
-function M.discover_spec_files(root)
-  if root == nil or root == "" then return {} end
-  local files = {}
-  for _, path in ipairs(proc.collect_files(root, ".lua") or {}) do
-    local base = path:match("([^/\\]+)%.lua$")
-    if base and base:find("test_") then files[#files + 1] = path end
+function M.discover_files(roots, pattern)
+  local files, seen = {}, {}
+  for _, root in ipairs(roots or {}) do
+    for _, path in ipairs(proc.collect_files(root, ".lua") or {}) do
+      local base = path:match("([^/\\]+)%.lua$")
+      if base and base:find(pattern or "test_") and not seen[path] then
+        files[#files + 1] = path
+        seen[path] = true
+      end
+    end
   end
   table.sort(files)
   return files
+end
+function M.discover_spec_files(root)
+  if root == nil or root == "" then return {} end
+  return M.discover_files({ root })
 end
 function M.file_cost(path)
   local file = io.open(path, "r")

@@ -29,4 +29,18 @@ function spec_lane_tools.discover_test_roots()
   return roots
 end
 
+-- 两条车道共用命名 profile 解析;目录点跑由 spec-lane 入口单独处理。
+function spec_lane_tools.profile_config(profile)
+  return dofile("tools/packages/spec_lane/spec_profiles.lua")[profile] or {}
+end
+
+function spec_lane_tools.profile_roots(profile)
+  if profile == nil or profile == "" then return nil, "missing profile" end
+  local config = spec_lane_tools.profile_config(profile)
+  if next(config) == nil then return nil, "unknown profile: " .. tostring(profile) end
+  if config.ROOT == nil then return nil, "profile has no ROOT: " .. tostring(profile) end
+  if type(config.ROOT) == "table" then return config.ROOT end
+  return { config.ROOT }
+end
+
 return spec_lane_tools
