@@ -2,9 +2,9 @@ param([Parameter(Mandatory)][string]$Prefix)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 # 原生 Windows CI 工具链(#126):MSVC 源码构建 Lua 5.4,配 LuaRocks 官方 Windows 二进制。
-# 产出 <Prefix>\bin(lua.exe/lua54.dll/luarocks.exe)、include\、lib\lua54.lib,与
-# tools/foundation/bootstrap.lua 由 <前缀>\bin\lua.exe 推导 --lua-dir 的口径一致。
-# 退出码沿用工具自举口径:下载失败退 3(不可用,重跑),校验/构建失败退 1。
+# 产出 <Prefix>\bin(lua.exe/lua54.dll/luarocks.exe)、include\、lib\lua54.lib,
+# 供本脚本预装 rock 时定位 Lua 解释器、头文件与链接库。
+# 下载不可达退 3(不可用,重跑),校验/构建失败退 1。
 $luaVer = '5.4.7'
 $luaSha256 = '9fbf5e28ef86c69858f6d3d34eccc32e911c1a28b4120ff3e84aaa70cfbf1e30'
 $rocksVer = '3.12.2'

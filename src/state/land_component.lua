@@ -13,8 +13,7 @@
 
 local land_component = {}
 
--- 未访问邻居收编进下一波。独立出来的理由:.same_owner 的圈复杂度要留在
--- crap 门禁内;波次主循环只留「同主才展开」一个判定。
+-- 未访问邻居收编进下一波;波次主循环只负责「同主才展开」的判定。
 local function _collect_unvisited(visited, next_wave, neighbors)
   for _, next_id in ipairs(neighbors) do
     if visited[next_id] == nil then
@@ -32,7 +31,7 @@ end
 function land_component.same_owner(start_tile_id, owner_id, owner_of, neighbors_of)
   -- 波次 BFS(逐层推进,顺序与单队列 BFS 逐位一致)。选这个形态而不是 head 游标
   -- 单队列:游标 +1 / 布尔 visited 的变异体是不终止死循环,断言杀不掉只能等超时;
-  -- 波次形态下每个位点的变异体都收敛(报错或结果错误),变异车道能干净闭合。
+  -- 波次形态下每个位点的变异体都收敛为报错或结果错误,便于变异测试观测。
   -- visited 存地块 id 本身(不存 true),入会检查用 == nil 而非 not。
   local visited = { [start_tile_id] = start_tile_id }
   local component = {}

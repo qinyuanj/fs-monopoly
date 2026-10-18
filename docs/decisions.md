@@ -22,7 +22,7 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 ## ADR 0038 — 道具窗口是局面快照
 
-道具窗口打开时一次物化 options，存续期内局面冻结；每次合法变化经 `reopen_or_finish` 重建窗口。验收先铺局面再开窗，断言窗口打开时的 offer 面。若未来引入窗口存续期内的并行局面变化，必须重议本决策。
+道具窗口打开时一次物化 options，存续期内局面冻结；每次合法变化经 `reopen_or_finish` 重建窗口。测试先铺局面再开窗，断言窗口打开时的 offer 面。若未来引入窗口存续期内的并行局面变化，必须重议本决策。
 
 ## ADR 0046 — 宿主调用以取证、端口和明确成功信号为准
 
@@ -42,7 +42,7 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 项目知识入口固定为 `AGENTS.md → 任务真源`。可执行代码、测试、配置、CLI 帮助和工具契约优先于叙事文档；`docs/` 只保留显式白名单中的五份 Markdown，不使用逐文件 front matter，不保留墓碑、兼容页、阶段报告或历史探索，Git 历史承担归档。
 
-该决策取代历史 ADR 0003、0033、0056。新增长期知识先证明明确消费者、当前有效、没有更权威的可执行真源，且独立文件比并入现有真源更便宜；否则写入代码、测试、配置、工具契约或工单。技能、Gherkin、工具契约和上游资产各由自己的执行/同步边界管理，不并入项目叙事文档白名单。
+该决策取代历史 ADR 0003、0033、0056。新增长期知识先证明明确消费者、当前有效、没有更权威的可执行真源，且独立文件比并入现有真源更便宜；否则写入代码、测试、配置、工具契约或工单。技能、工具契约和上游资产各由自己的执行/同步边界管理，不并入项目叙事文档白名单。
 
 ## ADR 0060 — 行动日志显示窗口取机型容量保守下界
 
@@ -54,17 +54,15 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 「当前是否由电脑执行」只有 `is_computer_controlled` 一处派生语义：补位电脑身份或任一托管模式任一成立即为 true。规则层继续经既有 `auto_play_port` 查询，端口谓词更名为 `is_computer_controlled`；允许依赖玩家层的回合与电脑决策直接使用控制模块。UI 不依赖玩家层：回合输出侧物化不可变玩家控制快照（至少 `is_delegated` 与 `is_computer_controlled`），选择门控与托管特效消费同一快照。旧的 `auto` / `auto_source` / `ai` 字段与 `is_auto_player` / `by_ai` 标识一次性删除，不保留镜像或兼容层，并由架构 guard 阻止复现。分享面板锁存、AFK 超时计数与恢复提示节流仍归各自交互/回合流程，不属于控制模块。本决定遵循 ADR 0018 的唯一真源先例，并保持 ADR 0054 的本机角色可见性与行动者授权边界。
 
-## ADR 0063 — 超时外壳退役：选择/弹层超时模块各自自持
+## ADR 0063 — 选择/弹层超时模块各自自持
 
-`src/turn/waits/timeout.lua` 原是 choice 与 modal 两族超时的装配外壳：转发解析、合并 default_policy、经 `step_default_choice` / `step_modal_timeout` 两个出口步进。#602 将其整壳退役，理由有三：
+选择超时与弹层超时分别由 `ChoiceTimeout.step_default` 与 `modal_timeout.step_default` 自持默认装配，`step_choice_timeout` / `step_modal_timeout` 端口分别直挂对应模块。
 
-1. **构造面虚胖**。ChoiceTimeout 构造器收 10 个依赖键，其中 `resolve_output_ports` / `deadline_service` / `resolve_choice` / `force_skip` 四个是全仓唯一实现的不变量，注入只会伪装可变性。收窄为 7 键后，不变量收进模块内部直 require，可覆盖面只剩真实策略点。
-2. **幽灵依赖**。`resolve_choice_ui_state` 原先不在必填键里，缺了静默降级（`choice_ui_sync` 里的 type 守卫吞掉缺失），缺屏探测形同虚设。升格为必填键后，缺失在构造期即报错。
-3. **外壳零增值**。`default_policy` 导出零生产调用，纯为测试存在；modal 半壳只剩一行转发。退役后 `step_choice_timeout` / `step_modal_timeout` 端口分别直挂 `ChoiceTimeout.step_default` 与 `modal_timeout.step_default`，`ui_sync` / `loop/ports` / `ui/ports/init` 的模块清单同步改指两个本源模块。
+1. **构造面只暴露真实策略点**。`resolve_output_ports` / `deadline_service` / `resolve_choice` / `force_skip` 是全仓唯一实现的不变量，由模块内部直 require；不为测试导出无生产消费者的 `default_policy`。
+2. **必需依赖在构造期校验**。`resolve_choice_ui_state` 是必填键，缺失即报错，避免缺屏探测静默降级。
+3. **modal 耦合保留**。choice_timeout 的 `_dispatch_action_with_close_choice` 在超时派单前经 modal 端口收屏，承担超时代答的收屏行为。
 
-**modal 耦合评估结论（保留）**：choice_timeout 对 modal 的唯一耦合是 `_dispatch_action_with_close_choice`——超时派单前经 modal 端口收屏。这是「超时收屏」验收场景的承重路径，不是可剪的依赖方向问题，予以保留。
-
-**测试通路随之切换**：不变量不可再注入，观测型测试改用仓库既有模块字段补丁通路（`with_patches` 替换 `src.turn.deadlines` 字段），输出端口经 `state.gameplay_loop_ports.output` 注入（与生产 `resolve_port` 路径一致）；min-visible 等策略钉改经公开 `step_default` 驱动默认装配，不再触碰策略表导出。
+**测试通路**：观测型测试使用仓库既有模块字段补丁通路（`with_patches` 替换 `src.turn.deadlines` 字段），输出端口经 `state.gameplay_loop_ports.output` 注入（与生产 `resolve_port` 路径一致）；min-visible 等策略经公开 `step_default` 驱动默认装配。
 
 ## ADR 0064 — 选择超时默认装配的 no-op 回落：三透传键与 modal 收屏缓存保留
 
@@ -95,29 +93,23 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 本条中的 `cmd.exe` 不是对新自动化脚本形态的要求；脚本形态、hook 里 sh 的转发边界与 CI 取舍见 ADR 0071。
 
-## ADR 0067 — 本仓退场本地 swarm-forge 编排
-
-`swarmforge/` 的 pack 资产（conf / roles / constitution 共 12 个文件）整套下架，`.swarmforge/` 运行时状态不再由本仓定义；随之删除 AGENTS.md 的 swarm 路由行与 pack 同步纪律、`.gitignore` 的 swarm 段、`root_whitelist_guard` 的 `swarmforge` 白名单与 launcher 退役钉、`repo_hygiene` 的 `.swarmforge/` 违规项、`features/manifest.lua` 的 `features/swarmforge/*` 三条、`clean`/`distclean` 的 `.swarmforge/` 条目。启停、编排与角色供给不再由本仓承接。
-
-APS 三件（`gherkin-parser` / `ir-dry-checker` / `gherkin-mutator`）的 PATH 供给机制同期整套删除：`provision.lua`、`swarm_root.lua`、`aps_forwarders.lua` 与其单测、`test/support/aps_forwarder_probe.lua` 一起退场，契约文本改为按显式路径调用 `tools/packages/acceptance/cli/parser.lua`、`cli/ir_dry.lua` 与 `acceptance_mutate/mutator.lua`。判据是按名解析在本仓**没有消费者**：唯一能成立它的前提是外部 launcher 把 `.swarmforge/bin` 放 PATH 最前，而本仓真实调用点早已是显式路径；为不存在的消费者保留转发器，还要在 Windows 上再养一套 `.cmd` 变体。
-
 ## ADR 0068 — 质量控制全量交接到 uml-viewer
 
-CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异经 `./uml crap` / `./uml mutate` 走 crapper / mutator 的 Lua 路径，架构面经 `./uml ir` 走 policy 与 IR。当时在 `tools/tools.lock` 里的 `crap4lua` / `mutate4lua` / `arch_view` 三钉、`tools/packages/{crap,mutate,coverage,arch_view}` 与对应 verify 车道随之退场。`docs/architecture.md` 与 `test/guards/` 仍是「人能读懂、机器能拦」的层边界执行真源，policy 是同一份边界在 uml-viewer 侧的表达式，不构成第二真源。
+CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异走 crapper / mutator 的 Lua 路径，架构面走 policy 与 IR。`docs/architecture.md` 与 `test/guards/` 是「人能读懂、机器能拦」的层边界执行真源，policy 是同一份边界在 uml-viewer 侧的表达式，不构成第二真源。
 
-理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。最后两个跟随上游主干的工具随后也退役：`dry4lua` 由 #148 改由 `qinyuanj/dryer` 承接，`acceptance4lua` 连同中文 Gherkin 验收管线由 #147 整体删除（母规格 #146）。两只工具退场后，整套「工具跟随上游主干」装载机制——`tools/tools.lock` 及其解析、HEAD 解析缓存、源码浅克隆与按锁安装——由 #149 一并删除。
+理由：uml-viewer 已承担「非 Clojure 的 CRAP 与变异」，具备 Lua 扫描与原生 Windows 复验记录；本仓沿用同一实现与架构边界，避免维护两套会漂移的真源。
 
 落地（#93）：本仓的受支持入口是 `lua tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 cmd 批处理里调用同一个 `uml-command.ps1`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，不钉装载面、也不做受控 Lua 环境预检，工具可能从版本口径外的 tree 解析出来。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。契约见 `tools/specs/uml_quality.prompt`。
 
 ## ADR 0069 — 测试框架的终态是 busted
 
-本仓测试后端定为 busted，LuaUnit 与自研运行器退场。三项约束随决策一并钉死：
+本仓测试后端定为真实 busted，断言使用真实 luassert：
 
-1. **迁移分两步，各自可独立验收**。先换断言层（`lu.*` → luassert），再换结构层（`TestX = {}` + `function TestX:test_y()` → `describe` / `it`）。**不做「自动把 TestX 包成 describe」的兼容层**：这类 shim 出错的表现是测试静默通过，是本仓最难发现的一类事故。两步之间的中间态允许进仓库。
-2. **装载与调用不依赖可执行位**。busted 与 `luassert` / `say` / `lua_cliargs` / `mediator_lua` / `penlight` / `lua-term` / `luasystem` / `luafilesystem` / `dkjson` / `datafile` 从受控 Lua 环境（ADR 0072）装载，以 `lua -e 'require("busted.runner")()'` 形态调用，与 `lua54` 既有「不依赖 shell wrapper 或可执行位」口径同源；`luaunit` 的 ensure 随之退役。Windows 上 tree 布局与 POSIX 同形已取证，不需平台分支。
-3. **完成的判据是数量与红绿双钉**。迁移前先在车道上取逐车道 passed / failed 基线，迁移后必须一致；另加 spec 文件集数量的 guard，防止文件被静默漏跑；再加一组故意写错的断言样本，迁移后仍须为红——直接钉住「断言没有退化成恒真」，这是九千处机械替换的真实风险面。
+1. **测试直接使用 DSL**。测试结构使用 `describe` / `it`，不做「自动把 TestX 包成 describe」的兼容层：这类 shim 出错的表现是测试静默通过。
+2. **装载与调用不依赖可执行位**。busted 与 `luassert` / `say` / `lua_cliargs` / `mediator_lua` / `penlight` / `lua-term` / `luasystem` / `luafilesystem` / `dkjson` / `datafile` 从受控 Lua 环境（ADR 0072）装载，以 `lua -e 'require("busted.runner")()'` 形态调用，与 `lua54` 既有「不依赖 shell wrapper 或可执行位」口径同源。Windows 上 tree 布局与 POSIX 同形已取证，不需平台分支。
+3. **运行器契约同时验证数量与失败传播**。spec 文件集 guard 防止文件被静默漏跑；故意写错的断言样本必须为红，确保断言没有退化成恒真。
 
-理由：本仓今天并存两套 harness——`test/**` 走 LuaUnit 类风格，`features/**` 的生成物已是 `describe` / `it` 加自带 harness（上游 generator 天然输出 busted 形状）。迁到真 busted 把两者统一成一套，并让 crapper / mutator 的 Lua 默认路径（busted + luacov）不必再包一层适配；此前替换掉 busted 的决定没有留下任何登记，本决策取代之。
+理由：测试与 crapper / mutator 的 Lua 默认路径共用 busted + luacov，保持一套执行与断言语义。
 
 ## ADR 0070 — uml-viewer 可视化接入：生成式 policy 与 companion 环境钉死
 
@@ -138,16 +130,16 @@ CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的�
 
 理由：`cmd.exe` 是 Lua 工具与子进程的语义约束，不是脚本形态约束；Git for Windows 起 hook 必须经过 sh，但这一层不承载逻辑；CI 取舍与退 3 语义若无登记，只能从工单评论或 PR 叙述里反推。
 
-## ADR 0072 — 退役项目工具缓存，测试与质量工具改用受控 Lua 环境
+## ADR 0072 — 测试与质量工具使用受控 Lua 环境
 
-整套项目内工具缓存（原仓内工具 tree）与「工具跟随上游主干」装载机制退役（母规格 #146）。测试与质量工具唯一允许的 Lua 装载来源改为**受控 Lua 环境**：由 `luarocks config rocks_trees` 解析出的机器 LuaRocks 5.4 包树，版本口径为 busted `>=2.3.0,<3`、luassert `>=1.9.0,<2`、luacov `>=0.17.0,<1`、luacov-reporter-lcov `>=0.2,<1`、luacheck `>=1.2.0,<2`。本仓只核对、不写入、不在项目内自举安装 rock；不满足即真实失败（退 1）并打印可直接执行的安装命令。
+测试与质量工具唯一允许的 Lua 装载来源是**受控 Lua 环境**：由 `luarocks config rocks_trees` 解析出的机器 LuaRocks 5.4 包树，版本口径为 busted `>=2.3.0,<3`、luassert `>=1.9.0,<2`、luacov `>=0.17.0,<1`、luacov-reporter-lcov `>=0.2,<1`、luacheck `>=1.2.0,<2`。本仓只核对、不写入、不在项目内自举安装 rock；不满足即真实失败（退 1）并打印可直接执行的安装命令。
 
 落实口径：
 
 1. **单一预检**。`tools/foundation/lua_env.lua` 是 tree 根解析、版本核对与模块来源校验的唯一实现。`preflight` 依次调 `luarocks config rocks_trees` 与 `luarocks list <name> --porcelain`，不调 `install` / `make` / `remove`。
-2. **测试运行器**。`tools/packages/test_runner/runner.lua` 先预检，再把受控 tree 的 share/lib 路径接入本进程；`cache_loader` 只从这些 tree 装载 busted 及依赖，解析到 tree 之外（含 C 模块）即失败，未验证的 `package.loaded` 预注入同样失败。项目内不再有 `ensure_*_tree` 安装入口。
+2. **测试运行器**。`tools/packages/test_runner/runner.lua` 先预检，再把受控 tree 的 share/lib 路径接入本进程；`cache_loader` 只从这些 tree 装载 busted 及依赖，解析到 tree 之外（含 C 模块）即失败，未验证的 `package.loaded` 预注入同样失败。项目内不提供安装入口。
 3. **变异 worker**。worker 的搜索模板只允许指向 worker 自身与受控 tree；模板指向其他 tree、源仓库代码、外部路径、路径穿越或空模板均失败。worker 不安装、不复制、不链接任何 rocks tree，`lfs` 校验器也从受控 tree 的 C 路径装载。
 4. **uml 子进程**。`uml` 预检把每个受控 tree 的 `share/lua/5.4` 与 `lib/lua/5.4` 写进子进程的 `LUA_PATH(_5_4)` / `LUA_CPATH(_5_4)`（另加仓根），模块探针按同一组根判定来源；`./uml` 安装器拷贝仍不是入口，因为它不钉装载面、也不做预检。
-5. **清理边界**。项目工具缓存路径从 bootstrap、package_path_helper、`.gitignore`、`clean` / `distclean` 与 uml 契约文本中移除；`distclean` 与 `clean` 同义。spec_lane 的实测时长缓存移到仓内 `tmp/`（gitignored，由 `clean` 清理）。
+5. **清理边界**。`distclean` 与 `clean` 同义。spec_lane 的实测时长缓存存于仓内 `tmp/`（gitignored，由 `clean` 清理）。
 
-代价与边界：worktree 不再需要复制或冷装缓存，并发写坏共享缓存的问题随之消失；换来的是每台开发机/CI 必须自行提供满足口径的机器 tree（CI 的供给在 `.github/scripts/setup-lua.ps1`：构建完 LuaRocks 后预装五个钉定 rock）。缺失或版本越界是真实失败，不再归类为「网络不可用」；退 3 只保留给平台/工具显式不可用。真身校验不因缓存退役而放宽：模块来源、版本、worker 绑定与 uml 探针仍在每次运行时核对。
+代价与边界：每台开发机/CI 必须自行提供满足口径的机器 tree（CI 的供给在 `.github/scripts/setup-lua.ps1`：构建完 LuaRocks 后预装五个钉定 rock）。缺失或版本越界是真实失败（退 1）；退 3 只保留给平台/工具显式不可用。模块来源、版本、worker 绑定与 uml 探针在每次运行时核对。

@@ -9,8 +9,7 @@
 -- require("packages.<pkg>.cli") → cli.main(args, env) → 顶层统一 os.exit。
 --
 -- 退出码约定(#300 Q2):0 = 成功 / 1 = 业务失败 / 2 = 用法错误(未知子命令、
--- require 失败)/ 3 = 不可用(声明的平台保证边界之外,#96)。第 4 个码是必要的:
--- 工具自举的网络失败沿用退 3(#112),与「跑了但失败」区分。
+-- require 失败)/ 3 = 平台或工具不可用(未运行)。缺依赖或版本越界退 1。
 -- 包内处理 --help/-h 并返回 0。
 --
 -- 骨架期(#304):包内 cli.lua 统一接口形态落地为骨架约定
@@ -49,6 +48,8 @@ local function _usage()
   for _, entry in ipairs(commands) do
     lines[#lines + 1] = string.format("  %-18s %s", entry.name, entry.summary)
   end
+  lines[#lines + 1] = ""
+  lines[#lines + 1] = "退出码:0 成功 / 1 真实失败 / 2 用法错误 / 3 平台或工具不可用(先查环境再重跑)"
   lines[#lines + 1] = ""
   lines[#lines + 1] = "用法提示:"
   lines[#lines + 1] = "  lua tools/cli.lua <子命令> --help   子命令帮助(包内 usage 真源)"
