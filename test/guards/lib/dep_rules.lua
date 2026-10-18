@@ -52,12 +52,59 @@ local function _check_forbidden_files(paths)
   return nil
 end
 
+-- Only configured calls use full-source parsing; existing line rules keep their scanner.
+local function _scan_call_rule(rule)
+  local ast = require("test.guards.lib.test_lint.ast")
+  local function find_call(node)
+    if type(node) ~= "table" then return nil end
+    if node.tag == "Call" then
+      local callee = node[1]
+      local name = ast.id_name(callee)
+      if callee.tag == "Index" and callee[2].tag == "String" then name = callee[2][1] end
+      local pattern = rule.forbidden_call_paths[name]
+      if pattern then
+        local arg = node[2]
+        local values = name == "run_command" and arg and arg.tag == "Table" and arg or { arg }
+        for _, value in ipairs(values) do
+          if value.tag == "String" and value[1]:find(pattern) then
+            return { line = node.line, token = pattern, text = name .. ": " .. value[1], description = rule.description }
+          end
+        end
+      end
+    end
+    for _, child in ipairs(node) do
+      local hit = find_call(child)
+      if hit then return hit end
+    end
+  end
+  for _, root in ipairs(rule.roots or {}) do
+    local files, err = guard_support.collect_lua_files(root)
+    if not files then return nil, err end
+    for _, path in ipairs(files) do
+      local file, open_err = io.open(path, "r")
+      if not file then return nil, open_err end
+      local source = file:read("*a")
+      file:close()
+      local parsed, parse_err = ast.parse(source)
+      if not parsed then return nil, path .. ": " .. tostring(parse_err) end
+      local hit = find_call(parsed.ast)
+      if hit then
+        hit.path = guard_support.normalize_path(path)
+        return hit
+      end
+    end
+  end
+end
+
 local M = {}
 
 function M.run(opts)
   opts = opts or {}
   for _, rule in ipairs(opts.rules or {}) do
     local hit, err = _scan_rule(rule)
+    if not hit and not err and rule.forbidden_call_paths then
+      hit, err = _scan_call_rule(rule)
+    end
     if err and not tostring(err):find("no lua files found under", 1, true) then
       return { ok = false, error = err }
     end

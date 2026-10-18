@@ -5,6 +5,12 @@ local check = require("luassert")
 local bin = require("packages.test_runner.lua54")
 
 describe("lua54 runner entry", function()
+  it("selected interpreter rejects non Lua override", function()
+    local proc = require("foundation.proc")
+    local result = proc.run_command('set "LUA54_BIN=cmd.exe" && lua -e "package.path=package.path..\';./tools/?.lua\'; assert(require(\'packages.test_runner.lua54\').detect_lua54()==nil)"')
+    check.truthy(result.ok, result.output)
+  end)
+
   it("argv prefix defaults to lua54 and runner", function()
     local prefix = bin.argv_prefix()
     check.equal(2, #prefix)

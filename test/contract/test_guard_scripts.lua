@@ -33,6 +33,45 @@ it("test_dep_rules_catches_ui_runtime_bypass", function()
   luassert.is_not_nil(result.violation.path:find("src/turn.lua", 1, true), "dep_rules should point to fixture file")
 end)
 
+local function _tool_foundation_rules(fixture)
+  local rules = {}
+  for _, rule in ipairs(require("test.guards.config.dep_rules").rules) do
+    if rule.roots[1] == "tools/foundation" then
+      rules[#rules + 1] = {
+        roots = { _fixture_path("dep_rules/tool_packages/" .. fixture) },
+        forbidden_patterns = rule.forbidden_patterns,
+        forbidden_call_paths = rule.forbidden_call_paths,
+        description = rule.description,
+      }
+    end
+  end
+  return rules
+end
+
+it("test_dep_rules_rejects_tool_packages_in_foundation", function()
+  local result = dep_rules.run({ rules = _tool_foundation_rules("bad.lua") })
+  luassert.is_false(result.ok, "foundation must reject tool package dependencies")
+  luassert.is_not_nil(result.violation)
+  luassert.matches("tool_packages/bad.lua", result.violation.path, 1, true)
+end)
+
+for _, fixture in ipairs({
+  "script_argv.lua", "script_command.lua", "script_dofile.lua", "script_loadfile.lua",
+  "multiline_argv.lua", "multiline_dofile.lua", "multiline_loadfile.lua",
+}) do
+  it("test_dep_rules_rejects_direct_tool_package_script_" .. fixture, function()
+    local result = dep_rules.run({ rules = _tool_foundation_rules(fixture) })
+    luassert.is_false(result.ok, "foundation must reject direct tool package scripts")
+    luassert.is_not_nil(result.violation)
+    luassert.matches("tool_packages/" .. fixture, result.violation.path, 1, true)
+  end)
+end
+
+it("test_dep_rules_allows_foundation_dependencies", function()
+  local result = dep_rules.run({ rules = _tool_foundation_rules("clean.lua") })
+  luassert.is_true(result.ok, "foundation may depend on other foundation modules")
+end)
+
 it("test_forbidden_globals_catches_numeric_cast_in_src", function()
   local result = forbidden_globals.run({
     scan_roots = { _fixture_path("forbidden_globals/numeric_cast/src/bad.lua") },
