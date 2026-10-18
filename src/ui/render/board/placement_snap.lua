@@ -87,9 +87,6 @@ end
 
 -- Exported for testing
 M.resolve_min_player_y = placement_geometry.resolve_min_player_y
-M._resolve_occupant_slot = placement_geometry.resolve_occupant_slot
-M._calc_slot_offset = placement_geometry.calc_slot_offset
-
 return M
 
 --[[ mutate4lua-manifest

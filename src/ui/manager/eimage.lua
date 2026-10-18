@@ -74,10 +74,6 @@ function EImage:set_texture_native_size(image_key)
     self:__apply_image_texture(true)
 end
 
-function EImage:reset_size()
-    self:__apply_image_texture(true)
-end
-
 return EImage
 
 --[[ mutate4lua-manifest

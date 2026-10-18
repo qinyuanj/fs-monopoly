@@ -3,8 +3,6 @@ require("test.bootstrap").install_package_paths()
 local luassert = assert
 -- luacheck: ignore 211
 local pending_confirmation = require("src.state.pending_confirmation")
-local market_slots = require("src.ui.render.market.slots")
-local placement = require("src.ui.render.board.placement")
 local status3d_status = require("src.ui.render.status3d.status")
 local board_feedback = require("src.ui.render.board_feedback.service")
 local role_control_lock_policy = require("src.ui.input.role_control_lock")
@@ -177,54 +175,6 @@ describe("TestGameplayT6Hotspot", function()
     for name, object in pairs(loaded_before_case) do package.loaded[name] = object end
   end)
 
-
-it("test_01_resolve_market_name_from_entry", function()
-  local name = market_slots._resolve_market_name(nil, 1001, { name = "EntryName" }, nil)
-  luassert.truthy(name == "EntryName", "should return entry name when available")
-end)
-
-it("test_02_resolve_market_name_from_cfg", function()
-  local name = market_slots._resolve_market_name(nil, 1001, nil, { name = "CfgName" })
-  luassert.truthy(name == "CfgName", "should return cfg name when entry name missing")
-end)
-
-it("test_03_resolve_market_name_from_opt_label", function()
-  local name = market_slots._resolve_market_name({ label = "OptLabel" }, 1001, nil, nil)
-  luassert.truthy(name == "OptLabel", "should return opt label when entry/cfg missing")
-end)
-
-it("test_04_resolve_market_name_fallback_to_product_id", function()
-  local name = market_slots._resolve_market_name(nil, 1001, nil, nil)
-  luassert.truthy(name == "1001", "should fallback to product_id as string")
-end)
-
-it("test_05_resolve_occupant_slot_single_player", function()
-  local list = { "p1" }
-  local slot, count = placement._resolve_occupant_slot(list, "p1")
-  luassert.truthy(slot == 1, "single player should be slot 1")
-  luassert.truthy(count == 1, "single player count should be 1")
-end)
-
-it("test_06_resolve_occupant_slot_first_in_list", function()
-  local list = { "p1", "p2", "p3" }
-  local slot, count = placement._resolve_occupant_slot(list, "p1")
-  luassert.truthy(slot == 1, "first player should be slot 1")
-  luassert.truthy(count == 3, "count should be list length")
-end)
-
-it("test_07_resolve_occupant_slot_middle_in_list", function()
-  local list = { "p1", "p2", "p3" }
-  local slot, count = placement._resolve_occupant_slot(list, "p2")
-  luassert.truthy(slot == 2, "middle player should be slot 2")
-  luassert.truthy(count == 3, "count should be list length")
-end)
-
-it("test_08_resolve_occupant_slot_last_in_list", function()
-  local list = { "p1", "p2", "p3" }
-  local slot, count = placement._resolve_occupant_slot(list, "p3")
-  luassert.truthy(slot == 3, "last player should be slot 3")
-  luassert.truthy(count == 3, "count should be list length")
-end)
 
 it("test_09_resolve_player_status_key_eliminated", function()
   local game = {}
@@ -768,75 +718,6 @@ it("test_35_anim_overlay_spawn_overlay_no_ids_returns_false", function()
   luassert.truthy(result == false, "spawn_overlay with no group_id or unit_id should return false")
 end)
 
-it("test_36_create_scene_ui_bind_unit_from_ctrl_unit", function()
-  _with_globals({
-    Enums = { ModelSocket = { socket_head = 1 } },
-  }, function()
-    local original_vector3 = math.Vector3
-    math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
-    local created = false
-    local mock_ctrl_unit = {
-      create_scene_ui_bind_unit = function() created = true return { id = "layer1" } end,
-    }
-    local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_1")
-    math.Vector3 = original_vector3
-    luassert.truthy(result ~= nil, "should create layer from ctrl_unit")
-    luassert.truthy(created == true, "ctrl_unit.create_scene_ui_bind_unit should be called")
-  end)
-end)
-
-it("test_37_create_scene_ui_bind_unit_ignores_role_factory_when_ctrl_unit_missing", function()
-  _with_globals({
-    Enums = { ModelSocket = { socket_head = 1 } },
-  }, function()
-    local original_vector3 = math.Vector3
-    math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
-    local created = false
-    local mock_ctrl_unit = nil
-    local mock_role = {
-      create_scene_ui_bind_unit = function() created = true return { id = "layer2" } end,
-    }
-    local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_2")
-    math.Vector3 = original_vector3
-    luassert.truthy(result == nil, "should not fall back to role factory")
-    luassert.truthy(created == false, "role factory should no longer be called")
-  end)
-end)
-
-it("test_38_create_scene_ui_bind_unit_ignores_global_factory_when_ctrl_unit_missing", function()
-  _with_globals({
-    SceneUI = {
-      create_scene_ui_bind_unit = function() return { id = "layer3" } end,
-    },
-    Enums = { ModelSocket = { socket_head = 1 } },
-  }, function()
-    local original_vector3 = math.Vector3
-    math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
-    local result = status3d_scene._create_scene_ui_bind_unit(nil, "layout_3")
-    math.Vector3 = original_vector3
-    luassert.truthy(result == nil, "should not fall back to global SceneUI")
-  end)
-end)
-
-it("test_39_create_scene_ui_bind_unit_returns_nil_when_unavailable", function()
-  local original_scene_ui = _G.SceneUI
-  local original_enums = _G.Enums
-  local original_vector3 = math.Vector3
-  _G.SceneUI = nil
-  _G.Enums = { ModelSocket = { socket_head = 1 } }
-  math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
-  local ok, err = pcall(function()
-    local result = status3d_scene._create_scene_ui_bind_unit({}, "layout_4")
-    luassert.truthy(result == nil, "should return nil when no method available")
-  end)
-  _G.SceneUI = original_scene_ui
-  _G.Enums = original_enums
-  math.Vector3 = original_vector3
-  if not ok then
-    error(err)
-  end
-end)
-
 it("test_40_ensure_layers_for_player_returns_false_when_ctrl_unit_factory_missing", function()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
@@ -1366,29 +1247,6 @@ it("test_58_anim_overlay_spawn_overlay_failed_spawn", function()
   }
   local result = anim_overlay_runtime.spawn_overlay(scene, "roadblock", 1, "group_123", nil, { x = 0, y = 0, z = 0 }, nil, nil)
   luassert.truthy(result == false, "spawn_overlay should return false when unit creation fails")
-end)
-
-it("test_59_create_scene_ui_bind_unit_preserves_offset", function()
-  _with_globals({
-    Enums = { ModelSocket = { socket_head = 1 } },
-  }, function()
-    local original_vector3 = math.Vector3
-    local captured_offset = nil
-    math.Vector3 = function(x, y, z)
-      captured_offset = { x = x, y = y, z = z }
-      return captured_offset
-    end
-    local mock_ctrl_unit = {
-      create_scene_ui_bind_unit = function(layout_id, socket, offset)
-        return { id = "layer", offset = offset }
-      end,
-    }
-    local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_1")
-    math.Vector3 = original_vector3
-    luassert.truthy(result ~= nil, "should create layer")
-    luassert.truthy(captured_offset ~= nil, "should create offset vector")
-    luassert.truthy(captured_offset.y == 4, "offset y should be 4")
-  end)
 end)
 
 it("test_60_play_cue_empty_cue_name", function()

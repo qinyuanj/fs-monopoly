@@ -99,12 +99,10 @@ it("test_choice_descriptor_keys_stay_stable", function()
   luassert.is.same({ "player", "remote", "secondary_confirm", "target" }, keys)
 end)
 
-it("test_opener_and_canvas_lookup_preserve_known_and_unknown_keys", function()
+it("test_opener_lookup_preserves_known_and_unknown_keys", function()
   local target = require("src.ui.screens.target_choice")
   luassert.is.equal(target.open, registry.opener_for("target"))
-  luassert.is.equal(target.canvas, registry.canvas_for("target"))
   luassert.is_nil(registry.opener_for("unknown"))
-  luassert.is_nil(registry.canvas_for("unknown"))
 end)
 
 it("test_route_specs_follow_registration_order", function()

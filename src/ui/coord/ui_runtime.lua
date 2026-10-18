@@ -40,6 +40,7 @@ service.build_ui_state = state.build_ui_state
 service.init_ui_assets = assets.init_ui_assets
 service.capture_player_colors = assets.capture_player_colors
 
+-- 行为测试公共接缝：角色槽位、触摸与演出场景经完整面板刷新观察可见结果。
 function service.refresh_panel(state_ctx, ui_model)
   _render_opts.refresh_item_slots = service.refresh_item_slots
   panel_presenter.refresh(state_ctx, ui_model, _render_opts)

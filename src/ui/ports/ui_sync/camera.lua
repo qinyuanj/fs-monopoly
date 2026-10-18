@@ -154,11 +154,6 @@ function camera_sync.reset_baseline()
   relock_filter.reset()
 end
 
--- 内部取分量/滤波函数挂到模块表供行为测试直接覆盖分支(与
--- turn_camera_policy._resolve_follow_player_id 的导出先例一致)。
-camera_sync._pos_components = relock_filter.pos_components
-camera_sync._filter_sync_lock_value = relock_filter.filter_value
-
 return camera_sync
 
 --[[ mutate4lua-manifest

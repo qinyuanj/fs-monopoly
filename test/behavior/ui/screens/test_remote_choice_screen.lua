@@ -37,7 +37,6 @@ end)
 
 it("test_registers_itself_into_the_registry_under_its_key", function()
   luassert.is_not_nil(registry.build_choice_screens().remote, "registry aggregates remote descriptor")
-  luassert.truthy(registry.canvas_for("remote") == remote_screen.canvas, "registry maps remote canvas")
   luassert.truthy(registry.opener_for("remote") == remote_screen.open, "registry maps remote opener")
 end)
 

@@ -65,6 +65,7 @@ function ui_sync_ports.build(common)
   }
 end
 
+-- 行为/契约测试公共接缝：模型刷新、镜头、选择门控场景沿此入口注入并观察端口行为。
 ui_sync_ports._model = ui_model_sync
 ui_sync_ports._camera = camera_sync
 ui_sync_ports._choice_state = choice_ui_state

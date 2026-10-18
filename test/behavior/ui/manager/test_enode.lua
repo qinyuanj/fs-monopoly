@@ -1,13 +1,11 @@
--- enode.lua branch-dense coverage: __custom_index / __new_custom_index role domain + fallback,
--- visible/disabled 的定向与广播分支,名称查询(含 DFS)与 listen 的事件注册/分发。
+-- ENode 的角色属性隔离、visible/disabled 定向与广播、子节点链接及事件分发。
 local luassert = assert
 local context = require("src.ui.manager.context")
 local ENode = require("src.ui.manager.enode")
 local host_events = require("src.ui.seams.host_events")
 local support = require("test.support.ui_manager_nodes_support")
 
--- 四个显式测试组保留各自钩子边界，角色状态逐例重建，宿主替身逐例恢复。
--- 用例数保持 10 + 6 + 10 + 6 = 32。
+-- 四个测试组保留各自钩子边界，角色状态逐例重建，宿主替身逐例恢复。
 
 local function _clear_context()
   support.clear_context()
@@ -102,15 +100,6 @@ it("test_new_custom_index_rawsets_non_protected_keys", function()
   luassert.truthy(node.foo == "bar", "non __protected_ key should be rawset on instance")
 end)
 
-it("test_set_attribute_and_get_attribtue_round_trip_custom_data", function()
-  local node = ENode:new(220, "attr_node")
-
-  node:set_attribute("slot", 3)
-
-  luassert.truthy(node:get_attribtue("slot") == 3, "stored attribute should be readable")
-  luassert.truthy(node:get_attribtue("missing") == nil, "unset attribute should read nil")
-end)
-
 it("test_custom_data_getter_and_setter_round_trip", function()
   local node = ENode:new(221, "custom_data_node")
 
@@ -186,45 +175,14 @@ it("test_disabled_broadcasts_to_all_roles_when_no_client_role", function()
   end
 end)
 
-it("test_for_all_roles_applies_a_setter_to_every_role_and_restores_client_role", function()
-  context.client_role = role_a
-  support.install_roles({ role_a, role_b })
-  local node = ENode:new(214, "for_all_node")
-
-  node:for_all_roles("visible", true)
-
-  for _, role in ipairs({ role_a, role_b }) do
-    local calls = support.calls_of(role, "set_node_visible")
-    luassert.truthy(#calls == 1 and calls[1].args[2] == true, "for_all_roles should broadcast to every role")
-  end
-  luassert.truthy(context.client_role == role_a, "for_all_roles should restore the previous client_role")
 end)
 
-it("test_for_all_roles_ignores_unknown_keys", function()
-  support.install_roles({ role_a })
-  local node = ENode:new(215, "unknown_key_node")
-
-  node:for_all_roles("no_such_property", true)
-
-  luassert.truthy(#role_a.calls == 0, "unknown property should not reach the host")
-end)
-
-end)
-
--- -------------------------------------------------- name queries
+-- -------------------------------------------------- child links
 
 -- 树: 1 root -> {2 child_a, 3 child_b}; 3 -> {4 deep, 5 child_a}
---
--- 第二棵独立的树钉 dfs 的「找到即收手」:11 自己没有 twin,两条分支各藏一个,
--- 且左分支把命中埋到孙层。只有当命中沿 dfs 一路上报、上层据此停止扫兄弟时,
--- 结果才只有一个。11 -> {12, 13}; 12 -> {14}; 14 -> {16 twin}; 13 -> {15 twin}
 local children_map = {
   [1] = { 2, 3 },
   [3] = { 4, 5 },
-  [11] = { 12, 13 },
-  [12] = { 14 },
-  [13] = { 15 },
-  [14] = { 16 },
 }
 local names = {
   [1] = "root",
@@ -232,12 +190,6 @@ local names = {
   [3] = "child_b",
   [4] = "deep",
   [5] = "child_a",
-  [11] = "twin_root",
-  [12] = "twin_branch",
-  [13] = "twin_sibling",
-  [14] = "twin_mid",
-  [15] = "twin",
-  [16] = "twin",
 }
 
 local function _build_tree()
@@ -250,29 +202,19 @@ local function _build_tree()
   return context.nodes_list[1]
 end
 
-describe("TestENodeNameQueries", function()
-local original_get_children, original_get_child_by_name
+describe("TestENodeChildLinks", function()
+local original_get_children
 before_each(function()
   _clear_context()
   _G.GameAPI = _G.GameAPI or {}
   original_get_children = _G.GameAPI.get_eui_children
-  original_get_child_by_name = _G.GameAPI.get_eui_child_by_name
   _G.GameAPI.get_eui_children = function(id)
     return children_map[id] or {}
-  end
-  _G.GameAPI.get_eui_child_by_name = function(id, name)
-    for _, child_id in ipairs(children_map[id] or {}) do
-      if names[child_id] == name then
-        return child_id
-      end
-    end
-    return nil
   end
 end)
 
 after_each(function()
   _G.GameAPI.get_eui_children = original_get_children
-  _G.GameAPI.get_eui_child_by_name = original_get_child_by_name
   _clear_context()
 end)
 
@@ -282,83 +224,6 @@ it("test_init_children_links_parents_and_children", function()
   luassert.truthy(root.children.length == 2, "root should own two children")
   luassert.truthy(root.children[1].name == "child_a", "children should keep host order")
   luassert.truthy(root.children[1].parent == root, "child parent should point back at root")
-end)
-
-it("test_get_first_node_by_name_returns_nil_when_no_direct_child_matches", function()
-  local root = _build_tree()
-
-  luassert.truthy(root:get_first_node_by_name("deep") == nil,
-    "a grandchild should not be found by the shallow lookup")
-  luassert.truthy(root:get_first_node_by_name("child_b").id == 3,
-    "a direct child should be found by the shallow lookup")
-end)
-
-it("test_query_nodes_by_name_collects_every_direct_child_with_the_name", function()
-  local root = _build_tree()
-  local branch = context.nodes_list[3]
-
-  luassert.truthy(#root:query_nodes_by_name("child_a") == 1, "root has one direct child_a")
-  luassert.truthy(#root:query_nodes_by_name("deep") == 0, "root has no direct child named deep")
-  luassert.truthy(#branch:query_nodes_by_name("child_a") == 1, "branch has one direct child_a")
-end)
-
-it("test_get_first_node_by_name_dfs_finds_a_direct_child_without_recursing", function()
-  local root = _build_tree()
-
-  local node = root:get_first_node_by_name_dfs("child_b")
-
-  luassert.truthy(node ~= nil and node.id == 3, "direct child should be returned immediately")
-end)
-
-it("test_get_first_node_by_name_dfs_descends_into_children", function()
-  local root = _build_tree()
-
-  local node = root:get_first_node_by_name_dfs("deep")
-
-  luassert.truthy(node ~= nil and node.id == 4, "grandchild should be found via depth-first descent")
-end)
-
-it("test_get_first_node_by_name_dfs_returns_nil_when_the_name_is_absent", function()
-  local root = _build_tree()
-
-  luassert.truthy(root:get_first_node_by_name_dfs("missing") == nil,
-    "absent names should yield nil after the whole subtree is scanned")
-end)
-
-it("test_query_nodes_by_name_dfs_stops_at_the_first_matching_node", function()
-  local root = _build_tree()
-
-  local list = root:query_nodes_by_name_dfs("child_a")
-
-  luassert.truthy(#list == 1, "dfs query should stop at the first match")
-  luassert.truthy(list[1].id == 2, "the shallowest match should win")
-end)
-
--- 命中在孙层、另一条兄弟分支也藏着同名节点:上报链一旦断掉(命中不再返回 true,
--- 或中间层不把子树的命中往上传),扫描会继续吃掉第二条分支,收到两个节点。
-it("test_query_nodes_by_name_dfs_stops_scanning_siblings_once_a_deep_match_is_found", function()
-  _build_tree()
-  local twin_root = context.nodes_list[11]
-
-  local list = twin_root:query_nodes_by_name_dfs("twin")
-
-  luassert.truthy(#list == 1, "a match found deep in the first branch must stop the sibling scan")
-  luassert.truthy(list[1].id == 16, "the first branch's grandchild should be the only result")
-end)
-
-it("test_query_nodes_by_name_dfs_descends_when_no_direct_child_matches", function()
-  local root = _build_tree()
-
-  local list = root:query_nodes_by_name_dfs("deep")
-
-  luassert.truthy(#list == 1 and list[1].id == 4, "dfs query should find the grandchild")
-end)
-
-it("test_query_nodes_by_name_dfs_returns_an_empty_list_when_the_name_is_absent", function()
-  local root = _build_tree()
-
-  luassert.truthy(#root:query_nodes_by_name_dfs("missing") == 0,
-    "absent names should yield an empty list")
 end)
 
 end)

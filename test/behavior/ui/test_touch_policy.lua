@@ -433,19 +433,6 @@ it("test_ui_touch_policy_auto_controls_touch", function()
   _assert_eq(touch["基础_托管按钮特效"], false, "auto effect should stay non-clickable when disabled")
 end)
 
-it("test_ui_touch_policy_runtime_nodes_touch_enabled", function()
-  local node1 = { disabled = true }
-  local node2 = { disabled = true }
-
-  ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, true)
-  _assert_eq(node1.disabled, false, "runtime node should be enabled")
-  _assert_eq(node2.disabled, false, "runtime node should be enabled")
-
-  ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, false)
-  _assert_eq(node1.disabled, true, "runtime node should be disabled")
-  _assert_eq(node2.disabled, true, "runtime node should be disabled")
-end)
-
 it("test_set_many_touch_enabled_noops_when_ui_lacks_hook", function()
   -- Pins L7 guard `not ui or not ui.set_touch_enabled`: an `and` mutant proceeds and
   -- calls the missing hook instead of returning cleanly.

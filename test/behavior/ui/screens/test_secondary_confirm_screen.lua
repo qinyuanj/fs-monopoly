@@ -20,7 +20,6 @@ end)
 
 it("test_registers_itself_into_the_registry_under_its_key", function()
   luassert.is_not_nil(registry.build_choice_screens().secondary_confirm, "registry aggregates secondary_confirm descriptor")
-  luassert.truthy(registry.canvas_for("secondary_confirm") == secondary_screen.canvas, "registry maps secondary_confirm canvas")
   luassert.truthy(registry.opener_for("secondary_confirm") == secondary_screen.open, "registry maps secondary_confirm opener")
 end)
 

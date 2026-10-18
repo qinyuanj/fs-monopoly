@@ -169,9 +169,6 @@ function market_view_slots.resolve_selection(option_id, image_refs)
   }
 end
 
--- Exported for testing
-market_view_slots._resolve_market_name = _resolve_market_name
-
 return market_view_slots
 
 --[[ mutate4lua-manifest

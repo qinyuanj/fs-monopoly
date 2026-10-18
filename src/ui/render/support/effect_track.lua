@@ -4,9 +4,6 @@ local effect_track = {}
 
 local active_tokens = {}
 local next_token_id = 1
-local coalesce_policies = {
-  cash_receive = "sum",
-}
 local timeout_seconds = 10.0
 
 local function _active_count()
@@ -117,60 +114,6 @@ function effect_track.scaled_duration(base)
     end
   end
   return base * scale
-end
-
-local function _merge_amount(merged, next_anim)
-  if merged.amount and next_anim.amount then
-    merged.amount = merged.amount + next_anim.amount
-  end
-end
-
--- Merges the run of same-kind entries starting at start_index under the "sum"
--- policy. Returns the merged entry and the index of the first entry past the run.
-local function _merge_sum_run(queue, start_index)
-  local anim = queue[start_index]
-  local merged = {}
-  for k, v in pairs(anim) do
-    merged[k] = v
-  end
-
-  local j = start_index + 1
-  while j <= #queue and queue[j].kind == anim.kind do
-    _merge_amount(merged, queue[j])
-    j = j + 1
-  end
-
-  merged.coalesced_count = j - start_index
-  return merged, j
-end
-
-local function _can_coalesce(queue)
-  return type(queue) == "table" and #queue > 1
-end
-
-function effect_track.coalesce_queue(queue)
-  if not _can_coalesce(queue) then
-    return queue
-  end
-
-  if _pressure() < 0.6 then
-    return queue
-  end
-
-  local result = {}
-  local i = 1
-  while i <= #queue do
-    local anim = queue[i]
-    if coalesce_policies[anim.kind] == "sum" then
-      local merged, next_index = _merge_sum_run(queue, i)
-      result[#result + 1] = merged
-      i = next_index
-    else
-      result[#result + 1] = anim
-      i = i + 1
-    end
-  end
-  return result
 end
 
 function effect_track.reset()

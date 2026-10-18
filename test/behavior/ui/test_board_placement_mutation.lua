@@ -131,12 +131,6 @@ describe("TestBoardPlacementMutation", function()
     luassert.truthy(second[5] == list_ref, "occupant list table should be cleared in place and reused")
   end)
 
-  it("test_resolve_occupant_slot_defaults_count_to_one_for_a_nil_list", function()
-    local slot, count = placement._resolve_occupant_slot(nil, "p1")
-    _assert_eq(slot, 1, "nil list should default slot to 1")
-    _assert_eq(count, 1, "nil list should default count to 1")
-  end)
-
   it("test_resolve_min_player_y_adds_the_configured_ground_offset_to_the_ground_height", function()
     local scene = { ground = { get_position = function() return { x = 0.0, y = 3.0, z = 0.0 } end } }
     -- resolve_min_player_y 随拆分迁到 placement_geometry(行为保持),配置覆写

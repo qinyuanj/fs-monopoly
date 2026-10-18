@@ -50,14 +50,6 @@ UIManager.EVENT = {
     CLICK = "CLICK"
 }
 
----@generic T
----@param node UIManager.ENodeUnion?
----@param type_name `T`
----@return TypeGuard<T>
-UIManager.typeof = function(node, type_name)
-    return node and node.__name == type_name or false
-end
-
 -- 发布对外 facade 到全局供消费点读取(单向 export,非簇内互引)。
 _G["UIManager"] = UIManager
 

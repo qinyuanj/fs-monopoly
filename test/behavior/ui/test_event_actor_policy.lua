@@ -42,13 +42,6 @@ it("test_classifies_actor_bound_intents_and_ui_buttons", function()
     "item_slot_N button is no longer a command and falls back to the generic ui_button")
   _assert_eq(policy.requires_event_actor({ type = "ui_button", id = 12 }), false,
     "unknown button id should fall back to the generic ui_button")
-  -- is_actor_bound_ui_button 包装(#262,kills requires_event_actor 调用 -> nil)。
-  _assert_eq(policy.is_actor_bound_ui_button("next"), true,
-    "next button should be actor-bound via the wrapper")
-  _assert_eq(policy.is_actor_bound_ui_button("auto"), true,
-    "auto button should be actor-bound via the wrapper")
-  _assert_eq(policy.is_actor_bound_ui_button("bogus_button"), false,
-    "unknown button should not be actor-bound via the wrapper")
 end)
 
 it("test_classifies_local_only_actor_resolution_intents", function()

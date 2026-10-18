@@ -697,8 +697,6 @@ describe("TestCameraPan", function()
     _assert_eq(#watcher_role._locked_positions(), 1, "不清基线时同位置第二帧应被去重")
   end)
 
-  -- 内部函数导出后直接覆盖分支(camera_sync._pos_components / _filter_sync_lock_value,
-  -- 导出先例见 turn_camera_policy._resolve_follow_player_id)。
   local function _make_unreadable_pos()
     return setmetatable({}, {
       __index = function()
@@ -706,35 +704,6 @@ describe("TestCameraPan", function()
       end,
     })
   end
-
-  it("test_pos_components_returns_nil_for_nil_pos", function()
-    _assert_eq(camera_sync._pos_components(nil), nil, "nil pos 应返回 nil")
-  end)
-
-  it("test_pos_components_returns_nil_when_component_read_fails", function()
-    _assert_eq(camera_sync._pos_components(_make_unreadable_pos()), nil, "pcall 失败应返回 nil")
-  end)
-
-  it("test_pos_components_returns_nil_when_component_missing", function()
-    _assert_eq(camera_sync._pos_components({ x = 1, y = 2 }), nil, "缺 z 分量应返回 nil")
-    _assert_eq(camera_sync._pos_components({ x = 1, y = nil, z = 3 }), nil, "y 为 nil 应返回 nil")
-  end)
-
-  it("test_pos_components_returns_components_when_readable", function()
-    local x, y, z = camera_sync._pos_components({ x = 1, y = 2, z = 3 })
-    _assert_eq(x, 1, "应返回 x 分量")
-    _assert_eq(y, 2, "应返回 y 分量")
-    _assert_eq(z, 3, "应返回 z 分量")
-  end)
-
-  it("test_filter_sync_lock_value_passthrough_when_components_unreadable", function()
-    -- 分量取不出时透传保持旧行为(不重发也不滤波)。
-    camera_sync.reset_baseline()
-    local role = _make_role_with_id(7)
-    _assert_eq(camera_sync._filter_sync_lock_value(role, nil), nil, "nil 目标应原样透传")
-    local unreadable = _make_unreadable_pos()
-    _assert_eq(camera_sync._filter_sync_lock_value(role, unreadable), unreadable, "取不出分量应原样透传")
-  end)
 
   it("test_pan_with_unreadable_components_skips_baseline", function()
     -- pan 目标分量取不出:lock 照发,但滤波基线不写(分量读不出不能当基线)。
