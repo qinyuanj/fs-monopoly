@@ -7,17 +7,16 @@ local guard = require("test.guards.lib.cli_command_table_guard")
 -- tools/packages/ 目录一一对应,非路由包走白名单。下面每一条都喂合成的
 -- 路由表/目录/白名单,断言它真的会红/会绿——门禁的价值全在能变红。
 
--- 精简的合成基线语料(6 条路由 + 1 个非路由包;真实仓库为 11 条路由 + 3 个
+-- 精简的合成基线语料(5 条路由 + 1 个非路由包;真实仓库为 9 条路由 + 3 个
 -- 非路由包,同构即可,判分支与数量无关)。
 local _COMMANDS = {
   { name = "verify", pkg = "verify" },
   { name = "spec-lane", pkg = "spec_lane" },
-  { name = "acceptance", pkg = "acceptance" },
   { name = "dry", pkg = "dry" },
   { name = "lint", pkg = "lint" },
   { name = "deploy", pkg = "ops" },
 }
-local _DIRS = { "verify", "spec_lane", "acceptance", "dry", "lint", "encoding", "ops" }
+local _DIRS = { "verify", "spec_lane", "dry", "lint", "encoding", "ops" }
 local _NON_ROUTED = { "encoding" }
 
 local function _check(commands, dirs, non_routed)
@@ -69,7 +68,7 @@ describe("TestCliCommandTableGuard", function()
 
   -- 多余包(未路由也未豁免)必须被拦。
   it("test_unrouted_unlisted_pkg_is_blocked", function()
-    local dirs = { "verify", "spec_lane", "acceptance", "dry", "lint", "encoding", "ops", "surprise" }
+    local dirs = { "verify", "spec_lane", "dry", "lint", "encoding", "ops", "surprise" }
     local violations = _check(nil, dirs)
     luassert.is.equal(1, #violations, _joined(violations))
     luassert.truthy(violations[1]:find("surprise", 1, true) ~= nil)
