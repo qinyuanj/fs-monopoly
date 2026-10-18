@@ -49,7 +49,7 @@ function runner.run_parallel(lanes, opts)
   return all_ok, results, elapsed
 end
 
--- 退 3 的车道是「不可用」(#112 工具自举网络失败 / #96 平台边界):不算通过,
+-- 退 3 的车道是「不可用」(平台或工具不可用):不算通过,
 -- 也不混进 failed。三态判定只在这张表里:车道判定与整体判定同源,整体取
 -- rank 最高者(有真实失败 1 > 有不可用 3 > 全通过 0);一条车道都没有按失败。
 local _STATES = {
@@ -112,7 +112,7 @@ function runner.build_output(input)
     #skipped, total_elapsed
   )
   if #unavailable > 0 then
-    buf[#buf + 1] = "[verify] unavailable(未运行,不是检查结论;先查网络再重跑): "
+    buf[#buf + 1] = "[verify] unavailable(未运行,平台或工具不可用;先查环境再重跑):"
       .. table.concat(unavailable, ", ") .. "\n"
   end
   if #skipped > 0 then

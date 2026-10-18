@@ -32,35 +32,15 @@
 
 ## 断言层与运行后端(#74 / #90,ADR 0069)
 
-迁移顺序是**先断言、后结构**:先把 `lu.*` / `luax.has_error` 换成真 luassert,`TestX = {}` 类结构原样留着;结构层(`describe` / `it`)换 busted 时再做第二步。两步之间的中间态允许进仓库,**不建「TestX 自动包成 describe」或「lu.* 转发到 luassert」的兼容层**——shim 出错的表现是测试静默通过。
-
-#90 之后旧后端已物理退场:自研 `luaunit_runner`(runner / registry / file_isolation / events / outputter / chunk_cache)、`packages.test_runner` 的双后端分派(`backend_manifest` / `manifest` / `events` / `update_manifest`)与 `test/support/luax.lua` 全部删除。唯一执行后端是真实 busted,入口 `tools/packages/test_runner/runner.lua`。
+唯一执行后端是真实 busted,入口 `tools/packages/test_runner/runner.lua`。断言使用真实 luassert,测试结构使用 `describe` / `it`。不得建立自动包装 Test 表或转发旧断言词汇的兼容层——shim 出错的表现是测试静默通过。
 
 ### 断言对象怎么拿
 
-- 仍走旧 Test 风格的 spec 文件头两行固定:`require("test.bootstrap").install_package_paths()` 之后 `local luassert = assert(require("test.support.luassert_loader").load())`,断言只走这个局部对象。该 loader 仍服务于场景套件、`shared_support`、`property`、`fuzz` 等尚未切 DSL 的支撑模块。
+- 由场景套件、`shared_support`、`property`、`fuzz` 等支撑模块装载断言时,在 `require("test.bootstrap").install_package_paths()` 之后使用 `local luassert = assert(require("test.support.luassert_loader").load())`,断言只走这个局部对象。
 - loader 只从**受控 Lua 环境**（`luarocks config rocks_trees` 解析出的机器 LuaRocks tree，见 GLOSSARY）装载 `luassert`、其子模块及 `say`。未验证的 `package.loaded` 预注入即失败;装载期间的优先 searcher 按受控 tree 内的文件显式 loadfile,避免 preload/searcher 绕过;后续调用复核已加载对象身份。解析路径在受控 tree 中不代表预加载对象来自 tree。真实 busted 侧由 `packages.test_runner.cache_loader` 施加同一口径的真身校验。本仓不安装、不写入任何 rocks tree。
 - **不覆盖全局 `assert`**。后端语义若挂在全局 `assert` 上,覆盖它等于换执行后端而不是换断言词汇。
 
 - #75 显式登记为 busted 的真实 `describe` / `it` 文件使用 busted 注入的断言对象（可写 `local luassert = assert`）；运行器先验证并从受控 Lua 环境装载真实 busted/luassert 依赖。不得将旧 Test 表动态包成 DSL，不得在 spec 中替换全局断言对象。普通 require 保持跨文件模块身份，singleton patch 由 spec 在 teardown 中显式恢复。
-
-### 译法对照(带陷阱)
-
-| 迁移前 | 迁移后 | 陷阱 |
-| --- | --- | --- |
-| 标量 `lu.assertEquals(a, b)` | `luassert.is.equal(b, a)` | **参数顺序翻转**成 (expected, actual);`is.equal` 是 `==`,表只比身份 |
-| 表 `lu.assertEquals(a, b)` | `luassert.is.same(b, a)` | LuaUnit 原本深比较表;luassert 的 `is.same` 忽略元表做深比较,不可换成身份比较 |
-| `lu.assertNotEquals(a, b)` | 标量用 `luassert.is_not(b, a)`,表用 `luassert.is_not.same(b, a)` | 必须保住标量不等或表内容不等的原口径 |
-| `lu.assertIs` / `lu.assertNotIs` | `luassert.is.equal` / `is_not`(同一引用) | 比的是引用,不是内容 |
-| `lu.assertEvalToTrue(x)` | `luassert.truthy(x)` | **truthiness**,`1` / `"s"` / 表都通过 |
-| `lu.assertEvalToFalse(x)` | `luassert.falsy(x)` | 只认 `nil` 与 `false` |
-| `lu.assertTrue(x)` / `lu.assertFalse(x)` | `luassert.is_true(x)` / `is_false(x)` | **严格布尔**,`is_true(1)` 必红;别拿 `truthy` 顶替 |
-| `lu.assertNil` / `lu.assertNotNil` | `luassert.is_nil` / `is_not_nil` | `is_nil(false)` 必红,`false` 不是 `nil` |
-| `lu.assertIsTable` 等类型断言 | `luassert.is_table` 等 | `is_*` 家族即类型断言 |
-| `lu.assertError(f, ...)` | `luassert.has_error(function() f(...) end)` | `lu.assertError` 把尾参**传给 f**、只验「抛没抛」;`has_error` **不转发参数**,给了 expected 就**精确比文本**。保住原义要显式包闭包、不顺手把期望值升级成精确文本——那是改期望值 |
-| `lu.assertErrorMsgContains(sub, f, ...)` | `luassert.has_error.match(function() f(...) end, sub, 1, true)` | 旧断言转发尾参;新断言需闭包保住调用。`has_error` 是**精确文本**,子串必须走 `match` 且加 `1, true`(init + plain,禁用模式元字符) |
-| `luax.has_error(f, msg)` | `luassert.has_error(f, msg)` | 同口径(先剥一层 `文件:行: ` 位置前缀,字符串精确比、表深比),换名即可 |
-| `lu.assertStrContains(s, sub)` | `luassert.matches(sub, s, 1, true)` | 同上,plain 模式 |
 
 ### 失败如何传播
 

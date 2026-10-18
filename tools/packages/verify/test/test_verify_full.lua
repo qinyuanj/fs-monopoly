@@ -98,7 +98,7 @@ skipped_lanes_appear_in_summary()
   check.truthy(out.stdout:find("skipped: lint-src, lint-test", 1, true))
 end
 
--- #112:退 3 的车道是「不可用」(工具自举网络失败),既不算通过也不混进 failed;
+-- 退 3 的车道是「平台或工具不可用」,既不算通过也不混进 failed;
 -- 摘要单列 unavailable,整体退出码非 0。
 local function _unavailable_lane()
   return { label = "lint-src", ok = false, exit_code = 3, elapsed = 2,
@@ -115,6 +115,7 @@ unavailable_lane_is_reported_and_never_passes()
   check.truthy(out.stdout:find("status=unavailable tool=luacheck", 1, true), out.stdout)
   check.truthy(out.stdout:find("[verify] UNAVAILABLE  passed=3 failed=0 unavailable=1", 1, true), out.stdout)
   check.is_nil(out.stdout:find("[verify] PASS", 1, true), out.stdout)
+  check.matches("平台或工具不可用;先查环境再重跑", out.stdout, 1, true)
 end
 
 local function
@@ -208,7 +209,7 @@ slim_plan_splits_lint_into_three_directory_lanes()
     "lint-test lane must target test dir: " .. labels["lint-test"])
 end
 
--- luacheck 不再由 PATH 探测供给(装进项目 tree 后经钉定 5.4 跑),所以
+-- luacheck 从受控 Lua 环境装载(经钉定 5.4 跑),所以
 -- "全局没有 luacheck" 不再是跳过 lint 车道的理由——三条 lint 车道恒在。
 local function
 missing_global_luacheck_keeps_project_install_lanes()

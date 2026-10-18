@@ -49,10 +49,8 @@ end
 
 local function _configure_detained_wait(game, turn, player)
   local detained_wait_seconds = timing.detained_turn_wait_seconds or 5.0
-  -- 扣留剩余回合 uses the 含当前回合 (inclusive) convention (CONTEXT「扣留剩余回合」): the player-visible
-  -- count includes the current frozen turn, so the tip reads the value BEFORE this turn's
-  -- decrement and never shows 0 while detained. The internal counter still decrements at
-  -- turn start (pinned by the 减后回合 acceptance scenario) via consume_detention_turn.
+  -- 扣留剩余回合含当前回合:提示显示本回合扣减前的值,扣留中不显示 0。
+  -- consume_detention_turn 在回合开始扣减内部计数,并返回含当前回合的显示值。
   local remaining_inclusive = game:consume_detention_turn(player)
   event_feed.publish(game, {
     kind = event_kinds.detained,

@@ -52,7 +52,7 @@ local function _status_of(player)
   return player and player.status or nil
 end
 
--- 扣留剩余回合（CONTEXT「扣留剩余回合」 含当前回合口径）：被扣留期间恒 >= 1，计到 0 即解除。
+-- 扣留剩余回合（含当前回合口径）：被扣留期间恒 >= 1，计到 0 即解除。
 function status_ops.detention_remaining(_self, player)
   local status = _status_of(player)
   local remaining = status and status.stay_turns or 0

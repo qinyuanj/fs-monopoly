@@ -17,8 +17,6 @@ L7 state | config
 
 门禁保留七层依赖方向、foundation 禁反向依赖整型层、未分类模块、每个命名空间视图的投影环，以及 UI 禁直接依赖 player/computer/rules、schema 纯度、ui.state 禁反向依赖 ui.coord。层号越大越内层，依赖只能指向同层或更内层。投影环把后代模块折叠成直接子节点再判定，不能只检查模块图；`allowed_cycles` 按 owning view、参与者集合和理由显式登记。
 
-旧 arch_view 分析器、其 `config.json` 兼容投影与 slim 的 arch 车道已于 #94 退役；层门禁唯一执行点是 guards 车道的 `test/guards/lib/arch_policy_guard.lua`。改边界只改 policy。
-
 `packages.arch_policy.project_uml_policy(policy)` 产生 uml-viewer 消费的 EDN；`lua tools/cli.lua uml ir` 把它与入库的 `docs/architecture.proposals.edn`（只含 `:proposals` / `:omit`）合并，写到仓根 `policy.edn`（gitignore，`:out` 为 `tmp/uml/monopoly.edn`），不要另存一份可手改配置（ADR 0070）。`:levels` 使用内层优先顺序（foundation、state/config、rules、player/computer、turn、ui、host、app），与门禁声明层互逆。使用 uml-viewer 公共 IR 主入口 `uml-viewer.main.ir-generator <policy.edn> <out.edn>`；#93 接管安装与 CRAP/变异的用户命令 `lua tools/cli.lua uml <check|crap|mutate>`，#99 加上 `ir` 与 `view`（契约见 `tools/specs/uml_quality.prompt`）。IR 只表达图和层方向，禁向规则、未分类和投影环仍由本项目 guard 执行。
 
 #92 在真实 policy/源码上验证：guard 与 uml-viewer IR 同为 570 模块、1788 内部依赖边，集合逐项相等，均无层违规。`require("src.host.init")` 沿用旧扫描口径作为外部依赖（模块 `.init` 折叠为 `src.host`）；另外两项外部依赖是 `Data.Prefab` 与 `Data.UIManagerNodes`。

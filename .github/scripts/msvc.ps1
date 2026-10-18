@@ -1,5 +1,6 @@
 # 把 MSVC x64 工具链载入当前 PowerShell 会话(#126);须 dot-source:`. .github/scripts/msvc.ps1`。
-# Lua 源码构建与 verify 期间 luarocks 编 C rock(luafilesystem/luasystem 等)都要它。
+# setup-lua.ps1 构建 Lua 与预装 C rock(luafilesystem/luasystem 等)需要它;
+# ci-verify.ps1 也载入同一环境,verify 只核对受控 Lua tree 并装载依赖。
 $previousErrorAction = $ErrorActionPreference
 try {
   $ErrorActionPreference = 'Stop'

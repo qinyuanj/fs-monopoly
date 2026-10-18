@@ -1,7 +1,7 @@
 -- 本地行动者身份解析接缝(#332 拆 ui.input ↔ ui.coord 投影环):input 层
 -- (route_item_slots)经此纯契约 port 解析点击者身份,不反向 require coord/
--- render 实现;实现由装配侧 configure 注入(host_install / 测试基线 /
--- acceptance 绑定),未注入时调用当场报错。两个动词与实现模块同形
+-- render 实现;实现由装配侧 configure 注入(host_install / 测试基线),
+-- 未注入时调用当场报错。两个动词与实现模块同形
 -- (turn_bound 是 from_event 的别名,语义原样保留);#446 收掉无生产消费者
 -- 的 resolve_local。
 local resolver = {}

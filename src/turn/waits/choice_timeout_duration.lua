@@ -1,4 +1,4 @@
--- 选择超时时长解析(自 timeout.lua 经 choice_timeout 迁入再拆出,行为保持):
+-- 选择超时时长解析:
 -- scoped 配置优先,缺 scope 回落 scope_timeouts.choice,再回落 constants 基础值。
 local number_utils = require("src.foundation.number")
 local constants = require("src.config.content.constants")

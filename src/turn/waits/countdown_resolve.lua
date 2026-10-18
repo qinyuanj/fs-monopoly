@@ -57,7 +57,7 @@ local function _resolve_pending_choice_countdown(state, gate, timeout, pending_c
 end
 
 local function _resolve_popup_countdown(game, state)
-  -- modal 事实直读 ui_gate(#602 外壳退役,不再经 timeout.lua 转发)。
+  -- modal 超时时长直接由 ui_gate 解析。
   local popup_timeout = tick_ui_gate.resolve_modal_timeout_seconds(state)
   if popup_timeout <= 0 then
     return false, 0

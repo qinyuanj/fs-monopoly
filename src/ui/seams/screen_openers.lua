@@ -1,6 +1,6 @@
 -- 开屏接缝(#332 拆 ui.coord ↔ ui.screens 投影环):coord 的开屏/收屏动作
 -- (secondary_confirm / market)经此纯契约 port,不反向 require screens 模块;
--- 实现由装配侧 configure 注入(host_install / 测试基线 / acceptance 绑定)。
+-- 实现由装配侧 configure 注入(host_install / 测试基线)。
 -- 签名与被转发实现同形,本模块不叠加任何屏结论。
 local screen_openers = {}
 local configured_impl = nil

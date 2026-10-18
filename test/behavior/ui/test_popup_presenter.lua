@@ -1,7 +1,7 @@
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
--- 弹层簇合并规约（#191）：popup_presenter 生命周期 + 卡牌展示广播（原
--- card_reveal_broadcast_spec 并入）。共享 _make_state / 角色扇出 / reveal fixture。
+-- 弹层行为规约:popup_presenter 生命周期与卡牌展示广播。
+-- 共享 _make_state / 角色扇出 / reveal fixture。
 local support = require("test.support.shared_support")
 local popup = require("src.ui.coord.popup")
 local popup_presenter = require("src.ui.coord.popup_presenter")

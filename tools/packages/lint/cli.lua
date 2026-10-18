@@ -1,7 +1,7 @@
 -- packages/lint/cli.lua —— lint 子命令(wayfinder #304 骨架 / #320 包退场)
 --
 -- 统一接口形态(#300 决议):本文件 return 纯接口模块:
---   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误 / 3 luacheck 自举不可用,#112)
+--   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误 / 3 平台或工具不可用)
 --   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
 --
 -- 实现(#311/#320/#322):薄壳已随包迁落位,进程内调用 packages.lint.runner
