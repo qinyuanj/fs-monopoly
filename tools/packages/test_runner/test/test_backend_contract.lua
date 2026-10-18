@@ -18,6 +18,14 @@ local function run(files, helper)
 end
 
 describe("real busted execution", function()
+  it("empty registered suite fails", function()
+    local root = env.make_temp_path("zero_cases_73", "")
+    check.truthy(fs.write_file(root .. "/test_empty.lua", "return {}\n"))
+    local result = proc.run_command({ "lua", "tools/packages/test_runner/runner.lua", "--", root .. "/test_empty.lua" })
+    check.truthy(fs.remove_path(root))
+    check.truthy(not result.ok and result.output:find("cases=0", 1, true), result.output)
+  end)
+
   it("reports one reconciled counts line", function()
     local result = run({ "passing" })
     check.equal(0, result.code, result.output)

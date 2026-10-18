@@ -90,14 +90,6 @@ it("empty discovery and native CLI startup", function()
   check.truthy(result.output:find("profile", 1, true), result.output)
 end)
 
-it("empty registered suite fails", function()
-  local root = env.make_temp_path("zero_cases_73", "")
-  check.truthy(fs.write_file(root .. "/test_empty.lua", "return {}\n"))
-  local result = proc.run_command({ "lua", "tools/packages/test_runner/runner.lua", "--", root .. "/test_empty.lua" })
-  check.truthy(fs.remove_path(root))
-  check.truthy(not result.ok and result.output:find("cases=0", 1, true), result.output)
-end)
-
 it("controlled lua environment exposes native DLL modules", function()
   local original = package.cpath
   require("foundation.lua_env").install_paths({ "C:/controlled/tree" })

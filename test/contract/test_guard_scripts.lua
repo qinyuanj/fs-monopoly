@@ -54,6 +54,15 @@ it("test_dep_rules_rejects_tool_packages_in_foundation", function()
   luassert.matches("tool_packages/bad.lua", result.violation.path, 1, true)
 end)
 
+for _, fixture in ipairs({ "script_argv.lua", "script_command.lua", "script_dofile.lua", "script_loadfile.lua" }) do
+  it("test_dep_rules_rejects_direct_tool_package_script_" .. fixture, function()
+    local result = dep_rules.run({ rules = _tool_foundation_rules(fixture) })
+    luassert.is_false(result.ok, "foundation must reject direct tool package scripts")
+    luassert.is_not_nil(result.violation)
+    luassert.matches("tool_packages/" .. fixture, result.violation.path, 1, true)
+  end)
+end
+
 it("test_dep_rules_allows_foundation_dependencies", function()
   local result = dep_rules.run({ rules = _tool_foundation_rules("clean.lua") })
   luassert.is_true(result.ok, "foundation may depend on other foundation modules")
