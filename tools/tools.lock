@@ -1,3 +1,0 @@
-# 工具跟随上游主干:ensure 时浅克隆 HEAD + luarocks make,.toolcache/luarocks tree 是唯一装载面。
-# Format: <name> <github-repo-url>(#94 起源自 GitHub,原私有 Gitea 已不可达)
-# HEAD 解析缓存于 .toolcache/resolved-tools.tsv(24h TTL);删除该文件强制重新解析。

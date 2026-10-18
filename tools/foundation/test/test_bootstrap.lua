@@ -8,7 +8,6 @@ local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
-local tool_lockfile = require("foundation.tool_lockfile")
 local test_source = debug.getinfo(1, "S").source:gsub("^@", "")
 local test_dir = test_source:match("^(.*)/[^/]+$") or "tools/foundation/test"
 local runtime_paths = dofile(test_dir .. "/../runtime_paths.lua")
@@ -67,72 +66,7 @@ end
 
 local _LUAROCKS_PREFIX = os.getenv("LOCALAPPDATA"):gsub("\\", "/") .. "/Programs/Lua"
 
--- #112:临时仓库根 + 锁文件,让 ensure_tool 走真实解析/拉取路径而不碰本仓 .toolcache。
--- cache_line 给出时预置一条新鲜的解析缓存(跳过 ls-remote,直达拉源码一步)。
-local function _temp_tool_repo(cache_line)
-  local root = env_lib.make_temp_path("bootstrap_unavailable_spec", "")
-  fs_lib.remove_path(root)
-  check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools")))
-  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"),
-    "dry4lua https://example.invalid/eggy/dry4lua\n"))
-  if cache_line ~= nil then
-    check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, ".toolcache")))
-    check.is_true(fs_lib.write_file(path_lib.join_path(root, ".toolcache/resolved-tools.tsv"), cache_line .. "\n"))
-  end
-  return { repo_root = root, tool_cache_dir = path_lib.join_path(root, ".toolcache"), tool_defs = { dry4lua = {} } }
-end
-
--- 断网替身:工具未装(luarocks list 失败),git 远端一律解析不到主机。
-local function _offline_stubs()
-  local real_exists = fs_lib.path_exists
-  return {
-    { target = fs_lib, key = "path_exists", value = function(path)
-      if tostring(path):match("luarocks%.exe$") then return true end
-      return real_exists(path)
-    end },
-    { target = proc_lib, key = "run_command", value = function(command)
-      local probe = _native_probe(command)
-      if probe then return probe end
-      if command[1] == "git" then
-        return { ok = false, output = "fatal: unable to access: Could not resolve host: example.invalid" }
-      end
-      return { ok = false, output = "" }
-    end },
-  }
-end
-
 describe("bootstrap", function()
-
-it("parses the repo url lockfile format", function()
-  local lock, err = tool_lockfile.parse_contents(table.concat({
-    "# comment",
-    "fixture http://example.invalid/eggy/fixture.git",
-    "",
-  }, "\n"), { fixture = {} })
-
-  check.is_nil(err)
-  check.is_not_nil(lock)
-  check.equal("http://example.invalid/eggy/fixture.git", lock.tools.fixture.url)
-  check.same({ "fixture" }, lock.ordered)
-end)
-
-it("rejects unknown tools", function()
-  local lock, err = tool_lockfile.parse_contents(
-    "unknown http://example.invalid/eggy/unknown\n"
-  )
-
-  check.is_nil(lock)
-  check.truthy(tostring(err):find("unknown tool", 1, true) ~= nil)
-end)
-
--- #94/#147/#148:旧 CRAP/变异/架构/验收/dry 工具退场后,锁文件白名单不再接受它们。
-it("rejects retired quality tools", function()
-  for _, name in ipairs({ "arch_view", "crap4lua", "mutate4lua", "dry4lua", "acceptance4lua" }) do
-    local lock, err = tool_lockfile.parse_contents(name .. " http://example.invalid/eggy/" .. name .. "\n")
-    check.is_nil(lock)
-    check.truthy(tostring(err):find("unknown tool", 1, true) ~= nil, name)
-  end
-end)
 
 it("install appends luarocks tree paths", function()
   local root = env_lib.make_temp_path("bootstrap_spec", "")
@@ -145,7 +79,7 @@ it("install appends luarocks tree paths", function()
     path_lib.join_path(root, "tools/foundation/package_path_helper.lua")
   ))
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools")))
-  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"), ""))
+  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/cli.lua"), "return {}"))
 
   local original = package.path
   package.path = "/sentinel/?.lua"
@@ -170,7 +104,7 @@ it("install appends luarocks tree cpath", function()
     path_lib.join_path(root, "tools/foundation/package_path_helper.lua")
   ))
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools")))
-  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"), ""))
+  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/cli.lua"), "return {}"))
 
   local original = package.cpath
   package.cpath = "/sentinel/?.so"
@@ -183,7 +117,7 @@ it("install appends luarocks tree cpath", function()
   check.truthy(cpath:find("/.toolcache/luarocks/lib/lua/5.4/?.so", 1, true) ~= nil)
 end)
 
-it("resolves a repo root from the lockfile based tool layout", function()
+it("resolves a repo root from the standard tool layout", function()
   local root = path_lib.join_path(
     "tmp",
     "runtime_paths_spec_$__monopoly_runtime_paths_unset__ path"
@@ -194,7 +128,7 @@ it("resolves a repo root from the lockfile based tool layout", function()
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "test")))
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools/foundation")))
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools")))
-  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"), ""))
+  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/cli.lua"), "return {}"))
 
   local env = runtime_paths.resolve({
     cwd = root,
@@ -318,35 +252,23 @@ it("process lock preserves non contention mkdir errors instead of waiting", func
   assert(run_ok, run_err)
 end)
 
-local function _assert_concurrent_cold_bootstrap(kinds)
+local function _assert_concurrent_cold_bootstrap()
   local root = env_lib.make_temp_path("bootstrap lock 中文 space", "")
   fs_lib.remove_path(root)
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "fake-bin")))
   local worker = path_lib.join_path(root, "worker.lua")
   local fake_script = path_lib.join_path(root, "fake_luarocks.lua")
   local fake_exe = path_lib.join_path(root, "fake_luarocks.cmd")
-  local fake_git_script = path_lib.join_path(root, "fake_git.lua")
-  local fake_git_exe = path_lib.join_path(root, "fake-bin/git.cmd")
-  local sha = string.rep("a", 40)
-  local needs_dry = kinds[1] == "dry4lua" or kinds[2] == "dry4lua"
 
-  if needs_dry then
-    -- resolved cache 只创建 .toolcache,不预建其下的 luarocks tree。
-    check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"),
-      "dry4lua https://example.invalid/eggy/dry4lua.git\n"))
-    check.is_true(fs_lib.write_file(path_lib.join_path(root, ".toolcache/resolved-tools.tsv"),
-      "dry4lua\t" .. sha .. "\t-\t" .. tostring(os.time()) .. "\n"))
-  end
-
-  -- 两个 worker 都到齐后才进入公共 ensure 接口。假 git 与假 luarocks 不起网络;
-  -- 假 install/remove/make 用独立目录锁模拟真实树锁,未串行化时必报竞争错误。
+  -- 两个 worker 都到齐后才进入公共 ensure 接口。假 luarocks 不起网络;
+  -- 假 install 用独立目录锁模拟真实树锁,未串行化时必报竞争错误。
   check.is_true(fs_lib.write_file(worker, [[
 local function exists(path)
   local file = io.open(path, "rb")
   if file then file:close() end
   return file ~= nil
 end
-local root, lane, kind = arg[1], arg[2], arg[3]
+local root, lane = arg[1], arg[2]
 local ready = root .. "/ready-" .. lane
 local file = assert(io.open(ready, "wb"))
 file:write("ready")
@@ -357,36 +279,10 @@ while not exists(root .. "/ready-1") or not exists(root .. "/ready-2") do
 end
 require("test.bootstrap").install_package_paths()
 local bootstrap = require("foundation.bootstrap")
-local ok, err, unavailable
-if kind == "dry4lua" then
-  ok, err, unavailable = bootstrap.ensure_tool(kind, {
-    repo_root = root,
-    tool_cache_dir = root .. "/.toolcache",
-    tool_defs = { dry4lua = {} },
-  })
-else
-  ok, err, unavailable = bootstrap.ensure_busted_tree(root)
-end
+local ok, err, unavailable = bootstrap.ensure_busted_tree(root)
 if unavailable ~= nil then io.stderr:write(tostring(err) .. "\n"); os.exit(3) end
 if not ok then io.stderr:write(tostring(err) .. "\n"); os.exit(1) end
-io.write("BOOTSTRAP_OK " .. kind .. "\n")
-]]))
-  check.is_true(fs_lib.write_file(fake_git_script, [[
-local sha = string.rep("a", 40)
-if arg[1] == "clone" then
-  local destination = arg[#arg]
-  assert(os.execute('mkdir "' .. destination:gsub("/", "\\") .. '" 2>nul'))
-  local file = assert(io.open(destination .. "/controlled-source.txt", "wb"))
-  file:write("source")
-  file:close()
-elseif arg[1] == "-C" and arg[3] == "rev-parse" then
-  io.write(sha .. "\n")
-elseif arg[1] == "ls-remote" then
-  io.write(sha .. "\tHEAD\n")
-else
-  io.stderr:write("unexpected fake git argv\n")
-  os.exit(2)
-end
+io.write("BOOTSTRAP_OK busted\n")
 ]]))
   check.is_true(fs_lib.write_file(fake_script, [[
 local tree, action
@@ -398,16 +294,6 @@ for index = 1, #arg do
   end
 end
 assert(tree and action, "fake luarocks requires a tree and action")
-local state = tree .. "/.controlled-dry4lua-installed"
-if action == "list" then
-  local installed = io.open(state, "rb")
-  if installed then
-    local version = installed:read("*a")
-    installed:close()
-    io.write("dry4lua " .. version .. " installed\n")
-  end
-  return
-end
 local lock = tree .. "/.controlled-fake-tree-lock"
 local native_lock = lock:gsub("/", "\\")
 local created = os.execute('mkdir "' .. native_lock .. '" 2>nul')
@@ -417,18 +303,12 @@ if created ~= true then
 end
 local deadline = os.time() + 2
 while os.time() < deadline do end
-if action == "remove" then
-  os.remove(state)
-elseif action == "install" then
+if action == "install" then
   local marker = tree .. "/share/lua/5.4/busted/runner.lua"
   local parent = marker:match("^(.*)/[^/]+$"):gsub("/", "\\")
   assert(os.execute('mkdir "' .. parent .. '" 2>nul'))
   local file = assert(io.open(marker, "wb"))
   file:write("-- controlled fake busted\n")
-  file:close()
-elseif action == "make" then
-  local file = assert(io.open(state, "wb"))
-  file:write("1.0.0-1")
   file:close()
 end
 assert(os.execute('rmdir "' .. native_lock .. '" 2>nul'))
@@ -437,15 +317,13 @@ io.write("FAKE_" .. action:upper() .. "_OK\n")
   local shell_lib = require("foundation.shell")
   check.is_true(fs_lib.write_file(fake_exe, "@echo off\r\n"
     .. shell_lib.build_command({ native_lua, fake_script }) .. " %*\r\n"))
-  check.is_true(fs_lib.write_file(fake_git_exe, "@echo off\r\n"
-    .. shell_lib.build_command({ native_lua, fake_git_script }) .. " %*\r\n"))
 
   local run_ok, run_err = xpcall(function()
     local lanes = {}
     for lane = 1, 2 do
       lanes[lane] = {
-        label = "cold-" .. kinds[lane],
-        cmd = { native_lua, worker, root, tostring(lane), kinds[lane] },
+        label = "cold-busted-" .. lane,
+        cmd = { native_lua, worker, root, tostring(lane) },
       }
     end
     local ok, results = require("foundation.parallel_lanes").run(lanes, {
@@ -469,21 +347,13 @@ io.write("FAKE_" .. action:upper() .. "_OK\n")
     check.is_true(ok, table.concat(diagnostics, "\n"))
     check.is_true(fs_lib.path_exists(path_lib.join_path(root,
       ".toolcache/luarocks/share/lua/5.4/busted/runner.lua")))
-    if needs_dry then
-      check.is_true(fs_lib.path_exists(path_lib.join_path(root,
-        ".toolcache/luarocks/.controlled-dry4lua-installed")))
-    end
   end, debug.traceback)
   fs_lib.remove_path(root)
   assert(run_ok, run_err)
 end
 
 it("serializes concurrent busted installs when the cache tree is absent", function()
-  _assert_concurrent_cold_bootstrap({ "busted", "busted" })
-end)
-
-it("serializes dry4lua builds with busted installs on the shared tree", function()
-  _assert_concurrent_cold_bootstrap({ "busted", "dry4lua" })
+  _assert_concurrent_cold_bootstrap()
 end)
 
 it("ensure busted tree reports missing post install marker", function()
@@ -685,148 +555,8 @@ it("ensure luacov lcov reporter tree installs the pinned rock", function()
   end)
 end)
 
--- #112:自举的网络类失败是「不可用」,不是「失败」——第三返回值标出工具与步骤,
+-- #112:自举的网络/下载类失败是「不可用」,不是「失败」——第三返回值标出工具与步骤,
 -- 调用方据此退 3,而不是把断网说成测试回归。
-it("ensure tool reports unresolvable upstream head as unavailable", function()
-  local env = _temp_tool_repo()
-  local ok, err, unavailable
-  _with_stubs(_offline_stubs(), function()
-    ok, err, unavailable = bootstrap.ensure_tool("dry4lua", env)
-  end)
-  fs_lib.remove_path(env.repo_root)
-  check.is_nil(ok)
-  check.truthy(tostring(err):find("git ls-remote failed", 1, true), tostring(err))
-  check.equal("unavailable", unavailable.status)
-  check.equal("dry4lua", unavailable.tool)
-  check.equal("resolve", unavailable.step)
-  check.equal(3, unavailable.exit_code)
-end)
-
-it("ensure tool reports failed source clone as unavailable", function()
-  local env = _temp_tool_repo("dry4lua\t" .. string.rep("a", 40) .. "\t-\t" .. tostring(os.time()))
-  local ok, err, unavailable
-  _with_stubs(_offline_stubs(), function()
-    ok, err, unavailable = bootstrap.ensure_tool("dry4lua", env)
-  end)
-  fs_lib.remove_path(env.repo_root)
-  check.is_nil(ok)
-  check.truthy(tostring(err):find("git clone failed", 1, true), tostring(err))
-  check.equal("dry4lua", unavailable.tool)
-  check.equal("fetch", unavailable.step)
-end)
-
--- 上游仓库不存在不是网络问题:按失败原因分类,照旧是真实失败。
-it("ensure tool keeps a missing upstream repository as a real failure", function()
-  local env = _temp_tool_repo()
-  local stubs = _offline_stubs()
-  local offline_run = stubs[2].value
-  stubs[2].value = function(command)
-    if command[1] == "git" then return { ok = false, output = "remote: Repository not found." } end
-    return offline_run(command)
-  end
-  local ok, err, unavailable
-  _with_stubs(stubs, function()
-    ok, err, unavailable = bootstrap.ensure_tool("dry4lua", env)
-  end)
-  fs_lib.remove_path(env.repo_root)
-  check.is_nil(ok)
-  check.truthy(tostring(err):find("Repository not found", 1, true), tostring(err))
-  check.is_nil(unavailable)
-end)
-
--- 构建失败要看原因:下载依赖失败是不可用,编译/构建错误是锁定版本或源码坏了,真实失败。
-local function _ensure_with_make_output(make_output)
-  local env = _temp_tool_repo("dry4lua\t" .. string.rep("a", 40) .. "\t-\t" .. tostring(os.time()))
-  local stubs = _offline_stubs()
-  stubs[2].value = function(command)
-    local probe = _native_probe(command)
-    if probe then return probe end
-    if command[1] == "git" and command[2] == "clone" then return { ok = true, output = "" } end
-    if command[1] == "git" then return { ok = true, output = string.rep("b", 40) .. "\n" } end
-    for _, token in ipairs(command) do
-      if token == "make" then return { ok = false, output = make_output } end
-    end
-    return { ok = false, output = "" }
-  end
-  local ok, err, unavailable
-  _with_stubs(stubs, function()
-    ok, err, unavailable = bootstrap.ensure_tool("dry4lua", env)
-  end)
-  fs_lib.remove_path(env.repo_root)
-  check.is_nil(ok)
-  check.truthy(tostring(err):find("luarocks make failed for dry4lua", 1, true), tostring(err))
-  return unavailable
-end
-
-it("ensure tool reports dependency download failure during build as unavailable", function()
-  local unavailable = _ensure_with_make_output("Error: Failed downloading https://luarocks.org/manifest - timed out")
-  check.equal("build", unavailable.step)
-  check.equal("dry4lua", unavailable.tool)
-end)
-
-it("ensure tool keeps a build error as a real failure", function()
-  check.is_nil(_ensure_with_make_output("Error: Build error: Failed compiling object src/lfs.o"))
-end)
-
--- 宁红勿假:编译报错里出现 ssl/tls/proxy/timed out 字样不等于网络失败。
-it("ensure tool keeps an openssl header compile error as a real failure", function()
-  check.is_nil(_ensure_with_make_output(
-    "src/tls_proxy.c:3:10: fatal error: openssl/ssl.h: No such file or directory\n"
-      .. "Error: Build error: Failed compiling object src/tls_proxy.o"))
-end)
-
-it("ensure tool keeps a timed out build step as a real failure", function()
-  check.is_nil(_ensure_with_make_output("Error: Build error: command timed out after 600s"))
-end)
-
--- ssh 形态的「仓库不存在」也带 Could not read from remote repository,不是网络问题。
-it("ensure tool keeps an ssh repository not found as a real failure", function()
-  local env = _temp_tool_repo()
-  local stubs = _offline_stubs()
-  local offline_run = stubs[2].value
-  stubs[2].value = function(command)
-    if command[1] == "git" then
-      return { ok = false, output = "ERROR: Repository not found.\nfatal: Could not read from remote repository." }
-    end
-    return offline_run(command)
-  end
-  local unavailable
-  _with_stubs(stubs, function()
-    unavailable = select(3, bootstrap.ensure_tool("dry4lua", env))
-  end)
-  fs_lib.remove_path(env.repo_root)
-  check.is_nil(unavailable)
-end)
-
-it("ensure tool reports a git tls handshake failure as unavailable", function()
-  local env = _temp_tool_repo()
-  local stubs = _offline_stubs()
-  local offline_run = stubs[2].value
-  stubs[2].value = function(command)
-    if command[1] == "git" then
-      return { ok = false, output = "fatal: unable to access: schannel: failed to receive handshake, SSL/TLS connection failed" }
-    end
-    return offline_run(command)
-  end
-  local unavailable
-  _with_stubs(stubs, function()
-    unavailable = select(3, bootstrap.ensure_tool("dry4lua", env))
-  end)
-  fs_lib.remove_path(env.repo_root)
-  check.equal("resolve", unavailable.step)
-end)
-
--- 锁文件缺项是仓内缺陷,照旧是真实失败,不能被降级成「不可用」。
-it("ensure tool keeps lockfile defects as real failures", function()
-  local env = _temp_tool_repo()
-  check.is_true(fs_lib.write_file(path_lib.join_path(env.repo_root, "tools/tools.lock"), "# no tools\n"))
-  local ok, err, unavailable = bootstrap.ensure_tool("dry4lua", env)
-  fs_lib.remove_path(env.repo_root)
-  check.is_nil(ok)
-  check.equal("tool missing from lockfile: dry4lua", err)
-  check.is_nil(unavailable)
-end)
-
 it("ensure luacheck tree reports install failure as unavailable", function()
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
