@@ -41,37 +41,6 @@ local function _selected_interpreter()
   return require("foundation.lua54").lua54_bin()
 end
 
--- 裸命令名 → Lua 安装前缀(luarocks `--lua-dir` 的实参)。
--- where.exe 可能先给出 lua.cmd / lua.bat 这类 wrapper(用户 shell 垫片),它们的
--- 目录不是 Lua 安装前缀,拿错会让 C 扩展找不到 include/lib;故优先取真实 .exe
--- 所在的 bin/ 目录,只在没有 .exe 时退回第一个 bin/ 前一节。
-local function _install_prefix(selected)
-  local proc = require("foundation.proc")
-  local candidates = {}
-  local normalized = runtime_paths.normalize_path(selected)
-  if normalized:find("/") ~= nil then
-    candidates[#candidates + 1] = normalized
-  else
-    local found = proc.run_command({ "where.exe", selected })
-    if found.ok == true then
-      for line in tostring(found.output or ""):gmatch("[^\r\n]+") do
-        candidates[#candidates + 1] = runtime_paths.normalize_path(line)
-      end
-    end
-  end
-  local fallback
-  for _, candidate in ipairs(candidates) do
-    local prefix = candidate:match("^(.*)/bin/[^/]+$")
-    if prefix ~= nil then
-      if candidate:lower():match("%.exe$") ~= nil then
-        return prefix
-      end
-      fallback = fallback or prefix
-    end
-  end
-  return fallback
-end
-
 -- 裸命令名解析成完整解释器路径(where.exe 首个 .exe 命中);已是路径形态原样返回。
 -- 只供 tool_discovery_env 导出使用,不改变 detect_lua54 自身的候选语义。
 local function _interpreter_path(selected)
@@ -120,9 +89,6 @@ end
 function bootstrap.tool_discovery_env()
   local selected = _selected_interpreter()
   local exe = _interpreter_path(selected)
-  if _install_prefix(exe) == nil then
-    return nil
-  end
   local ok, rocks = pcall(_luarocks_exe)
   if not ok then
     return nil

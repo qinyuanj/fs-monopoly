@@ -17,6 +17,7 @@ local tap_summary = require("foundation.tap_summary")
 local tool_availability = require("foundation.tool_availability")
 local parallel_lanes = require("foundation.parallel_lanes")
 local sharding = require("foundation.spec_sharding")
+local lane_tools = require("packages.spec_lane.spec_lane_tools")
 local lane_args = require("packages.spec_lane.spec_lane_args")
 local evidence = require("packages.spec_lane.spec_evidence")
 local runner_bin = require("packages.test_runner.lua54")
@@ -40,49 +41,11 @@ local function _profile_roots(profile)
   if fs_lib.is_dir(profile) then
     return { profile }
   end
-  local profiles = dofile("tools/packages/spec_lane/spec_profiles.lua")
-  local config = profiles[profile]
-  if config == nil then
-    return nil
-  end
-  return config.ROOT or {}
+  return lane_tools.profile_roots(profile)
 end
 
--- 分片 lane 需要 profile 的 helper/pattern(显式传参,与串行 `--run <profile>`
--- 让 runner 解析的取值同源——都是 spec_profiles.lua)。
-local function _profile_config(profile)
-  local profiles = dofile("tools/packages/spec_lane/spec_profiles.lua")
-  local config = profiles[profile]
-  if type(config) ~= "table" then
-    return {}
-  end
-  return config
-end
-
--- 发现口径与 runner 的 `--run` 逐字节等价(collect_files + basename 子串匹配
--- pattern)。仍保留本地实现而不用 discover_spec_files:那里 pattern 写死
--- test_,这里按 profile 取(值仍同源——都是 spec_profiles.lua)。
--- 分片只拆文件边界、不拆文件内顺序(LPT 纪律)。
-local function _discover_files(roots, pattern)
-  local files = {}
-  local seen = {}
-  for _, root in ipairs(roots or {}) do
-    local discovered = proc_lib.collect_files(root, ".lua")
-    for _, path in ipairs(discovered or {}) do
-      local base = path:match("([^/\\]+)%.lua$")
-      if base ~= nil and base:find(pattern) ~= nil and not seen[path] then
-        local verdict = require("foundation.platform_boundary").test_verdict(path)
-        if verdict then
-          io.write("[tooling] excluded status=unavailable file=" .. verdict.identity
-            .. " cases=" .. verdict.cases .. " capability=acceptance-mutate reason=" .. verdict.entry.reason .. "\n")
-        else files[#files + 1] = path end
-        seen[path] = true
-      end
-    end
-  end
-  table.sort(files)
-  return files
-end
+local _profile_config = lane_tools.profile_config
+local _discover_files = sharding.discover_files
 
 -- worker 数:options.workers 显式覆写(测试注入用);否则 EGGY_SPEC_LANE_WORKERS
 -- 环境变量(语义对齐 EGGY_BEHAVIOR_WORKERS / EGGY_COVERAGE_WORKERS),默认 3,
@@ -172,7 +135,7 @@ local function _merge_durations(profile, files, measured_paths)
   end
 end
 
--- runner 子进程自举不可用(#131):诊断原样转 stderr,一个测试都没跑,不报 failed。
+-- runner 子进程工具/平台不可用:诊断原样转 stderr,不报 failed。
 local function _unavailable_result(diagnostic)
   return { stdout = "", stderr = diagnostic, code = tool_availability.EXIT_CODE,
     status = "unavailable", passed = 0, failed = 0 }
@@ -249,8 +212,8 @@ local function _run_sharded(options, profile, files, spawn_env)
   local _, results = run_lanes(lane_specs, { stream = false, env = spawn_env })
   _merge_durations(profile, files, measured_paths)
 
-  -- 自举不可用的 lane 不并入 TAP、不算失败;其余 lane 全过时整体按不可用报
-  -- (各 lane 断网诊断相同,只转一份)。混有真实失败仍退 1(#131)。
+  -- 不可用的 lane 不并入 TAP、不算失败;其余 lane 全过时整体报不可用,
+  -- 诊断只转一份。混有真实失败仍退 1(#131)。
   local raw_parts = {}
   local entries = {}
   local code = 0
@@ -363,7 +326,7 @@ function M.run(options)
     else
       stdout = compressed .. (counts and counts .. "\n" or "") .. _count_diagnostics(aggregated, false)
     end
-    -- 一个用例都没解析出来就失败(典型:自举构建错误),摘要只剩「0 passed」,
+    -- 一个用例都没解析出来就失败(典型:依赖预检错误),摘要只剩「0 passed」,
     -- 原样附上子进程输出交代原因(#131)。
     if code ~= 0 and passed + failed == 0 and not options.verbose then
       stdout = stdout .. raw .. (raw:sub(-1) == "\n" and "" or "\n")

@@ -3,8 +3,6 @@
 # 扫描/构建产物目录与标记文件。
 /build/
 *.luac
-# spec_lane junit 车道输出。
-/junit-output.xml
 # 车道/工具日志残留兜底（仓根与子树都不版本化 .log）。
 *.log
 # luacov 残留防护：任何链路把 luacov 产物泄进仓根时，guards 的白名单检查会
