@@ -10,12 +10,13 @@
 local lua_env = {}
 
 -- 版本口径:min 含、below 不含(下一大版本)。install 是失败时打印的钉定安装版本。
+-- module 是运行时真正 require 的入口模块,用于核对模块文件确实落在受控 tree 内。
 lua_env.REQUIREMENTS = {
-  { name = "busted", min = "2.3.0", below = "3", install = "2.3.0-1" },
-  { name = "luassert", min = "1.9.0", below = "2", install = "1.9.0-1" },
-  { name = "luacov", min = "0.17.0", below = "1", install = "0.17.0-1" },
-  { name = "luacov-reporter-lcov", min = "0.2", below = "1", install = "0.2-0" },
-  { name = "luacheck", min = "1.2.0", below = "2", install = "1.2.0-1" },
+  { name = "busted", module = "busted.runner", min = "2.3.0", below = "3", install = "2.3.0-1" },
+  { name = "luassert", module = "luassert", min = "1.9.0", below = "2", install = "1.9.0-1" },
+  { name = "luacov", module = "luacov.runner", min = "0.17.0", below = "1", install = "0.17.0-1" },
+  { name = "luacov-reporter-lcov", module = "luacov.reporter.lcov", min = "0.2", below = "1", install = "0.2-0" },
+  { name = "luacheck", module = "luacheck.main", min = "1.2.0", below = "2", install = "1.2.0-1" },
 }
 
 local LUA_VERSION = "5.4"
@@ -121,20 +122,33 @@ local function _parse_roots(output)
   return roots
 end
 
--- 该包在机器 tree 中已装的全部版本;按名称精确过滤(luarocks list 是子串匹配)。
-local function _installed_versions(run, exe, name)
-  local result = run({ exe, "--lua-version", LUA_VERSION, "list", name, "--porcelain" })
-  local versions = {}
-  if result.ok ~= true then
-    return versions
-  end
-  for line in tostring(result.output or ""):gmatch("[^\r\n]+") do
-    local pkg, version = line:match("^([^\t]+)\t([^\t]+)\tinstalled")
-    if pkg == name then
-      versions[#versions + 1] = version
+-- 该包在各 tree 中已装的全部副本。`luarocks list` 默认只列当前 tree,而模块按
+-- rocks_trees 顺序装载,所以必须逐 tree 询问:任一越界副本都可能先被解析到。
+local function _installed_copies(run, exe, name, roots)
+  local copies = {}
+  for _, root in ipairs(roots) do
+    local result = run({ exe, "--lua-version", LUA_VERSION, "list", "--tree=" .. root, name, "--porcelain" })
+    if result.ok == true then
+      for line in tostring(result.output or ""):gmatch("[^\r\n]+") do
+        local pkg, version = line:match("^([^\t]+)\t([^\t]+)\tinstalled")
+        if pkg == name then
+          copies[#copies + 1] = { version = version, root = root }
+        end
+      end
     end
   end
-  return versions
+  return copies
+end
+
+-- 按 roots 顺序拼出模块搜索路径(与 install_paths 实际装载顺序一致)。
+local function _module_search_path(roots)
+  local parts = {}
+  for _, root in ipairs(roots) do
+    local base = _normalize(root)
+    parts[#parts + 1] = base .. "/share/lua/" .. LUA_VERSION .. "/?.lua"
+    parts[#parts + 1] = base .. "/share/lua/" .. LUA_VERSION .. "/?/init.lua"
+  end
+  return table.concat(parts, ";")
 end
 
 -- 解析受控 Lua 环境的 tree 根:`luarocks config rocks_trees`。
@@ -166,28 +180,52 @@ function lua_env.preflight(opts)
     return nil, roots_err
   end
 
-  local problems, versions = {}, {}
+  local problems, versions, modules = {}, {}, {}
+  local search = _module_search_path(roots)
   for _, requirement in ipairs(lua_env.REQUIREMENTS) do
-    local found = _installed_versions(run, exe, requirement.name)
-    local chosen
-    for _, version in ipairs(found) do
-      if lua_env.version_in_range(version, requirement) then
-        chosen = version
+    local copies = _installed_copies(run, exe, requirement.name, roots)
+    local described, out_of_range, chosen, verified_roots = {}, 0, nil, {}
+    for _, copy in ipairs(copies) do
+      described[#described + 1] = copy.version .. " (" .. copy.root .. ")"
+      if lua_env.version_in_range(copy.version, requirement) then
+        chosen = chosen or copy.version
+        verified_roots[#verified_roots + 1] = copy.root
+      else
+        out_of_range = out_of_range + 1
       end
     end
-    if chosen ~= nil then
-      versions[requirement.name] = chosen
-    elseif #found == 0 then
+    if #copies == 0 then
       problems[#problems + 1] = {
         text = requirement.name .. " 未安装(要求 " .. _range_text(requirement) .. ")",
         command = _install_command(requirement),
       }
-    else
+    elseif out_of_range > 0 then
       problems[#problems + 1] = {
-        text = requirement.name .. " " .. table.concat(found, ", ")
+        text = requirement.name .. " " .. table.concat(described, ", ")
           .. " 不在口径内(要求 " .. _range_text(requirement) .. ")",
         command = _install_command(requirement),
       }
+    else
+      versions[requirement.name] = chosen
+      -- 版本清单通过只说明 rock 已装;还要确认运行时真正 require 的模块文件
+      -- 能在 roots 顺序下解析到(且 locate 本身会拒绝 tree 以外来源)。
+      local file, locate_err = lua_env.locate(requirement.module, roots, search, opts.exists)
+      if file == nil then
+        problems[#problems + 1] = {
+          text = requirement.name .. ": " .. tostring(locate_err),
+          command = _install_command(requirement),
+        }
+      elseif not lua_env.is_inside(file, verified_roots) then
+        -- 模块落在某个受控 tree 里、但该 tree 并没有本包在口径内的副本:
+        -- 这份文件不是被核对的安装物,不能当成受控来源。
+        problems[#problems + 1] = {
+          text = requirement.name .. ": 模块 " .. requirement.module
+            .. " 从被核对 tree 以外解析: " .. file,
+          command = _install_command(requirement),
+        }
+      else
+        modules[requirement.name] = file
+      end
     end
   end
 
@@ -202,7 +240,7 @@ function lua_env.preflight(opts)
     end
     return nil, table.concat(lines, "\n")
   end
-  return true, nil, { roots = roots, versions = versions }
+  return true, nil, { roots = roots, versions = versions, modules = modules }
 end
 
 -- file 是否位于任一 root 之内(按路径段比较,root-evil 不算在 root 内;Windows 不分大小写)。
@@ -256,14 +294,98 @@ function lua_env.install_paths(roots)
   end
 end
 
--- 子进程入口:装好受控路径、校验 module 出自受控 Lua 环境,再 require 返回。
-function lua_env.require_controlled(module, roots)
-  lua_env.install_paths(roots)
-  local file, err = lua_env.locate(module, roots, package.path)
-  if file == nil then
-    error(err, 0)
+-- 受控装载的搜索模板:只有 roots 的 share/lib 5.4。不留继承来的任何路径。
+local function _controlled_search(roots)
+  local paths, cpaths = {}, {}
+  for _, root in ipairs(roots) do
+    local base = _normalize(root)
+    paths[#paths + 1] = base .. "/share/lua/" .. LUA_VERSION .. "/?.lua"
+    paths[#paths + 1] = base .. "/share/lua/" .. LUA_VERSION .. "/?/init.lua"
+    cpaths[#cpaths + 1] = base .. "/lib/lua/" .. LUA_VERSION .. "/?.dll"
+    cpaths[#cpaths + 1] = base .. "/lib/lua/" .. LUA_VERSION .. "/?.so"
   end
-  return require(module)
+  return table.concat(paths, ";"), table.concat(cpaths, ";")
+end
+
+-- 已装入 package.loaded 的模块不会再经过 searcher,只能按当前(尚未限制的)
+-- 装载面反查来源。查不到来源也按 fail closed 处理,不把未知来源当成受控。
+local function _guard_preloaded(module, roots)
+  if package.loaded[module] == nil then
+    return
+  end
+  local source = package.searchpath(module, package.path)
+    or package.searchpath(module, package.cpath)
+  if source == nil then
+    error("模块 " .. module .. " 已预加载但无法核对来源(受控 Lua 环境要求 fail closed)", 0)
+  end
+  source = _normalize(source)
+  if not lua_env.is_inside(source, roots) then
+    error("预加载模块 " .. module .. " 从受控 Lua 环境以外解析: " .. source, 0)
+  end
+end
+
+-- 置于 package.searchers 首位:所有(含 C)模块都由这里按受限路径解析,
+-- 不落回继承路径、preload 或后续 searcher。
+local function _install_controlled_searcher(roots)
+  local function searcher(name)
+    if package.preload[name] ~= nil then
+      error("模块 " .. name .. " 来自 package.preload,来源不可核对", 0)
+    end
+    local source = package.searchpath(name, package.path)
+    local native = false
+    if source == nil then
+      source = package.searchpath(name, package.cpath)
+      native = true
+    end
+    if source == nil then
+      error("模块 " .. name .. " 在受控 Lua 环境中找不到", 0)
+    end
+    source = _normalize(source)
+    if not lua_env.is_inside(source, roots) then
+      error("模块 " .. name .. " 从受控 Lua 环境以外解析: " .. source, 0)
+    end
+    local chunk, err
+    if native then
+      chunk, err = package.loadlib(source, "luaopen_" .. name:gsub("%.", "_"))
+    else
+      chunk, err = loadfile(source)
+    end
+    if chunk == nil then
+      error(err, 0)
+    end
+    return chunk, source
+  end
+  table.insert(package.searchers, 1, searcher)
+  return searcher
+end
+
+-- 受控装载入口:限制整个 require 链(含传递依赖与 C 模块)只从 roots 解析,
+-- 并拒绝来源不可核对的预加载模块。默认保持受限,覆盖调用方的整个运行期
+-- (lint 子进程随后还要执行 luacheck);opts.restore_paths 供进程内测试辅助
+-- 在 require 结束后恢复原装载面。
+function lua_env.require_controlled(module, roots, opts)
+  opts = opts or {}
+  _guard_preloaded(module, roots)
+  if package.loaded[module] == nil and package.preload[module] ~= nil then
+    error("模块 " .. module .. " 来自 package.preload,来源不可核对", 0)
+  end
+  local original_path, original_cpath = package.path, package.cpath
+  package.path, package.cpath = _controlled_search(roots)
+  local searcher = _install_controlled_searcher(roots)
+  local ok, result = pcall(require, module)
+  if opts.restore_paths then
+    package.path, package.cpath = original_path, original_cpath
+    for index, value in ipairs(package.searchers) do
+      if value == searcher then
+        table.remove(package.searchers, index)
+        break
+      end
+    end
+  end
+  if not ok then
+    error(result, 0)
+  end
+  return result
 end
 
 return lua_env

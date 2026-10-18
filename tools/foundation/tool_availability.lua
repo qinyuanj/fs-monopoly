@@ -7,8 +7,9 @@
 -- 三态沿用 platform_boundary(#96):不可用退 3、status=unavailable 写 stderr,
 -- 本次未运行、不报通过也不报失败。仓内缺陷(配置缺失)不归这里,照旧是真实失败。
 --
--- 纯演算砖:保留 classify / message 供仍可能自行下载的工具与子进程诊断使用;
--- 本仓已没有项目内工具缓存,工具缺失/版本越界由受控 Lua 环境预检按真实失败报出。
+-- 纯演算砖:保留 unavailable / verdict / message / child_diagnostic 供入口与
+-- 子进程诊断使用;本仓已没有项目内工具缓存,工具缺失/版本越界由受控 Lua 环境
+-- 预检按真实失败报出。
 
 -- 按本文件所在目录 dofile 兄弟模块:bootstrap 在 package.path 装好之前就加载本文件。
 local function _module_dir()
@@ -37,53 +38,6 @@ function availability.unavailable(tool, step, detail)
     step = step,
     detail = detail,
   }
-end
-
--- 网络/下载类失败的输出特征(luarocks 的英文报错,小写子串比对)。
--- 只有命中才判不可用:编译/构建错误说明锁定版本或源码坏了,是真实失败;
--- 认不出的报错也保守按真实失败处理(宁红勿假)——包括本地化报错
--- (如中文 luarocks),认不出就退 1,这是有意的取舍。
--- 只收具体短语:裸 "ssl"/"tls"/"proxy"/"timed out" 会把 openssl/ssl.h 编译错误、
--- 编译超时、带这些字样的文件名误判成不可用。
-local _HOST_PATTERNS = {
-  "could not resolve host",
-  "temporary failure in name resolution",
-  "connection refused",
-  "connection reset",
-}
-
--- luarocks 安装:只认下载类(构建期间的超时、编译错误不算)。
-local _DOWNLOAD_PATTERNS = {
-  "failed downloading",
-  "failed fetching",
-  "error fetching",
-  "could not fetch",
-  "unable to download",
-}
-
-local _STEP_PATTERNS = {
-  install = { _HOST_PATTERNS, _DOWNLOAD_PATTERNS },
-}
-
-local function _is_network_failure(step, detail)
-  local text = tostring(detail or ""):lower()
-  for _, patterns in ipairs(_STEP_PATTERNS[step]) do
-    for _, pattern in ipairs(patterns) do
-      if text:find(pattern, 1, true) ~= nil then
-        return true
-      end
-    end
-  end
-  return false
-end
-
--- 按失败原因分类:网络/下载类返回不可用记录,其余返回 nil(调用方按真实失败报)。
-function availability.classify(tool, step, detail)
-  assert(_STEPS[step] ~= nil, "tool_availability: 未登记的自举步骤 " .. tostring(step))
-  if _is_network_failure(step, detail) then
-    return availability.unavailable(tool, step, detail)
-  end
-  return nil
 end
 
 -- 渲染成 platform_boundary 的不可用判定({status, exit_code, stream, message}),

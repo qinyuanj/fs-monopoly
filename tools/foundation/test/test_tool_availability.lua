@@ -13,20 +13,6 @@ local _CHILD_UNAVAILABLE = "[test_runner] status=unavailable tool=busted step=in
   .. "[test_runner] 详情: " .. _OFFLINE_INSTALL .. "\n"
 
 describe("tool availability", function()
-  -- busted/luassert 与 luacheck 同走 luarocks install:下载类失败归不可用。
-  it("classifies an offline busted install as unavailable", function()
-    local record = availability.classify("busted", "install", _OFFLINE_INSTALL)
-    check.equal("unavailable", record.status)
-    check.equal(3, record.exit_code)
-    check.equal("busted", record.tool)
-    check.equal("install", record.step)
-  end)
-
-  it("keeps a busted build error as a real failure", function()
-    check.is_nil(availability.classify("busted", "install",
-      "luarocks install failed for busted: Error: Build error: Failed compiling object src/term/core.obj"))
-  end)
-
   -- 入口进程(spec-lane / behavior_parallel)据子进程退出码与状态词认领不可用。
   it("relays a child that exited unavailable with its diagnostic", function()
     check.equal(_CHILD_UNAVAILABLE, availability.child_diagnostic(3, _CHILD_UNAVAILABLE))

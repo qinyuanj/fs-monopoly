@@ -67,16 +67,21 @@ local function _stash_metrics(fs, path)
   return backup
 end
 
+-- 返回 nil 表示收尾完成;返回文本表示恢复失败(此时备份必须留在磁盘上,
+-- 不能把唯一可用的基线也删掉)。
 local function _settle_metrics(fs, path, backup, ok)
   if ok then
     if backup ~= nil then fs.remove_path(backup) end
-    return
+    return nil
   end
   fs.remove_path(path)
   if backup ~= nil then
-    fs.copy_file(backup, path)
+    if not fs.copy_file(backup, path) then
+      return "无法恢复 " .. path .. "(备份保留在 " .. backup .. ")"
+    end
     fs.remove_path(backup)
   end
+  return nil
 end
 
 function M.main(args, env)
@@ -119,8 +124,11 @@ function M.main(args, env)
     return result.code == 0 and 1 or result.code
   end
   local verdict = dryer.judge(result.code, result.output, fs.path_exists(metrics))
-  _settle_metrics(fs, metrics, backup, verdict.ok)
+  local restore_error = _settle_metrics(fs, metrics, backup, verdict.ok)
   if not verdict.ok then
+    if restore_error ~= nil then
+      io.stderr:write("[dry] " .. restore_error .. "\n")
+    end
     io.stderr:write("[dry] " .. verdict.reason .. "\n")
     return 1
   end
