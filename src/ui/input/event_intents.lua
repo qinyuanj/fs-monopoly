@@ -4,14 +4,6 @@ local modal_state = require("src.ui.state.modal")
 
 local intents = {}
 
-local function _resolve_option_id_from_payload(payload)
-  return payload.option_id
-end
-
-local function _resolve_index_from_payload(payload)
-  return payload.index
-end
-
 local function _resolve_mapped_from_runtime(state, index)
   if state == nil then
     return nil
@@ -43,11 +35,11 @@ end
 function intents.resolve_option_id(choice, payload, state)
   assert(choice ~= nil, "missing choice")
   assert(payload ~= nil, "missing payload")
-  local option_id = _resolve_option_id_from_payload(payload)
+  local option_id = payload.option_id
   if option_id then
     return option_id
   end
-  local index = _resolve_index_from_payload(payload)
+  local index = payload.index
   if index then
     return _resolve_option_id_by_index(choice, index, state)
   end
