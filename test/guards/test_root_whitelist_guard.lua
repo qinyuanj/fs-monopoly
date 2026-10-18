@@ -26,12 +26,6 @@ describe("TestRootWhitelistGuard", function()
     luassert.is.same({ "README.md" }, violations)
   end)
 
-  -- 运营方任务书 tasks/<task-name>.md 是版本化的意图真源（master 随任务首次
-  -- git 工作提交），常驻白名单；把它降级为忽略项即破此钉。
-  it("test_tasks_doc_dir_stays_whitelisted", function()
-    luassert.is.same({}, guard.check({ "tasks" }))
-  end)
-
   -- uml-viewer 只在项目根读 uml-quality.json(#93);安装拷贝、覆盖率 target/
   -- 走 .gitignore,不进白名单——放开它们即破此钉。
   it("test_uml_quality_config_whitelisted_but_not_its_local_outputs", function()

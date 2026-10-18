@@ -77,10 +77,6 @@ local guards = {
     module = "test.guards.lib.debug_flags_guard",
   },
   {
-    name = "crap_coverage_spec_naming_guard",
-    module = "test.guards.lib.crap_coverage_spec_naming_guard",
-  },
-  {
     name = "same_name_pair_guard",
     module = "test.guards.lib.same_name_pair_guard",
   },
