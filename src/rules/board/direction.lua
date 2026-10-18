@@ -4,7 +4,6 @@ local opposite = direction_constants.opposite
 local direction = {}
 
 -- 内圈入口门控的唯一权威判据：branch parity 为偶数才允许拐入内圈。
--- 前进解析与 route_plan 的 seat+roll 规划都消费这里，改门控只改这一处。
 function direction.parity_allows_inner(parity)
   return parity ~= nil and parity % 2 == 0
 end

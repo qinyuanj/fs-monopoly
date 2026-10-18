@@ -56,7 +56,6 @@ function scheduler:init(game, phases, await_handlers)
       return timing_script.create(session, self.await_handlers)
     end,
   })
-  self.session = self._session  -- 公开观察接缝（#513：turn_driver.observe_turn_phases）
 end
 
 local function _sync_snapshot(runtime)
