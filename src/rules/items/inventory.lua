@@ -65,7 +65,7 @@ function inventory.remove_by_index(player, idx)
   return inv:remove_by_index(idx)
 end
 
--- 移除「第 N 张占用卡」(CONTEXT「道具槽位」):随机取卡语义经 nth-occupied 映射落槽,
+-- 移除「第 N 张占用卡」:随机取卡语义经 nth-occupied 映射落槽,
 -- 其余卡的槽位不变。
 function inventory.remove_nth_occupied(player, n)
   assert(n ~= nil, "missing n")

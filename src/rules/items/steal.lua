@@ -36,7 +36,7 @@ local function _consume_steal_card(player, commit)
 end
 
 -- 背包已满不阻止偷窃:满背包必然含偷窃卡自身,自耗先腾出空洞,偷来的
--- 道具按「填编号最小空洞」入包(CONTEXT「偷窃入包」/ CONTEXT「道具槽位」)——没有更早
+-- 道具按「填编号最小空洞」入包——没有更早
 -- 的洞时恰好落进偷窃卡腾出的那一格;双方其余卡的槽位均不变。
 function steal.steal_nth_occupied(game, player, target, nth, commit)
   if inventory.count(target) == 0 then
