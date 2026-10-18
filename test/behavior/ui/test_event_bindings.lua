@@ -747,7 +747,7 @@ end)
 
 it("test_skin_gallery_view_actions_update_local_state", function()
   local skin_gallery = require("src.ui.screens.skin_panel.skin_gallery")
-  local skin_panel = require("src.ui.screens.skin_panel")
+  local transaction = require("src.app.cosmetics.transaction")
   local tip_queue_mod = require("src.foundation.tips")
   local state = { ui = {} }
   local tips = {}
@@ -762,7 +762,7 @@ it("test_skin_gallery_view_actions_update_local_state", function()
     _assert_eq(state.ui.skin_gallery.mode, "skin", "skin panel mode should be skin")
     skin_gallery.handle_action(state, "buy", 1)
     skin_gallery.handle_action(state, "equip", 1)
-    _assert_eq(state.ui.skin_panel.selected_by_role["1"], skin_panel.catalog[1].product_id,
+    _assert_eq(state.ui.skin_panel.selected_by_role["1"], transaction.catalog[1].product_id,
       "equip should select unlocked skin")
     skin_gallery.open_gallery(state, 1)
     _assert_eq(state.ui.skin_gallery.mode, "gallery", "gallery button should open gallery mode")
@@ -776,7 +776,7 @@ end)
 
 it("test_skin_gallery_routes_close_without_mirroring_panel_state", function()
   local skin_gallery = require("src.ui.screens.skin_panel.skin_gallery")
-  local skin_panel = require("src.ui.screens.skin_panel")
+  local transaction = require("src.app.cosmetics.transaction")
   local tip_queue_mod = require("src.foundation.tips")
   local state = { ui = {} }
 
@@ -790,7 +790,7 @@ it("test_skin_gallery_routes_close_without_mirroring_panel_state", function()
     _assert_eq(route.page_index, nil, "route state should not mirror panel pagination")
     _assert_eq(route.role_id, nil, "route state should not mirror panel ownership")
 
-    local pid = skin_panel.catalog[1].product_id
+    local pid = transaction.catalog[1].product_id
     skin_gallery.open_skin(state, 1)
     local skin_state = skin_gallery.handle_action(state, "buy", 1)
     _assert_eq(skin_state, state.ui.skin_panel, "buy should return canonical skin state")

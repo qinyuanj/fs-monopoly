@@ -437,7 +437,7 @@ local function _test_skip_context_install_wires_skin_panel_to_skin_equip()
 
   _assert_eq(captured and captured.role_id, 9, "skin equip should receive role id")
   _assert_eq(captured and captured.creature_key,
-    runtime_refs.skins[tostring(skin_panel.catalog[3].product_id)],
+    runtime_refs.skins[tostring(require("src.app.cosmetics.transaction").catalog[3].product_id)],
     "skin equip should receive the numeric resource id resolved from refs.skins")
 end
 
