@@ -22,10 +22,9 @@ local function _gitlinks()
   return links
 end
 
--- 拦截生成物/本地件误提交；acceptance/generated 是 gitignored 生成物。
+-- 拦截生成物/本地件误提交。
 local _TRACKED_PATHSPEC_RULES = {
   { pathspec = ".claude/worktrees", message = "tracked generated/local artifact" },
-  { pathspec = "tools/packages/acceptance/generated/", message = "tracked generated/local artifact" },
 }
 
 function M.run()

@@ -81,14 +81,6 @@ local guards = {
     module = "test.guards.lib.crap_coverage_spec_naming_guard",
   },
   {
-    name = "acceptance_step_seam_guard",
-    module = "test.guards.lib.acceptance_step_seam_guard",
-  },
-  {
-    name = "steps_budget_guard",
-    module = "test.guards.lib.steps_budget_guard",
-  },
-  {
     name = "same_name_pair_guard",
     module = "test.guards.lib.same_name_pair_guard",
   },

@@ -18,7 +18,7 @@ it("real cwd ignores MSYS PWD", function()
   local cwd = runtime.current_dir()
   check.matches("^%a:/", cwd, "cwd must be a native absolute drive path: " .. cwd)
   check.equal(cwd, env.current_dir(), "bootstrap and process cwd must agree")
-  check.is_true(runtime.path_exists(cwd .. "/tools/tools.lock"), "cwd must load the real project")
+  check.is_true(runtime.path_exists(cwd .. "/tools/cli.lua"), "cwd must load the real project")
 end)
 
 it("native files round trip discover copy and remove", function()
@@ -28,7 +28,7 @@ it("native files round trip discover copy and remove", function()
     check.truthy(fs.ensure_dir(root .. "/source/empty"))
     check.truthy(fs.ensure_dir(root .. "/src"))
     check.truthy(fs.ensure_dir(root .. "/test"))
-    check.truthy(fs.write_file(root .. "/tools/tools.lock", "{}"))
+    check.truthy(fs.write_file(root .. "/tools/cli.lua", "return {}"))
     local bootstrap = dofile("tools/foundation/bootstrap.lua")
     check.equal(root, bootstrap.resolve(root .. "/tools/probe.lua").repo_root)
     check.truthy(fs.append_file(root .. "/source/子目录/a.lua", "!"))
@@ -103,10 +103,12 @@ it("spec lane accepts serial configuration", function()
   check.truthy(opts and opts.serial, err)
 end)
 
-it("project cache exposes native DLL modules", function()
-  local helper = dofile("tools/foundation/package_path_helper.lua")
-  helper.install_luarocks_tree_paths({ repo_root = "C:/project" })
-  check.truthy(package.cpath:find("C:/project/.toolcache/luarocks/lib/lua/5.4/?.dll", 1, true))
+it("controlled lua environment exposes native DLL modules", function()
+  local original = package.cpath
+  require("foundation.lua_env").install_paths({ "C:/controlled/tree" })
+  local cpath = package.cpath
+  package.cpath = original
+  check.truthy(cpath:find("C:/controlled/tree/lib/lua/5.4/?.dll", 1, true))
 end)
 
 it("selected interpreter rejects non Lua override", function()
@@ -119,7 +121,7 @@ it("tooling discovers retained native test roots", function()
   check.truthy(roots and #roots > 0, err)
   local found = {}
   for _, root in ipairs(roots) do found[root] = true end
-  check.is_true(found["tools/foundation/test"] and found["tools/packages/acceptance/test"])
+  check.is_true(found["tools/foundation/test"] and found["tools/packages/clean/test"])
 end)
 
 it("verify forwards native flags without literal quotes", function()

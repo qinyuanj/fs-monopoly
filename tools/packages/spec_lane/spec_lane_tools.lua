@@ -2,12 +2,6 @@ local proc = require("foundation.proc")
 
 local spec_lane_tools = {}
 
-local _PROFILE_TOOLS = {
-  acceptance = { "acceptance4lua" },
-  -- dry 集成用例按需自行 ensure dry4lua。
-  tooling = { "acceptance4lua" },
-}
-
 -- #298 的发现式包结构：tooling 车道 33 行
 -- 手维护 ROOT 清单废除,塌缩为 tools/**/test/ + test/support/**/test/ 双口径
 -- 自动收养。双口径同时匹配新旧两种布局——同名对时代(foo.lua + foo/test/)
@@ -33,18 +27,6 @@ function spec_lane_tools.discover_test_roots()
   end
   table.sort(roots)
   return roots
-end
-
--- 失败返回 nil, err, unavailable:第三值透传 bootstrap 的不可用记录(#112,
--- 网络类自举失败),为 nil 时是真实失败(锁文件缺项等仓内缺陷)。
-function spec_lane_tools.ensure_for_profile(profile, ensure_tool, bootstrap_env)
-  for _, tool_name in ipairs(_PROFILE_TOOLS[profile] or {}) do
-    local _, err, unavailable = ensure_tool(tool_name, bootstrap_env)
-    if err ~= nil then
-      return nil, "tool bootstrap failed: " .. tostring(err), unavailable
-    end
-  end
-  return true
 end
 
 return spec_lane_tools

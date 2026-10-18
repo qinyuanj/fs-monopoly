@@ -414,19 +414,6 @@ local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
   end)
 end
 
-local function _test_reference_tools_do_not_expose_bin_entrypoints()
-  -- tree 形态下 root 即 luarocks tree,bin/ 住着其它工具的入口(dry4lua 等);
-  -- 参考形态的 4lua 库(acceptance4lua)契约改为检查 rock 安装清单不含 bin 条目。
-  local tool = assert(bootstrap.ensure_tool("acceptance4lua"))
-  local version = tool.version
-  check.is_not_nil(version, "acceptance4lua should report its installed version from ensure_tool")
-  local manifest_path = path_lib.join_path(tool.root,
-    "lib/luarocks/rocks-5.4/acceptance4lua/" .. version .. "/rock_manifest")
-  local manifest = assert(fs_lib.read_file(manifest_path))
-  check.is_nil(manifest:find("bin =", 1, true),
-    "reference 4lua tools should not expose bin entrypoints: " .. manifest_path)
-end
-
 local function _test_bootstrap_resolves_repo_root_from_non_repo_cwd()
   _with_ascii_tmp("bootstrap_non_repo_cwd", function(tmp_root)
     local outside_dir = path_lib.join_path(tmp_root, "outside")
@@ -467,7 +454,6 @@ local contract_tests = {
   { group = "shared", owner = "foundation", name = "path_predicates_return_one_boolean", run = _test_path_predicates_return_one_boolean },
   { group = "shared", owner = "foundation", name = "foundation_handles_unicode_paths_for_file_ops", run = _test_foundation_handles_unicode_paths_for_file_ops },
   { group = "shared", owner = "tooling_policy", name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
-  { group = "quality", owner = "tooling_policy", name = "reference_tools_do_not_expose_bin_entrypoints", run = _test_reference_tools_do_not_expose_bin_entrypoints },
   { group = "shared", owner = "bootstrap", name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { group = "ops", owner = "deploy", name = "deploy_lua_matches_simplified_cli", run = _test_deploy_lua_matches_simplified_cli },
 }

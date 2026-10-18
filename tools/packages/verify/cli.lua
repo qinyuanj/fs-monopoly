@@ -56,9 +56,8 @@ function M.usage()
     "  - 红车道 → 看 `[verify] FAIL <lane>` 行,按 lane 名下钻",
     "    (spec-lane --profile <目录> 或单文件)。",
     "",
-    "pipeline 不包含(按需走单工具):uml crap / uml mutate / dry / acceptance;",
-    "acceptance 需单独 `lua tools/cli.lua acceptance`,dry 与 acceptance-mutate 是软车道,",
-    "两条软车道均支持原生 Windows;tooling/acceptance 中相关探针实际执行。",
+    "pipeline 不包含(按需走单工具):uml crap / uml mutate / dry;",
+    "dry 是软车道,支持原生 Windows;tooling 中相关探针实际执行。",
     "真源:tools/packages/verify/(main.lua / lane_builders.lua / lanes.lua)。",
     "",
   }, "\n") .. "\n"

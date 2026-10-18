@@ -5,10 +5,10 @@
 --   M.usage()         -> 完整 usage 文本
 --
 -- 质量算法与派发优先级在邻接 uml-viewer;本包钉环境、预检并独立核验变异结果:
---   1. 预检:Lua 模块只从项目 .toolcache/luarocks 解析(不借全局 %APPDATA%\luarocks
---      tree)、PowerShell 7、uml-viewer 检出、uml-quality.json(用 uml-viewer 自己的
---      读取器校验)、crapper/mutator 的 Python 3.11+ venv。任一不过退 1,先删陈旧的
---      .uml-viewer/quality-result.json,不起工具。
+--   1. 预检:Lua 模块只从受控 Lua 环境(`luarocks config` 解析的机器 tree)解析
+--      (不借仓内工具 tree)、PowerShell 7、uml-viewer 检出、uml-quality.json(用
+--      uml-viewer 自己的读取器校验)、crapper/mutator 的 Python 3.11+ venv。任一
+--      不过退 1,先删陈旧的 .uml-viewer/quality-result.json,不起工具。
 --   2. 派发:在钉死 LUA_PATH/LUA_CPATH/PATH 的 cmd 批处理里跑 uml-command.ps1,
 --      crap 退出码原样回传;mutate 独立按目标核验,有效结果/no-sites 退 0,未执行退 1。
 -- 预检失败退 1;上游 mutate 的 3(存活突变)只在独立核验通过后归一为 0。
@@ -24,7 +24,6 @@ local M = {}
 local runtime = require("packages.uml_quality.runtime")
 local proposals = require("packages.uml_quality.proposals")
 local arch_policy = require("packages.arch_policy")
-local bootstrap = require("foundation.bootstrap")
 local proc = require("foundation.proc")
 local fs = require("foundation.fs")
 local env_lib = require("foundation.env")
@@ -33,14 +32,6 @@ local path_lib = require("foundation.path")
 local _TOOLS = { check = { "crapper", "mutator" }, crap = { "crapper" }, mutate = { "mutator" }, ir = {}, view = {} }
 
 local _IR_OUT = "tmp/uml/monopoly.edn"
-
--- 必需 rock 与 bootstrap 中的钉版本一一对应;lcov reporter 依赖 luacov,自带前置。
-local _ROCKS = {
-  { "busted", "ensure_busted_tree" },
-  { "luassert", "ensure_luassert_tree" },
-  { "luacov", "ensure_luacov_tree" },
-  { "luacov-reporter-lcov", "ensure_luacov_reporter_lcov_tree" },
-}
 
 local _PYTHON_PROBE = {
   crapper = "import sys, crapper, crapper.languages.treesitter; "
@@ -53,7 +44,7 @@ function M.usage()
   return table.concat({
     "用法: lua tools/cli.lua uml <check|crap|mutate|ir|view> [args...]",
     "",
-    "check   只做预检:项目缓存 Lua 模块来源、PowerShell 7、uml-viewer 检出、",
+    "check   只做预检:受控 Lua 环境模块来源、PowerShell 7、uml-viewer 检出、",
     "        uml-quality.json、crapper/mutator Python 3.11+ venv。0 = 全过 / 1 = 有缺失。",
     "crap    预检后经 uml-command.ps1 跑 crapper(standardTools,--full-tree)。",
     "        退出码原样回传:0/2 有效结果,其余失败。",
@@ -100,11 +91,18 @@ local function _lua_exe(state)
   return exe
 end
 
-local function _ensure_rocks(state, root)
-  for _, rock in ipairs(_ROCKS) do
-    local ok, err = bootstrap[rock[2]](root)
-    _report(state, ok == true, "project cache rock " .. rock[1] .. (ok == true and "" or (": " .. tostring(err))))
+-- 受控 Lua 环境预检(#150 / #151):只核对机器 LuaRocks tree 与版本口径,
+-- 不安装、不写入;失败是真实失败(预检退 1),诊断里带安装命令。
+local function _check_lua_env(state)
+  local verified, err, info = require("foundation.lua_env").preflight()
+  if not verified then
+    _report(state, false, "controlled Lua environment: " .. tostring(err):gsub("\n", " "))
+    return nil
   end
+  for _, root in ipairs(info.roots) do
+    _report(state, true, "controlled Lua tree " .. tostring(root))
+  end
+  return info.roots
 end
 
 local function _run_batch(root, env_list, argv, output_path)
@@ -115,15 +113,15 @@ local function _run_batch(root, env_list, argv, output_path)
   return require("foundation.shell").exit_status(ok, kind, code)
 end
 
-local function _probe_lua_modules(state, root, lua_exe)
-  local env_list = runtime.pinned_env(root, path_lib.parent_dir(lua_exe), os.getenv("PATH"))
+local function _probe_lua_modules(state, root, lua_exe, roots)
+  local env_list = runtime.pinned_env(root, roots, path_lib.parent_dir(lua_exe), os.getenv("PATH"))
   local output_path = env_lib.make_temp_path("uml_quality_probe", ".log")
   local argv = { lua_exe, root .. "/tools/packages/uml_quality/probe_lua_modules.lua" }
   for _, name in ipairs(runtime.REQUIRED_LUA_MODULES) do argv[#argv + 1] = name end
   _run_batch(root, env_list, argv, output_path)
   local output = fs.read_raw(output_path) or ""
   fs.remove_path(output_path)
-  local ok, verdicts = runtime.probe_verdicts(output, root)
+  local ok, verdicts = runtime.probe_verdicts(output, roots)
   for _, verdict in ipairs(verdicts) do _report(state, verdict.ok, "lua module " .. verdict.message) end
   if not ok and #verdicts == 0 then _report(state, false, "lua module probe produced no output: " .. output) end
   return env_list
@@ -210,8 +208,10 @@ local function _preflight(root, op, env)
   local state = { ok = true }
   if op ~= "ir" then
     local lua_exe = _lua_exe(state)
-    _ensure_rocks(state, root)
-    if lua_exe ~= nil then state.env_list = _probe_lua_modules(state, root, lua_exe) end
+    state.lua_roots = _check_lua_env(state)
+    if lua_exe ~= nil and state.lua_roots ~= nil then
+      state.env_list = _probe_lua_modules(state, root, lua_exe, state.lua_roots)
+    end
   end
   _check_pwsh(state)
   state.scripts = _check_viewer(state, root, op ~= "ir")

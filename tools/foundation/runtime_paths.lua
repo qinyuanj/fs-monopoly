@@ -34,7 +34,7 @@ local function _looks_like_repo_root(path)
     "src",
     "test",
     "tools",
-    "tools/tools.lock",
+    "tools/cli.lua",
   }
 
   for _, entry in ipairs(required_entries) do
@@ -67,7 +67,6 @@ function runtime_paths.resolve(opts)
         script_dir = script_dir,
         repo_root = probe,
         tools_dir = _join_path(probe, "tools"),
-        tool_cache_dir = _join_path(probe, ".toolcache"),
       }
     end
 
