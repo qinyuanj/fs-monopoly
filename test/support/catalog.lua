@@ -49,7 +49,8 @@ function M.run_behavior_suites(suites, opts)
   local root = repo_root()
   local tool_bootstrap = dofile(path_lib.join_path(root, "tools/foundation/bootstrap.lua"))
   local env = tool_bootstrap.install(debug.getinfo(1, "S").source)
-  assert(tool_bootstrap.ensure_busted_tree(env.repo_root))
+  -- busted / luassert 已由 test_runner 从受控 Lua 环境装载并校验;这里只复核
+  -- 当前进程的依赖来源与身份,不再自举安装任何 rock。
   require("packages.test_runner.cache_loader").install(env.repo_root)
   local failures, summary, case_times, suite_times, slow_cases, suite_index = {}, {}, {}, {}, {}, {}
   local log_capture = require("test.support.log_capture")

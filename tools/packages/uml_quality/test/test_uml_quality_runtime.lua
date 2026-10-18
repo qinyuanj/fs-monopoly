@@ -2,13 +2,14 @@
 if arg then rawset(arg, 0, "tools/packages/uml_quality/test/test_uml_quality_runtime.lua") end
 require("test.bootstrap").install_package_paths()
 
--- uml 质量入口的纯演算面(#93):子进程钉死的 Lua 装载环境、项目缓存来源判定与
--- Python 工具环境判定。真跑 crapper/mutator 不在本套件内。
+-- uml 质量入口的纯演算面(#93):子进程钉死的 Lua 装载环境、受控 Lua 环境来源
+-- 判定与 Python 工具环境判定。真跑 crapper/mutator 不在本套件内。
 local check = require("luassert")
 local runtime = require("packages.uml_quality.runtime")
 
 local ROOT = "/repo"
-local CACHE = "/repo/.toolcache/luarocks"
+local TREE = "/luarocks/tree"
+local ROOTS = { TREE }
 
 local function _env_map(list)
   local map = {}
@@ -19,22 +20,30 @@ end
 describe("uml quality runtime", function()
 
 -- 全局 %APPDATA%\luarocks tree 里也有 busted/luacov/lcov reporter;子进程若继承
--- 用户 LUA_PATH,就会从全局 tree 解析出「能跑」的假绿。装载面必须只剩仓根与项目缓存。
-it("pins child lua module paths to the repo root and project cache only", function()
-  local env = _env_map(runtime.pinned_env(ROOT, "/lua/bin", "/sys"))
+-- 用户 LUA_PATH,就会从全局 tree 解析出「能跑」的假绿。装载面必须只剩仓根与
+-- 受控 Lua 环境的 tree。
+it("pins child lua module paths to the repo root and controlled trees only", function()
+  local env = _env_map(runtime.pinned_env(ROOT, ROOTS, "/lua/bin", "/sys"))
   local expected_path = "/repo/?.lua;/repo/?/init.lua;"
-    .. CACHE .. "/share/lua/5.4/?.lua;" .. CACHE .. "/share/lua/5.4/?/init.lua"
+    .. TREE .. "/share/lua/5.4/?.lua;" .. TREE .. "/share/lua/5.4/?/init.lua"
   check.equal(expected_path, env.LUA_PATH_5_4)
   check.equal(expected_path, env.LUA_PATH)
-  check.equal(CACHE .. "/lib/lua/5.4/?.dll", env.LUA_CPATH_5_4)
-  check.equal(CACHE .. "/lib/lua/5.4/?.dll", env.LUA_CPATH)
+  local expected_cpath = TREE .. "/lib/lua/5.4/?.dll;" .. TREE .. "/lib/lua/5.4/?.so"
+  check.equal(expected_cpath, env.LUA_CPATH_5_4)
+  check.equal(expected_cpath, env.LUA_CPATH)
   check.equal("", env.LUA_INIT)
   check.equal("", env.LUA_INIT_5_4)
 end)
 
+it("pins every controlled tree and keeps their config order", function()
+  local env = _env_map(runtime.pinned_env(ROOT, { "/a", "/b" }, "/lua/bin", "/sys"))
+  check.equal("/repo/?.lua;/repo/?/init.lua;/a/share/lua/5.4/?.lua;/a/share/lua/5.4/?/init.lua;"
+    .. "/b/share/lua/5.4/?.lua;/b/share/lua/5.4/?/init.lua", env.LUA_PATH)
+end)
+
 -- crapper/mutator 用 PATH 上的 lua 解析解释器;选定的 Lua 5.4 目录排第一。
 it("puts the selected lua 5.4 directory first on PATH", function()
-  local env = _env_map(runtime.pinned_env(ROOT, "/lua/bin", "/sys;/tools"))
+  local env = _env_map(runtime.pinned_env(ROOT, ROOTS, "/lua/bin", "/sys;/tools"))
   check.equal("/lua/bin;/sys;/tools", env.PATH)
 end)
 
@@ -51,27 +60,28 @@ it("accepts herdr X.Y.Z versions at or above 0.9.3", function()
   check.equal("herdr 0.9.4", runtime.herdr_verdict("herdr 0.9.4\n").message)
 end)
 
-it("accepts a module resolved inside the project cache", function()
+it("accepts a module resolved inside a controlled tree", function()
   local verdict = runtime.module_verdict("luacov.reporter.lcov",
-    CACHE .. "/share/lua/5.4/luacov/reporter/lcov.lua", ROOT)
+    TREE .. "/share/lua/5.4/luacov/reporter/lcov.lua", ROOTS)
   check.is_true(verdict.ok)
 end)
 
--- 反例:解析到全局 tree 或缺失都必须判失败,不能因为「能 require」就放行。
-it("rejects a module resolved outside the project cache", function()
+-- 反例:解析到其他 LuaRocks tree、项目目录或缺失都必须判失败,不能因为
+-- 「能 require」就放行。
+it("rejects a module resolved outside the controlled environment", function()
   local verdict = runtime.module_verdict("busted.runner",
-    "/home/AppData/Roaming/luarocks/share/lua/5.4/busted/runner.lua", ROOT)
+    "/home/AppData/Roaming/luarocks/share/lua/5.4/busted/runner.lua", ROOTS)
   check.is_false(verdict.ok)
-  check.truthy(verdict.message:find("outside project cache", 1, true))
+  check.truthy(verdict.message:find("outside controlled Lua environment", 1, true))
 end)
 
-it("rejects a module resolved from the repo root instead of the cache", function()
-  local verdict = runtime.module_verdict("busted.runner", "/repo/busted/runner.lua", ROOT)
+it("rejects a module resolved from the repo root instead of the controlled tree", function()
+  local verdict = runtime.module_verdict("busted.runner", "/repo/busted/runner.lua", ROOTS)
   check.is_false(verdict.ok)
 end)
 
 it("rejects a missing module", function()
-  local verdict = runtime.module_verdict("luacov.reporter.lcov", nil, ROOT)
+  local verdict = runtime.module_verdict("luacov.reporter.lcov", nil, ROOTS)
   check.is_false(verdict.ok)
   check.truthy(verdict.message:find("not found", 1, true))
 end)
@@ -102,33 +112,33 @@ end)
 
 -- 探针输出:resolve 行 = 必需模块的解析结果,load 行 = require 时实际装载的每个文件
 -- (含传递依赖),error 行 = require 失败;loader 行 = luarocks.loader 是否可解析。
-it("passes a probe whose every module and loaded file lives in the project cache", function()
+it("passes a probe whose every module and loaded file lives in a controlled tree", function()
   local output = table.concat({
-    "resolve\tbusted.runner\t" .. CACHE .. "/share/lua/5.4/busted/runner.lua",
-    "load\tsystem.core\t" .. CACHE .. "/lib/lua/5.4/system/core.dll",
+    "resolve\tbusted.runner\t" .. TREE .. "/share/lua/5.4/busted/runner.lua",
+    "load\tsystem.core\t" .. TREE .. "/lib/lua/5.4/system/core.dll",
     "loader\t",
   }, "\n")
-  local ok, verdicts = runtime.probe_verdicts(output, ROOT)
+  local ok, verdicts = runtime.probe_verdicts(output, ROOTS)
   check.is_true(ok)
   check.equal(3, #verdicts)
 end)
 
-it("fails a probe when a transitively loaded file comes from the global tree", function()
+it("fails a probe when a transitively loaded file comes from another tree", function()
   local output = table.concat({
-    "resolve\tbusted.runner\t" .. CACHE .. "/share/lua/5.4/busted/runner.lua",
+    "resolve\tbusted.runner\t" .. TREE .. "/share/lua/5.4/busted/runner.lua",
     "load\tsay\t/home/AppData/Roaming/luarocks/share/lua/5.4/say/init.lua",
     "loader\t",
   }, "\n")
-  local ok, verdicts = runtime.probe_verdicts(output, ROOT)
+  local ok, verdicts = runtime.probe_verdicts(output, ROOTS)
   check.is_false(ok)
   check.is_false(verdicts[2].ok)
 end)
 
 it("fails a probe that reports a require error or nothing at all", function()
-  local ok, verdicts = runtime.probe_verdicts("error\tluacov.reporter.lcov\tmodule not found\nloader\t", ROOT)
+  local ok, verdicts = runtime.probe_verdicts("error\tluacov.reporter.lcov\tmodule not found\nloader\t", ROOTS)
   check.is_false(ok)
   check.truthy(verdicts[1].message:find("module not found", 1, true))
-  check.is_false((runtime.probe_verdicts("", ROOT)))
+  check.is_false((runtime.probe_verdicts("", ROOTS)))
 end)
 
 -- 批处理里 % 会被 cmd 展开;环境值必须原样到达子进程。

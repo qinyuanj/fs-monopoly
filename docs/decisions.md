@@ -125,14 +125,14 @@ CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-view
 
 理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。最后两个跟随上游主干的工具随后也退役：`dry4lua` 由 #148 改由 `qinyuanj/dryer` 承接，`acceptance4lua` 连同中文 Gherkin 验收管线由 #147 整体删除（母规格 #146）。两只工具退场后，整套「工具跟随上游主干」装载机制——`tools/tools.lock` 及其解析、HEAD 解析缓存、源码浅克隆与按锁安装——由 #149 一并删除。
 
-落地（#93）：本仓的受支持入口是 `lua tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 cmd 批处理里调用同一个 `uml-command.ps1`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，会从全局 `%APPDATA%\luarocks` tree 解析出假绿。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。契约见 `tools/specs/uml_quality.prompt`。
+落地（#93）：本仓的受支持入口是 `lua tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 cmd 批处理里调用同一个 `uml-command.ps1`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，不钉装载面、也不做受控 Lua 环境预检，工具可能从版本口径外的 tree 解析出来。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。契约见 `tools/specs/uml_quality.prompt`。
 
 ## ADR 0069 — 测试框架的终态是 busted
 
 本仓测试后端定为 busted，LuaUnit 与自研运行器退场。三项约束随决策一并钉死：
 
 1. **迁移分两步，各自可独立验收**。先换断言层（`lu.*` → luassert），再换结构层（`TestX = {}` + `function TestX:test_y()` → `describe` / `it`）。**不做「自动把 TestX 包成 describe」的兼容层**：这类 shim 出错的表现是测试静默通过，是本仓最难发现的一类事故。两步之间的中间态允许进仓库。
-2. **装载与调用不依赖可执行位**。busted 与 `luassert` / `say` / `lua_cliargs` / `mediator_lua` / `penlight` / `lua-term` / `luasystem` / `luafilesystem` / `dkjson` / `datafile` 纳入 `.toolcache/luarocks`，以 `lua -e 'require("busted.runner")()'` 形态调用，与 `lua54` 既有「不依赖 shell wrapper 或可执行位」口径同源；`luaunit` 的 ensure 随之退役。Windows 上 tree 布局与 POSIX 同形已取证，不需平台分支。
+2. **装载与调用不依赖可执行位**。busted 与 `luassert` / `say` / `lua_cliargs` / `mediator_lua` / `penlight` / `lua-term` / `luasystem` / `luafilesystem` / `dkjson` / `datafile` 从受控 Lua 环境（ADR 0072）装载，以 `lua -e 'require("busted.runner")()'` 形态调用，与 `lua54` 既有「不依赖 shell wrapper 或可执行位」口径同源；`luaunit` 的 ensure 随之退役。Windows 上 tree 布局与 POSIX 同形已取证，不需平台分支。
 3. **完成的判据是数量与红绿双钉**。迁移前先在车道上取逐车道 passed / failed 基线，迁移后必须一致；另加 spec 文件集数量的 guard，防止文件被静默漏跑；再加一组故意写错的断言样本，迁移后仍须为红——直接钉住「断言没有退化成恒真」，这是九千处机械替换的真实风险面。
 
 理由：本仓今天并存两套 harness——`test/**` 走 LuaUnit 类风格，`features/**` 的生成物已是 `describe` / `it` 加自带 harness（上游 generator 天然输出 busted 形状）。迁到真 busted 把两者统一成一套，并让 crapper / mutator 的 Lua 默认路径（busted + luacov）不必再包一层适配；此前替换掉 busted 的决定没有留下任何登记，本决策取代之。
@@ -152,6 +152,20 @@ CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-view
 
 Git for Windows 用自带 `sh` 唤起 hook，这是宿主强制的启动边界，不是业务实现：hook 中的 sh 只允许定位仓根（定位失败可立即退出）并以 `exec lua tools/cli.lua verify` 形态转交原生 Lua 解释器；对工具结果的退出码分支、提示与业务逻辑一律归原生侧。当前 `.githooks/pre-push` 即此形态，因此 hook 存在 sh 文件不违反 ADR 0066 的「Git for Windows POSIX 层不是受支持运行前提」：sh 不承载业务逻辑，也不被当作可复用的运行时。
 
-CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的本地叠加车道，不进 CI。退 3（工具自举网络不可用）保持失败结论、仍为红灯，同时在 annotation 与 step summary 标 `UNAVAILABLE`，语义是「网络不可用，应重跑」而非「测试回归，应排查」。
+CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的本地叠加车道，不进 CI。退 3（平台/工具不可用）保持失败结论、仍为红灯，同时在 annotation 与 step summary 标 `UNAVAILABLE`，语义是「环境不可用，应重跑或补齐环境」而非「测试回归，应排查」。
 
 理由：`cmd.exe` 是 Lua 工具与子进程的语义约束，不是脚本形态约束；Git for Windows 起 hook 必须经过 sh，但这一层不承载逻辑；CI 取舍与退 3 语义若无登记，只能从工单评论或 PR 叙述里反推。
+
+## ADR 0072 — 退役项目工具缓存，测试与质量工具改用受控 Lua 环境
+
+整套项目内工具缓存（原仓内工具 tree）与「工具跟随上游主干」装载机制退役（母规格 #146）。测试与质量工具唯一允许的 Lua 装载来源改为**受控 Lua 环境**：由 `luarocks config rocks_trees` 解析出的机器 LuaRocks 5.4 包树，版本口径为 busted `>=2.3.0,<3`、luassert `>=1.9.0,<2`、luacov `>=0.17.0,<1`、luacov-reporter-lcov `>=0.2,<1`、luacheck `>=1.2.0,<2`。本仓只核对、不写入、不在项目内自举安装 rock；不满足即真实失败（退 1）并打印可直接执行的安装命令。
+
+落实口径：
+
+1. **单一预检**。`tools/foundation/lua_env.lua` 是 tree 根解析、版本核对与模块来源校验的唯一实现。`preflight` 依次调 `luarocks config rocks_trees` 与 `luarocks list <name> --porcelain`，不调 `install` / `make` / `remove`。
+2. **测试运行器**。`tools/packages/test_runner/runner.lua` 先预检，再把受控 tree 的 share/lib 路径接入本进程；`cache_loader` 只从这些 tree 装载 busted 及依赖，解析到 tree 之外（含 C 模块）即失败，未验证的 `package.loaded` 预注入同样失败。项目内不再有 `ensure_*_tree` 安装入口。
+3. **变异 worker**。worker 的搜索模板只允许指向 worker 自身与受控 tree；模板指向其他 tree、源仓库代码、外部路径、路径穿越或空模板均失败。worker 不安装、不复制、不链接任何 rocks tree，`lfs` 校验器也从受控 tree 的 C 路径装载。
+4. **uml 子进程**。`uml` 预检把每个受控 tree 的 `share/lua/5.4` 与 `lib/lua/5.4` 写进子进程的 `LUA_PATH(_5_4)` / `LUA_CPATH(_5_4)`（另加仓根），模块探针按同一组根判定来源；`./uml` 安装器拷贝仍不是入口，因为它不钉装载面、也不做预检。
+5. **清理边界**。项目工具缓存路径从 bootstrap、package_path_helper、`.gitignore`、`clean` / `distclean` 与 uml 契约文本中移除；`distclean` 与 `clean` 同义。spec_lane 的实测时长缓存移到仓内 `tmp/`（gitignored，由 `clean` 清理）。
+
+代价与边界：worktree 不再需要复制或冷装缓存，并发写坏共享缓存的问题随之消失；换来的是每台开发机/CI 必须自行提供满足口径的机器 tree。缺失或版本越界是真实失败，不再归类为「网络不可用」；退 3 只保留给平台/工具显式不可用。真身校验不因缓存退役而放宽：模块来源、版本、worker 绑定与 uml 探针仍在每次运行时核对。

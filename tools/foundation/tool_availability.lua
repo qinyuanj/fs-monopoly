@@ -7,8 +7,8 @@
 -- 三态沿用 platform_boundary(#96):不可用退 3、status=unavailable 写 stderr,
 -- 本次未运行、不报通过也不报失败。仓内缺陷(配置缺失)不归这里,照旧是真实失败。
 --
--- 纯演算砖:bootstrap 经 classify 按失败原因分类,网络/下载类才构造 unavailable
--- 记录作为 ensure_* 的第三返回值,入口用 message 渲染诊断。
+-- 纯演算砖:保留 classify / message 供仍可能自行下载的工具与子进程诊断使用;
+-- 本仓已没有项目内工具缓存,工具缺失/版本越界由受控 Lua 环境预检按真实失败报出。
 
 -- 按本文件所在目录 dofile 兄弟模块:bootstrap 在 package.path 装好之前就加载本文件。
 local function _module_dir()
@@ -96,8 +96,8 @@ function availability.verdict(record, tag)
         .. "」,通常是网络不可达或瞬时失败。",
       "本次未运行任何检查;退出码 " .. availability.EXIT_CODE .. " 表示环境不可用,不是测试/检查结论。",
       "详情: " .. tostring(record.detail),
-      "处理: 检查网络(能否访问上游仓库)后重试;或在联网环境先跑一次同一命令,"
-        .. "把工具预装进 .toolcache/luarocks。",
+      "处理: 检查网络(能否访问上游仓库)后重试;或在联网环境先按预检给出的命令"
+        .. "把工具装进受控 Lua 环境(机器 LuaRocks tree)。",
     })
 end
 

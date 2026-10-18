@@ -6,7 +6,7 @@ require("test.bootstrap").install_package_paths()
 -- clean / distclean 的原生 Windows 窄反馈(#69 / ADR 0066)。清单与旧 Makefile 同口径:
 -- 仓根的 build/ tmp/ 整树删,junit-output.xml 与 luacov 的
 -- stats/report 残留(含 luacov.<名>.stats.out 一类)删文件,未命中静默忽略;
--- clean 保留 .toolcache/,distclean 连它一起清。
+-- 项目工具缓存退役后 clean 与 distclean 同义,都不碰非清单目录。
 --
 -- 只在临时目录里跑:env.repo_root 指向夹具根,绝不对真实仓库执行清理。
 local check = require("luassert")
@@ -51,7 +51,7 @@ local function _with_fixture(fn)
     for _, dir in ipairs(TARGET_DIRS) do
       check.is_true(fs_lib.write_file(path_lib.join_path(root, dir .. "/nested/artifact.txt"), "x\n"))
     end
-    check.is_true(fs_lib.write_file(path_lib.join_path(root, ".toolcache/luarocks/manifest"), "x\n"))
+    check.is_true(fs_lib.write_file(path_lib.join_path(root, ".local-cache/manifest"), "x\n"))
     fn(root)
   end, debug.traceback)
   fs_lib.remove_path(root)
@@ -74,23 +74,23 @@ end
 
 describe("clean cli", function()
 
-it("clean removes the listed artifacts and keeps the tool cache", function()
+it("clean removes the listed artifacts and keeps unrelated directories", function()
   _with_fixture(function(root)
     check.equal(0, clean_cli.main({}, { repo_root = root, action = "clean" }))
 
     _assert_cleaned(root)
-    check.is_true(fs_lib.path_exists(path_lib.join_path(root, ".toolcache/luarocks/manifest")),
-      "clean 必须保留 .toolcache/")
+    check.is_true(fs_lib.path_exists(path_lib.join_path(root, ".local-cache/manifest")),
+      "clean 不碰清单外目录")
   end)
 end)
 
-it("distclean also removes the tool cache", function()
+it("distclean is the same cleanup as clean", function()
   _with_fixture(function(root)
     check.equal(0, clean_cli.main({}, { repo_root = root, action = "distclean" }))
 
     _assert_cleaned(root)
-    check.is_false(fs_lib.path_exists(path_lib.join_path(root, ".toolcache")),
-      "distclean 必须清掉 .toolcache/")
+    check.is_true(fs_lib.path_exists(path_lib.join_path(root, ".local-cache/manifest")),
+      "distclean 不碰清单外目录")
   end)
 end)
 
@@ -125,7 +125,7 @@ it("clean works with only lua and cmd.exe on PATH", function()
 
     check.equal(0, result.code, result.output)
     _assert_cleaned(root)
-    check.is_false(fs_lib.path_exists(path_lib.join_path(root, ".toolcache")), result.output)
+    check.is_true(fs_lib.path_exists(path_lib.join_path(root, ".local-cache/manifest")), result.output)
   end)
 end)
 

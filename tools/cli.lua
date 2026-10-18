@@ -20,12 +20,12 @@ local commands = {
   { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },
   { name = "dry",               pkg = "dry",                summary = "结构重复检测(邻接 .uml-viewer/dryer;写 .metrics/dry.edn)" },
-  { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 入口(check/crap/mutate/ir/view;项目缓存钉死)" },
+  { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 入口(check/crap/mutate/ir/view;受控 Lua 环境)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
   { name = "deploy",            pkg = "ops",                summary = "部署到本地 Eggy 目录(原生 Windows;零参数)" },
   { name = "sync-data",         pkg = "data_sync",          summary = "从部署目录回同步导出(Data;EggyAPI/EggyEditorAPI 存根)" },
   { name = "clean",             pkg = "clean",              summary = "清生成物(build/tmp/luacov 等)",              action = "clean" },
-  { name = "distclean",         pkg = "clean",              summary = "clean 之上再清 .toolcache", action = "distclean" },
+  { name = "distclean",         pkg = "clean",              summary = "clean 的别名(仓内已无项目工具缓存)", action = "distclean" },
 }
 
 local function _module_dir()

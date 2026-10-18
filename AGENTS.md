@@ -34,7 +34,7 @@ CI（#126）：`.github/workflows/verify.yml` 在原生 Windows runner 上跑同
 
 按改动风险另选（都是显式步骤，不是硬地板）：`lua tools/cli.lua uml crap`、`lua tools/cli.lua uml mutate`；完整 flag 以 `lua tools/cli.lua verify --help` 与 `lua tools/cli.lua uml --help` 为准。
 
-uml-viewer 质量入口（ADR 0068 / #93）：`lua tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/` 派发。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，会从全局 luarocks tree 解析出假绿。契约见 `tools/specs/uml_quality.prompt`。
+uml-viewer 质量入口（ADR 0068 / #93）：`lua tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/` 派发。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，也不做受控 Lua 环境预检，模块可能从版本口径外的 tree 解析出来。契约见 `tools/specs/uml_quality.prompt`。
 
 uml-viewer companion 边界（ADR 0070 / #99）：
 
@@ -48,7 +48,7 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 
 - `tools/foundation/platform_boundary.lua` 保留平台声明与显式跳过的通用协议；当前无 POSIX 专用能力。不可用（退 3）/ 显式跳过（退 0，`status=skipped`）/ 真实失败（退 1 或用法错误退 2）互相区分，跳过不计通过。
 - 默认硬门禁不包含完整 dry 软车道；tooling 中相关探针实际执行。契约见 `tools/specs/dryer.prompt`。
-- 工具自举的网络/下载类失败（#112：luarocks 构建/安装时下载失败）沿用同一「不可用」：`spec-lane` 与 `behavior_parallel`（含 test runner 自举 busted，#131：contract/guards/behavior/tooling 等 busted 车道同口径）、`lint` 入口（#114）退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查网络再重跑，不要当测试回归排查；编译/构建错误与认不出的报错仍退 1。分类真源是 `tools/foundation/tool_availability.lua`。
+- 测试与质量工具的 Lua 依赖只从**受控 Lua 环境**（`luarocks config rocks_trees` 解析的机器 tree，版本口径见 ADR 0072）装载。本仓只核对、不写入、不在项目内自举安装；缺失或版本越界是真实失败（退 1）并打印安装命令。工具/平台显式不可用（#96 / #112）沿用同一「不可用」：`spec-lane`、`behavior_parallel` 等入口退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查环境再重跑，不要当测试回归排查。分类真源是 `tools/foundation/tool_availability.lua`。
 
 ## 操作边界
 

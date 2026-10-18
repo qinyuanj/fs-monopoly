@@ -62,7 +62,7 @@ end
 
 local _LUAROCKS_PREFIX = os.getenv("LOCALAPPDATA"):gsub("\\", "/") .. "/Programs/Lua"
 
--- #112:临时仓库根 + 锁文件,让 ensure_tool 走真实解析/拉取路径而不碰本仓 .toolcache。
+-- #112:临时仓库根 + 锁文件,让 ensure_tool 走真实解析/拉取路径而不碰本仓 controlled-rocks。
 -- cache_line 给出时预置一条新鲜的解析缓存(跳过 ls-remote,直达拉源码一步)。
 local function _temp_tool_repo(cache_line)
   local root = env_lib.make_temp_path("bootstrap_unavailable_spec", "")
@@ -71,10 +71,10 @@ local function _temp_tool_repo(cache_line)
   check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"),
     "acceptance4lua https://example.invalid/eggy/acceptance4lua\n"))
   if cache_line ~= nil then
-    check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, ".toolcache")))
-    check.is_true(fs_lib.write_file(path_lib.join_path(root, ".toolcache/resolved-tools.tsv"), cache_line .. "\n"))
+    check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "controlled-rocks")))
+    check.is_true(fs_lib.write_file(path_lib.join_path(root, "controlled-rocks/resolved-tools.tsv"), cache_line .. "\n"))
   end
-  return { repo_root = root, tool_cache_dir = path_lib.join_path(root, ".toolcache") }
+  return { repo_root = root, tool_cache_dir = path_lib.join_path(root, "controlled-rocks") }
 end
 
 -- 断网替身:工具未装(luarocks list 失败),git 远端一律解析不到主机。
@@ -152,8 +152,8 @@ it("install appends luarocks tree paths", function()
   package.path = original
   fs_lib.remove_path(root)
 
-  check.truthy(path:find("/.toolcache/luarocks/share/lua/5.4/?.lua", 1, true) ~= nil)
-  check.truthy(path:find("/.toolcache/luarocks/share/lua/5.4/?/init.lua", 1, true) ~= nil)
+  check.truthy(path:find("/controlled-rocks/luarocks/share/lua/5.4/?.lua", 1, true) ~= nil)
+  check.truthy(path:find("/controlled-rocks/luarocks/share/lua/5.4/?/init.lua", 1, true) ~= nil)
 end)
 
 it("install appends luarocks tree cpath", function()
@@ -177,7 +177,7 @@ it("install appends luarocks tree cpath", function()
   package.cpath = original
   fs_lib.remove_path(root)
 
-  check.truthy(cpath:find("/.toolcache/luarocks/lib/lua/5.4/?.so", 1, true) ~= nil)
+  check.truthy(cpath:find("/controlled-rocks/luarocks/lib/lua/5.4/?.so", 1, true) ~= nil)
 end)
 
 it("resolves a repo root from the lockfile based tool layout", function()
@@ -201,7 +201,7 @@ it("resolves a repo root from the lockfile based tool layout", function()
   fs_lib.remove_path(root)
 
   check.equal(path_lib.normalize_path(root), env.repo_root)
-  check.equal(path_lib.join_path(path_lib.normalize_path(root), ".toolcache"), env.tool_cache_dir)
+  check.equal(path_lib.join_path(path_lib.normalize_path(root), "controlled-rocks"), env.tool_cache_dir)
 end)
 
 it("ensure busted tree skips install when marker exists", function()
@@ -209,7 +209,7 @@ it("ensure busted tree skips install when marker exists", function()
   local command_calls = 0
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
-      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/busted/runner.lua", path)
+      check.equal("/repo/controlled-rocks/luarocks/share/lua/5.4/busted/runner.lua", path)
       return true
     end },
     { target = fs_lib, key = "ensure_dir", value = function()
@@ -236,11 +236,11 @@ it("ensure busted tree installs pinned rock and checks marker", function()
       -- 解释器候选路径(/opt/homebrew/bin/lua5.4 之类)不参与 marker 计数。
       if path:match("%.lua$") == nil then return false end
       marker_checks = marker_checks + 1
-      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/busted/runner.lua", path)
+      check.equal("/repo/controlled-rocks/luarocks/share/lua/5.4/busted/runner.lua", path)
       return marker_checks > 1
     end },
     { target = fs_lib, key = "ensure_dir", value = function(path)
-      check.equal("/repo/.toolcache/luarocks", path)
+      check.equal("/repo/controlled-rocks/luarocks", path)
       return true
     end },
     { target = proc_lib, key = "command_exists", value = function() return true end },
@@ -253,7 +253,7 @@ it("ensure busted tree installs pinned rock and checks marker", function()
   }, function()
     check.is_true(bootstrap.ensure_busted_tree("/repo"))
   end)
-  check.same({ "--tree", "/repo/.toolcache/luarocks", "--lua-version", "5.4" },
+  check.same({ "--tree", "/repo/controlled-rocks/luarocks", "--lua-version", "5.4" },
     { table.unpack(captured_command, 2, 5) })
   check.same({ "install", "busted", "2.3.0-1", "--deps-mode", "one" },
     { table.unpack(captured_command, 8) })
@@ -410,7 +410,7 @@ it("ensure luacov lcov reporter tree stops when luacov dependency fails", functi
   local command_calls = 0
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
-      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/luacov/reporter/lcov.lua", path)
+      check.equal("/repo/controlled-rocks/luarocks/share/lua/5.4/luacov/reporter/lcov.lua", path)
       return false
     end },
     { target = fs_lib, key = "ensure_dir", value = function() return true end },

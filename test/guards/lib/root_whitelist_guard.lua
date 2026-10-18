@@ -7,7 +7,7 @@ local M = {}
 
 -- 根部显式白名单。当前工作树的已跟踪与未跟踪文件都检查，已删除路径不参与。
 -- 仅包含项目主动承诺保持在根目录的文件与一级目录。
--- 生成物（build/、tmp/、.toolcache/、luacov 残留等）由 `lua tools/cli.lua clean` 清理，
+-- 生成物（build/、tmp/、luacov 残留等）由 `lua tools/cli.lua clean` 清理，
 -- 因此不在白名单内；guard 通过 git 跟踪 + 未忽略未跟踪项检查，自然排除它们。
 -- agent 在根目录新建任何未跟踪条目都会在此报违规。
 local _WHITELIST = {

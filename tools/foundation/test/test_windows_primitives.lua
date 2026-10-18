@@ -103,10 +103,12 @@ it("spec lane accepts serial configuration", function()
   check.truthy(opts and opts.serial, err)
 end)
 
-it("project cache exposes native DLL modules", function()
-  local helper = dofile("tools/foundation/package_path_helper.lua")
-  helper.install_luarocks_tree_paths({ repo_root = "C:/project" })
-  check.truthy(package.cpath:find("C:/project/.toolcache/luarocks/lib/lua/5.4/?.dll", 1, true))
+it("controlled lua environment exposes native DLL modules", function()
+  local original = package.cpath
+  require("foundation.lua_env").install_paths({ "C:/controlled/tree" })
+  local cpath = package.cpath
+  package.cpath = original
+  check.truthy(cpath:find("C:/controlled/tree/lib/lua/5.4/?.dll", 1, true))
 end)
 
 it("selected interpreter rejects non Lua override", function()

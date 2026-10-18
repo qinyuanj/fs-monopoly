@@ -12,8 +12,8 @@ return function(busted, _, helper_options)
   local root = require("lfs").currentdir():gsub("\\", "/"):gsub("/+$", "") .. "/"
   cache_loader.adopt_preloaded(root)
   -- Resolve bootstrap from worker source before it adds tools/test templates.
-  -- install revalidates the worker/source binding and removes bootstrap's empty
-  -- worker-local rocks templates; the original project cache stays read-only.
+  -- install revalidates the worker/source binding and confines paths to the
+  -- worker plus the controlled Lua environment.
   if os.getenv("MUTATOR_WORKER_ROOT") ~= nil or os.getenv("MUTATOR_SOURCE_ROOT") ~= nil then
     require("test.bootstrap").install_package_paths()
     cache_loader.install(root)
@@ -21,8 +21,8 @@ return function(busted, _, helper_options)
 
   -- crapper's luacov config drops absolute chunk names (^%a:), but test.bootstrap
   -- puts the repo root on package.path as an absolute path. Every repo-local Lua
-  -- file (outside the tool cache) is therefore loaded under its relative
-  -- forward-slash name (tools/foundation derives sibling paths from it).
+  -- file (outside the controlled Lua environment) is therefore loaded under its
+  -- relative forward-slash name (tools/foundation derives sibling paths from it).
   local function canonical(path)
     local normalized = tostring(path):gsub("\\", "/"):gsub("^%./", "")
     if normalized:sub(1, #root):lower() == root:lower() then normalized = normalized:sub(#root + 1) end
@@ -32,7 +32,7 @@ return function(busted, _, helper_options)
       collapsed = normalized
       normalized = normalized:gsub("[^/]+/%.%./", "", 1):gsub("/%./", "/")
     until normalized == collapsed
-    if normalized:match("^%.%./") or normalized:match("^%a:") or normalized:match("^/") or normalized:match("^%.toolcache/") then return nil end
+    if normalized:match("^%.%./") or normalized:match("^%a:") or normalized:match("^/") then return nil end
     return normalized
   end
   -- Specs swap or drop globals (package, io, assert ...); hold the originals.

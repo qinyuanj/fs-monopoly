@@ -1,33 +1,30 @@
--- 测试 lint 骨架(#127):AST 获取。parser 用项目工具缓存里的 luacheck
--- (与 lint 车道同一棵树、同一份真身校验),首次装载失败时按需 ensure;
--- 网络类装不上由调用方按 #112 不可用归类,不冒充「测试干净」。
+-- 测试 lint 骨架(#127):AST 获取。parser 从受控 Lua 环境(GLOSSARY)
+-- 装载,与 lint 车道同一份真身校验;缺包或版本越界由预检报告,本仓不安装。
 require("test.bootstrap").install_package_paths()
 
 local M = {}
 
 local _parser
 
--- 返回 luacheck.parser 模块;装不上时返回 nil, err, unavailable(第三值同
--- foundation.bootstrap.ensure_luacheck_tree 的不可用记录)。
+-- 返回 luacheck.parser 模块;受控环境不可用时返回 nil, err。
 function M.parser()
   if _parser ~= nil then
     return _parser
   end
-  local loaded, mod = pcall(require, "luacheck.parser")
-  if not loaded then
-    local bootstrap = require("foundation.bootstrap")
-    local env = bootstrap.resolve()
-    local ensured, err, unavailable = bootstrap.ensure_luacheck_tree(env.repo_root)
-    if ensured ~= true then
-      return nil, err, unavailable
-    end
-    mod = require("luacheck.parser")
+  local lua_env = require("foundation.lua_env")
+  local roots, roots_err = lua_env.roots()
+  if roots == nil then
+    return nil, roots_err
   end
-  -- 与 lint 车道同口径的真身校验:必须解析自项目 .toolcache/luarocks。
+  local ok, mod = pcall(lua_env.require_controlled, "luacheck.parser", roots)
+  if not ok then
+    return nil, tostring(mod)
+  end
+  -- 与 lint 车道同口径的真身校验:必须解析自受控 Lua 环境。
   local origin = package.searchpath("luacheck.parser", package.path) or ""
   assert(
-    origin:gsub("\\", "/"):find("/.toolcache/luarocks/", 1, true) ~= nil,
-    "luacheck.parser must resolve from .toolcache/luarocks, got: " .. origin
+    lua_env.is_inside(origin:gsub("\\", "/"), roots),
+    "luacheck.parser must resolve from the controlled Lua environment, got: " .. origin
   )
   _parser = mod
   return _parser

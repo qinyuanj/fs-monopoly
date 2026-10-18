@@ -71,6 +71,33 @@ local function _luarocks_exe(opts)
   return "luarocks"
 end
 
+-- 默认子进程执行面刻意不 require foundation.proc:本模块会在 stock busted 的钉死
+-- 环境里被 dofile,那时只有仓根与受控 tree 在 package.path 上,tools/ 还不可见。
+-- io.popen 的 close 在失败时返回 nil, "exit", code,足够区分成功/失败。
+local function _quote(arg)
+  local text = tostring(arg)
+  if text:match("^[%w%-%._/\\:]+$") ~= nil then
+    return text
+  end
+  return '"' .. text .. '"'
+end
+
+local function _default_run(command)
+  local parts = {}
+  for _, arg in ipairs(command) do parts[#parts + 1] = _quote(arg) end
+  local handle = io.popen(table.concat(parts, " ") .. " 2>&1")
+  if handle == nil then
+    return { ok = false, output = "io.popen failed" }
+  end
+  local output = handle:read("*a") or ""
+  local ok, _, code = handle:close()
+  return { ok = ok == true, code = code, output = output }
+end
+
+local function _run_command(opts)
+  return opts.run_command or _default_run
+end
+
 -- `luarocks config rocks_trees` 打印一个 Lua 表字面量:元素是 {name=,root=} 或裸路径串。
 local function _parse_roots(output)
   local chunk = load("return " .. tostring(output or ""), "=rocks_trees", "t", {})
@@ -110,13 +137,12 @@ local function _installed_versions(run, exe, name)
   return versions
 end
 
--- 预检受控 Lua 环境。返回 true, nil, { roots = {...}, versions = {name = version} };
--- 失败返回 nil, 诊断文本(含逐项安装命令)。run_command / luarocks_exe 为注入缝。
-function lua_env.preflight(opts)
+-- 解析受控 Lua 环境的 tree 根:`luarocks config rocks_trees`。
+-- 只读、不列包;需要版本核对时用 preflight。失败返回 nil, 诊断文本。
+function lua_env.roots(opts)
   opts = opts or {}
-  local run = opts.run_command or require("foundation.proc").run_command
+  local run = _run_command(opts)
   local exe = _luarocks_exe(opts)
-
   local config = run({ exe, "--lua-version", LUA_VERSION, "config", "rocks_trees" })
   if config.ok ~= true then
     return nil, "受控 Lua 环境不可核对: `luarocks config rocks_trees` 失败: " .. tostring(config.output)
@@ -124,6 +150,20 @@ function lua_env.preflight(opts)
   local roots = _parse_roots(config.output)
   if roots == nil then
     return nil, "受控 Lua 环境不可核对: luarocks config 未给出 rocks_trees: " .. tostring(config.output)
+  end
+  return roots
+end
+
+-- 预检受控 Lua 环境。返回 true, nil, { roots = {...}, versions = {name = version} };
+-- 失败返回 nil, 诊断文本(含逐项安装命令)。run_command / luarocks_exe 为注入缝。
+function lua_env.preflight(opts)
+  opts = opts or {}
+  local run = _run_command(opts)
+  local exe = _luarocks_exe(opts)
+
+  local roots, roots_err = lua_env.roots({ run_command = run, luarocks_exe = exe })
+  if roots == nil then
+    return nil, roots_err
   end
 
   local problems, versions = {}, {}

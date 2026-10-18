@@ -67,7 +67,6 @@ function runtime_paths.resolve(opts)
         script_dir = script_dir,
         repo_root = probe,
         tools_dir = _join_path(probe, "tools"),
-        tool_cache_dir = _join_path(probe, ".toolcache"),
       }
     end
 

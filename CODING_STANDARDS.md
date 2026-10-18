@@ -39,10 +39,10 @@
 ### 断言对象怎么拿
 
 - 仍走旧 Test 风格的 spec 文件头两行固定:`require("test.bootstrap").install_package_paths()` 之后 `local luassert = assert(require("test.support.luassert_loader").load())`,断言只走这个局部对象。该 loader 仍服务于场景套件、`shared_support`、`property`、`fuzz` 等尚未切 DSL 的支撑模块。
-- loader 只从**项目工具缓存** `<repo>/.toolcache/luarocks/` 装载 `luassert`、其子模块及 `say`。未验证的 `package.loaded` 预注入即失败;装载期间的优先 searcher 按缓存文件显式 loadfile,避免 preload/searcher 绕过;后续调用复核已加载对象身份。解析路径在缓存中不代表预加载对象来自缓存。真实 busted 侧由 `packages.test_runner.cache_loader` 施加同一口径的真身校验。
+- loader 只从**受控 Lua 环境**（`luarocks config rocks_trees` 解析出的机器 LuaRocks tree，见 GLOSSARY）装载 `luassert`、其子模块及 `say`。未验证的 `package.loaded` 预注入即失败;装载期间的优先 searcher 按受控 tree 内的文件显式 loadfile,避免 preload/searcher 绕过;后续调用复核已加载对象身份。解析路径在受控 tree 中不代表预加载对象来自 tree。真实 busted 侧由 `packages.test_runner.cache_loader` 施加同一口径的真身校验。本仓不安装、不写入任何 rocks tree。
 - **不覆盖全局 `assert`**。后端语义若挂在全局 `assert` 上,覆盖它等于换执行后端而不是换断言词汇。
 
-- #75 显式登记为 busted 的真实 `describe` / `it` 文件使用 busted 注入的断言对象（可写 `local luassert = assert`）；运行器先验证并从项目缓存装载真实 busted/luassert 依赖。不得将旧 Test 表动态包成 DSL，不得在 spec 中替换全局断言对象。普通 require 保持跨文件模块身份，singleton patch 由 spec 在 teardown 中显式恢复。
+- #75 显式登记为 busted 的真实 `describe` / `it` 文件使用 busted 注入的断言对象（可写 `local luassert = assert`）；运行器先验证并从受控 Lua 环境装载真实 busted/luassert 依赖。不得将旧 Test 表动态包成 DSL，不得在 spec 中替换全局断言对象。普通 require 保持跨文件模块身份，singleton patch 由 spec 在 teardown 中显式恢复。
 
 ### 译法对照(带陷阱)
 

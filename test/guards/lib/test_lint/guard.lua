@@ -24,7 +24,7 @@ local _GUARD = "test_lint_guard"
 local RULES = { vacuous_branch, call_count }
 
 -- 纯策略核:tracked 路径表 + read(path) -> content|nil,返回统一格式的违规
--- 字符串列表。opts.parse 可注入替代 parser;缺省走项目工具缓存的 luacheck。
+-- 字符串列表。opts.parse 可注入替代 parser;缺省走受控 Lua 环境的 luacheck。
 -- spec 必须能拿合成违规输入喂进来证明它会红,不碰 git、不碰文件系统。
 function M.check(paths, read, opts)
   opts = opts or {}
@@ -68,15 +68,10 @@ function M.check(paths, read, opts)
   return report.format_all(_GUARD, violations)
 end
 
--- IO 壳:luacheck 是规则引擎,装不上(网络,#112)按不可用报出,不冒充通过。
+-- IO 壳:luacheck 是规则引擎,受控 Lua 环境不可用按真实失败报出,不冒充通过。
 function M.run()
-  local bootstrap = require("foundation.bootstrap")
-  local env = bootstrap.resolve()
-  local ensured, err, unavailable = bootstrap.ensure_luacheck_tree(env.repo_root)
-  if ensured ~= true then
-    if unavailable ~= nil then
-      return { ok = false, error = require("foundation.tool_availability").message(unavailable, _GUARD) }
-    end
+  local parser, err = ast_mod.parser()
+  if parser == nil then
     return { ok = false, error = _GUARD .. " error: " .. tostring(err) }
   end
 

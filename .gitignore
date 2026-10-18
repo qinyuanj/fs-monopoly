@@ -12,12 +12,6 @@
 /luacov.report.out
 /luacov.stats.out
 
-# ── 本地工具缓存 ─────────────────────────────────────────────────
-# quality tool cache（本地状态，下载/安装的工具钉）。
-# 隔离 worktree 用 bootstrap 装出的自有真实目录，不用 junction/软链/镜像主仓缓存。
-# 不带斜杠只是兜底：误建的 symlink 被 git 视为文件，.toolcache/ 规则不会忽略它。
-.toolcache
-
 # ── 外部 overlay 与编辑器缓存 ────────────────────────────────────
 # 已批准保留的外部共享 scripts overlay：本地状态，不版本化。
 /swarmforge/scripts/

@@ -22,7 +22,7 @@ it("preflight failure is a real failure and never launches luacheck", function()
   check.equal(message .. "\n", result.stderr)
 end)
 
--- 预检通过:luacheck 经受控 Lua 环境装载器拉起,不再引用项目缓存。
+-- 预检通过:luacheck 经受控 Lua 环境装载器拉起,不再引用仓内工具 tree。
 it("preflight success loads luacheck through the controlled environment", function()
   local seen
   local result = runner.execute({
@@ -38,7 +38,6 @@ it("preflight success loads luacheck through the controlled environment", functi
   check.matches("lua_env.lua", joined, 1, true)
   check.matches("require_controlled('luacheck.main'", joined, 1, true)
   check.matches("'C:/Users/dev/AppData/Roaming/luarocks'", joined, 1, true)
-  check.is_nil(joined:find(".toolcache", 1, true), joined)
   check.is_nil(joined:find("bootstrap", 1, true), joined)
 end)
 

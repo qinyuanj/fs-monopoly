@@ -11,7 +11,8 @@
 -- 清单与生产者对应：build/ tmp/ 为本地
 -- 构建产物;junit-output.xml 由 spec_lane 生成;luacov.* 是 luacov 默认落点的残留
 -- (uml crap 的 crapper 经 luacov 采集覆盖率)。
--- clean 保留 .toolcache/；distclean 连工具缓存一起清。
+-- 仓内不再有项目工具缓存:工具模块一律从受控 Lua 环境装载,clean 与 distclean
+-- 只清仓内生成物。
 --
 -- 实现:原生 Windows 单平台(ADR 0066),不依赖 rm/sh。目录与文件都经
 -- foundation.fs.remove_path 删(整树删 / 删文件,未命中静默成功);luacov 的
@@ -35,15 +36,14 @@ local _CLEAN_FILE_PATTERNS = {
   "^luacov%..*%.stats%.out$",
   "^luacov%..*%.report%.out$",
 }
-local _DISTCLEAN_DIRS = { ".toolcache" }
 
 function M.usage()
   return table.concat({
     "用法: lua tools/cli.lua clean | distclean",
     "",
     "clean     清生成物:build/ tmp/、",
-    "          junit-output.xml、luacov 残留。保留 .toolcache/。",
-    "distclean clean 之上再清 .toolcache/(工具缓存)。",
+    "          junit-output.xml、luacov 残留。",
+    "distclean 与 clean 同义(项目工具缓存已退役,不再有仓内工具 tree)。",
     "",
   }, "\n") .. "\n"
 end
@@ -92,11 +92,6 @@ function M.main(args, env)
 
   local repo_root = (env and env.repo_root) or "."
   local dirs = { table.unpack(_CLEAN_DIRS) }
-  if env and env.action == "distclean" then
-    for _, dir in ipairs(_DISTCLEAN_DIRS) do
-      dirs[#dirs + 1] = dir
-    end
-  end
 
   if not _remove_all(repo_root, dirs) then
     return 1
