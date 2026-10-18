@@ -30,20 +30,6 @@ function M.resolve_grouped_override(override_ports, group_names)
   return nil
 end
 
-function M.has_legacy_flat_override(override_ports, group_names, port_groups)
-  -- override_ports 恒为 table(唯一调用方 resolve 已用 error 把非 table 挡在
-  -- 前面),曾经的类型守卫恒不触发——等价变异体,按 #257 三分类删冗余。
-  for _, group_name in ipairs(group_names) do
-    local keys = port_groups[group_name]
-    for _, key in ipairs(keys) do
-      if type(override_ports[key]) == "function" then
-        return true
-      end
-    end
-  end
-  return false
-end
-
 -- 必填端口：override 给了函数就用 override，否则用 base；base 缺失即报错。
 local function _merge_required_ports(merged, base_group, override_group, required_keys)
   for _, key in ipairs(required_keys) do

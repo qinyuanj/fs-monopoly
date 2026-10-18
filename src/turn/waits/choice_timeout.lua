@@ -1,7 +1,5 @@
--- 待决选择超时模块(#602):自包含不变接线——端口组解析、deadline 服务、
--- resolve/force_skip 由模块内部自持,不再占据构造 interface;外壳 timeout.lua
--- 整体退役。构造键只留真实变化点(7 个);resolve_choice_ui_state 提升为显式
--- 必需键,不再是契约外静默穿透。
+-- 待决选择超时模块：端口组解析、deadline 服务、resolve/force_skip 由
+-- 模块内部自持。七个必填构造键承载策略，默认装配直接委派生产 ui_sync 端口。
 -- 内部拆分(refactorer 收尾):tick 引擎在 choice_timeout_engine,deadline 簿记
 -- 在 choice_timeout_tracking,时长解析在 choice_timeout_duration;本文件保持
 -- ChoiceTimeout 公共面(new / resolve_choice_timeout_seconds / step_default)
@@ -9,7 +7,6 @@
 local engine = require("src.turn.waits.choice_timeout_engine")
 local duration = require("src.turn.waits.choice_timeout_duration")
 local timing = require("src.config.gameplay.timing")
-local runtime_state = require("src.state.runtime")
 local resolve_port = require("src.turn.output.resolve_port")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
@@ -21,8 +18,8 @@ ChoiceTimeout.new = engine.new
 ChoiceTimeout.resolve_choice_timeout_seconds = duration.resolve_choice_timeout_seconds
 
 -- modal 端口只参与一件事:超时自动代答派发时挂 on_close_choice,让真实选择
--- 弹窗随裁定收屏(「超时收屏」验收场景)。这是选择超时对 modal 的唯一接线,
--- 评估结论见 docs/decisions.md #602 条。
+-- 弹窗随裁定收屏。这是选择超时对 modal 的唯一接线，
+-- 评估结论见 docs/decisions.md ADR 0063 / 0064。
 local _dispatch_close_opts = { on_close_choice = nil }
 local _cached_dispatch_modal_ref = nil
 local function _dispatch_action_with_close_choice(game, state, action)
@@ -43,10 +40,8 @@ local function _resolve_ui_sync_ports(state)
   return resolve_port.resolve(state, "ui_sync", nil)
 end
 
--- 默认装配(自 timeout.lua 迁入,行为保持):生产与测试不再各自拼写同一份
--- 不变接线;装配方(loop 端口)直接用 step_default,定制方走 ChoiceTimeout.new。
-local _choice_ui_fallback = {}
-
+-- 默认装配统一生产与测试的接线：loop 端口直接用 step_default，
+-- 定制策略走 ChoiceTimeout.new。
 local _default_dependencies = {
   build_action = function(game_ctx, state_ctx, choice, action_ctx)
     return choice_auto_policy.decide(game_ctx, state_ctx, choice, action_ctx)
@@ -62,27 +57,17 @@ local _default_dependencies = {
 
 _default_dependencies.on_pending_choice = function(game, state, pending)
   local ports = _resolve_ui_sync_ports(state)
-  if ports and type(ports.on_pending_choice) == "function" then
-    return ports.on_pending_choice(game, state, pending)
-  end
+  return ports.on_pending_choice(game, state, pending)
 end
 
 _default_dependencies.is_choice_active = function(state)
   local ports = _resolve_ui_sync_ports(state)
-  if ports and type(ports.is_choice_active) == "function" then
-    return ports.is_choice_active(state)
-  end
-  return runtime_state.get_pending_choice(state) ~= nil
+  return ports.is_choice_active(state)
 end
 
 _default_dependencies.resolve_choice_ui_state = function(game, state, choice)
   local ports = _resolve_ui_sync_ports(state)
-  if ports and type(ports.resolve_choice_ui_state) == "function" then
-    return ports.resolve_choice_ui_state(game, state, choice)
-  end
-  _choice_ui_fallback.route_key = choice and choice.route_key or nil
-  _choice_ui_fallback.should_warn = false
-  return _choice_ui_fallback
+  return ports.resolve_choice_ui_state(game, state, choice)
 end
 
 local _default_choice_timeout = ChoiceTimeout.new(_default_dependencies)

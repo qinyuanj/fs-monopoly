@@ -90,7 +90,8 @@ it("test_guards_the_production_default_choice_tick_as_well", function()
   _open_owned_choice(g, owner)
   bankruptcy.eliminate(g, owner, { reason = "测试破产" })
 
-  ChoiceTimeout.step_default(g, {}, 0.1)
+  local state = require("test.support.gameplay_fixtures").build_loop_state()
+  ChoiceTimeout.step_default(g, state, 0.1)
 
   luassert.is_nil(g.turn.pending_choice, "the default production tick must clear an eliminated owner's window")
 end)

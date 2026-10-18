@@ -229,8 +229,12 @@ local function _run_one_seed(seed)
   local g = support.new_game({ ai = {} })
   local state = fixtures.build_loop_state()
   local now = 0
-  -- 真实 ui_sync（含 choice 超时/倒计时）+ 可控时钟；modal/anim 保持 noop。
+  -- 回合默认步进与测试 UI 接线、可控时钟组合；modal/anim 保持 noop。
   state.gameplay_loop_ports = loop_ports.resolve({
+    ui_sync = {
+      on_pending_choice = state.gameplay_loop_ports.ui_sync.on_pending_choice,
+      resolve_choice_ui_state = state.gameplay_loop_ports.ui_sync.resolve_choice_ui_state,
+    },
     clock = {
       wall_now_seconds = function() return now end,
       wall_diff_seconds = function(a, b) return (a or 0) - (b or 0) end,

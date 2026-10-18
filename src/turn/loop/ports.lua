@@ -184,9 +184,6 @@ function gameplay_loop_ports.resolve(override_ports)
   if grouped_override then
     return _build_resolved_ports(grouped_override)
   end
-  if ports_merge.has_legacy_flat_override(override_ports, group_names, port_groups) then
-    error("legacy flat gameplay_loop_ports is not supported; use grouped ports: modal/anim/ui_sync/debug/clock/state")
-  end
   return _build_resolved_ports(nil)
 end
 

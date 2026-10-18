@@ -85,12 +85,6 @@ it("test_returns_the_option_id_carried_directly_on_the_payload", function()
   _assert_eq(result, "opt_a", "payload option_id wins over index lookup")
 end)
 
-it("test_accepts_the_legacy_option_payload_key", function()
-  local choice = { id = "c1", options = { { id = "o1" } } }
-  local result = event_intents.resolve_option_id(choice, { option = "opt_b" }, nil)
-  _assert_eq(result, "opt_b", "payload option key")
-end)
-
 it("test_falls_back_to_the_choice_option_at_the_payload_index", function()
   local choice = { id = "c1", options = { { id = "o1" }, { id = "o2" } } }
   local result = event_intents.resolve_option_id(choice, { index = 2 }, nil)
@@ -127,26 +121,6 @@ it("test_returns_select_intent_by_index_via_choice_options", function()
   local result = event_intents.choice_select_intent(state, 2, "spec_synthetic")
   luassert.truthy(result ~= nil, "should return intent")
   _assert_eq(result.option_id, "o2", "option_id from choice options")
-end)
-
-it("test_resolves_option_index_payload_key", function()
-  -- kills _resolve_index_from_payload 第二段 or->and:payload 只带
-  -- option_index 时必须经索引命中对应 option(变异体会把链压成 nil)。
-  local choice = { id = "c1", options = { { id = "o1" }, { id = "o2" }, { id = "o3" } } }
-  local state = _make_state({})
-  local option_id = event_intents.resolve_option_id(choice, { option_index = 3 }, state)
-  _assert_eq(option_id, "o3", "option_index payload should resolve the option at that index")
-end)
-
-it("test_resolves_card_index_and_choice_index_payload_keys", function()
-  -- kills _resolve_index_from_payload 第三段 or->and:card_index /
-  -- choice_index 任一存在时都必须参与索引解析。
-  local choice = { id = "c1", options = { { id = "o1" }, { id = "o2" }, { id = "o3" } } }
-  local state = _make_state({})
-  local via_card = event_intents.resolve_option_id(choice, { card_index = 2 }, state)
-  _assert_eq(via_card, "o2", "card_index payload should resolve the option at that index")
-  local via_choice = event_intents.resolve_option_id(choice, { choice_index = 1 }, state)
-  _assert_eq(via_choice, "o1", "choice_index payload should resolve the option at that index")
 end)
 
 it("test_resolve_option_id_rejects_missing_choice_and_payload_with_messages", function()

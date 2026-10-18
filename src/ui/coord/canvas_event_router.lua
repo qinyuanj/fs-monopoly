@@ -17,11 +17,6 @@ local function _destroy_listener(listener)
   end
 end
 
-local function _clear_compat_fields(state)
-  state.ui_event_router_listeners = {}
-  state.ui_event_router_registered = {}
-end
-
 local function _take_scope(state)
   local scope = state.ui_event_router_scope
   state.ui_event_router_scope = nil
@@ -41,17 +36,8 @@ end
 function router.destroy(state)
   assert(state ~= nil, "missing state")
   local scope = _take_scope(state)
-  -- 兼容字段可能仍持有旧版(无 Scope)残留 listener;有 Scope 时由 Scope 统一释放。
-  local orphan_listeners = state.ui_event_router_listeners
-  _clear_compat_fields(state)
   if scope ~= nil then
     scope:destroy()
-    return
-  end
-  if type(orphan_listeners) == "table" then
-    for _, listener in ipairs(orphan_listeners) do
-      _destroy_listener(listener)
-    end
   end
 end
 
@@ -92,8 +78,6 @@ function router.bind(state, resolve_game)
   local cache = {}
   local registered = {}
   local listeners = {}
-  state.ui_event_router_registered = registered
-  state.ui_event_router_listeners = listeners
 
   local tracked_count = 0
   local function track_new_listeners()

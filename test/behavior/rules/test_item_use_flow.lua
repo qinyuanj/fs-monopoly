@@ -249,7 +249,7 @@ do
       local player = g.players[1]
       local settled = settlement.execute(g, player, item_ids.mine, function()
         return { ok = false, reason = "blocked" }
-      end, { fallback_reason = "fallback", context_preconsumed = true })
+      end, { fallback_reason = "fallback", choice = { meta = { item_preconsumed = true } } })
 
       _assert_eq(flow_result.normalize_effect(settled, player, item_ids.mine), settled,
         "settled results should pass through unchanged")
@@ -1018,7 +1018,7 @@ do
 
       local settled = settlement.execute(g, user, item_ids.mine, function()
         return { ok = false, reason = "blocked" }
-      end, { fallback_reason = "fallback", context_preconsumed = true })
+      end, { fallback_reason = "fallback", choice = { meta = { item_preconsumed = true } } })
 
       _assert_eq(settled.ok, false, "escrowed failure should reject")
       _assert_eq(settled.reason, "blocked", "effect reason passes through")
@@ -1246,7 +1246,7 @@ do
 
       local result = settlement.execute(g, user, item_ids.steal, function()
         return { ok = true }
-      end, { consume = "applier_owned", context_preconsumed = true })
+      end, { consume = "applier_owned", choice = { meta = { item_preconsumed = true } } })
 
       _assert_eq(result.ok, true, "escrowed applier-owned item should apply")
       _assert_eq(result.item_consumed, true, "escrowed item should report consumed")

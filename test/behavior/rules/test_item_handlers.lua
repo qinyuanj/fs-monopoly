@@ -197,12 +197,6 @@ describe("TestItemHandlersApplyOrchestration", function()
     _assert_eq(consumed, nil, "an already-consumed result must not double-consume")
   end)
 
-  it("test_a_preconsumed_context_skips_the_consume_step", function()
-    local g = _game()
-    local _, consumed = _run(g, item_ids.exile, { ok = true }, { item_preconsumed = true })
-    _assert_eq(consumed, nil, "a preconsumed item must not be consumed again")
-  end)
-
   it("test_an_apply_that_already_queued_its_own_anim_is_not_re_queued", function()
     local g = _game()
     local res, _, payload = _run(g, item_ids.exile, { ok = true, action_anim = true })

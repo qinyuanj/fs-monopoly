@@ -137,7 +137,8 @@ it("test_guards_the_production_default_choice_tick_as_well", function()
   local g = support.new_game({ players = { "P1", "P2", "P3" } })
   _open_orphaned_choice(g)
 
-  ChoiceTimeout.step_default(g, {}, 0.1)
+  local state = require("test.support.gameplay_fixtures").build_loop_state()
+  ChoiceTimeout.step_default(g, state, 0.1)
 
   luassert.is_nil(g.turn.pending_choice, "the default production tick must clear an orphaned window")
 end)

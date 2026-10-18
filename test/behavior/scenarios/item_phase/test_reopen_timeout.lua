@@ -60,7 +60,7 @@ describe("TestGameplayItemPhaseReopenTimeout", function()
   player.inventory:add({ id = item_ids.tax })
   player.inventory:add({ id = item_ids.rich })
 
-  local state = {}
+  local state = require("test.support.gameplay_fixtures").build_loop_state()
   runtime_state.ensure_all(state)
   _install_choice_seed_bridge(g, state)
   local session = { wait_state = "wait_choice", game = g, choice_elapsed_seconds = 0 }

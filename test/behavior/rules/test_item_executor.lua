@@ -132,7 +132,7 @@ describe("TestItemExecutor", function()
   end)
 
 -- #293 补杀:_use_post_effect 臂(无 handler 的道具)从未通过 executor 接口测过,
--- consume="before_apply" 字符串→nil 与 context.item_preconsumed==true→false 两个位点存活。
+-- 通过无 handler 的道具验证 consume="before_apply" 的结算路径。
   it("test_use_item_without_handler_consumes_via_before_apply", function()
     local game = _new_game()
     local player = game.players[1]
@@ -153,23 +153,6 @@ describe("TestItemExecutor", function()
     end)
   end)
 
-  it("test_use_item_with_preconsumed_context_marks_item_as_consumed", function()
-    local game = _new_game()
-    local player = game.players[1]
-    player.inventory:add({ id = TEST_ITEM_ID })
-
-    local result = _with_item_handler(game, TEST_ITEM_ID, function()
-      -- handler 不自耗，但 context.item_preconsumed=true 告知结算道具已被预消耗
-      return { ok = true }
-    end, function()
-      return executor.use_item(game, player, TEST_ITEM_ID, { item_preconsumed = true })
-    end)
-
-    _assert_eq(result.ok, true, "item use should succeed")
-    -- context.item_preconsumed==true 经 settlement 的 _init_escrow 将 ledger.escrowed 置 true
-    _assert_eq(result.item_consumed, true,
-      "preconsumed flag must cause settlement to mark item as consumed without consuming via ledger")
-  end)
 
 
 end)

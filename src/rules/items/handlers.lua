@@ -67,7 +67,6 @@ local function _settle_target_player(game, player, item_id, target, context, opt
   end, {
     consume = "after_success",
     fallback_reason = opts and opts.fallback_reason or "invalid_target",
-    context_preconsumed = context.item_preconsumed == true,
   })
 end
 

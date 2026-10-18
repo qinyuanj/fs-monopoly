@@ -158,21 +158,16 @@ describe("TestItemsSettlement", function()
     end)
   end)
 
-  it("test_the_public_item_preconsumed_flag_and_context_preconsumed_also_seed_escrow", function()
-    for _, opts in ipairs({
-      { choice = { meta = { item_preconsumed = true } } },
-      { context_preconsumed = true },
-    }) do
-      local calls, patches = _make_patches()
-      with_patches(patches, function()
-        local result = settlement.execute(_make_game(), _player, _ITEM, function()
-          return use_result.applied()
-        end, opts)
+  it("test_the_public_item_preconsumed_flag_seeds_escrow", function()
+    local calls, patches = _make_patches()
+    with_patches(patches, function()
+      local result = settlement.execute(_make_game(), _player, _ITEM, function()
+        return use_result.applied()
+      end, { choice = { meta = { item_preconsumed = true } } })
 
-        luassert.truthy(#calls.consume == 0, "preconsumed markers skip before_apply consumption")
-        luassert.truthy(result.item_consumed == true, "escrow counts as consumed")
-      end)
-    end
+      luassert.truthy(#calls.consume == 0, "preconsumed choice skips before_apply consumption")
+      luassert.truthy(result.item_consumed == true, "escrow counts as consumed")
+    end)
   end)
 
   it("test_commit_is_one_shot_and_reports_success_on_both_branches", function()

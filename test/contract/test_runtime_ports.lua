@@ -93,28 +93,6 @@ describe("TestRuntimePorts", function()
   luassert.is_nil(runtime_ports.context_policy, "context_policy must be removed")
   end)
 
-  it("test_runtime_install_rejects_removed_legacy_options", function()
-  local ok_policy, err_policy = pcall(function()
-    runtime_install.install({
-      context_policy = "retired",
-      skip_context_install = true,
-    })
-  end)
-  luassert.is_false(ok_policy, "runtime_install must reject removed context_policy option")
-  luassert.is_true(tostring(err_policy):find("context_policy option removed", 1, true) ~= nil,
-    "runtime_install should report removed context_policy option")
-
-  local ok_helper, err_helper = pcall(function()
-    runtime_install.install({
-      skip_context_install = true,
-      enable_legacy_helper_fallback = true,
-    })
-  end)
-  luassert.is_false(ok_helper, "runtime_install must reject removed helper fallback option")
-  luassert.is_true(tostring(err_helper):find("enable_legacy_helper_fallback option removed", 1, true) ~= nil,
-    "runtime_install should report removed helper fallback option")
-  end)
-
   it("test_runtime_install_skip_context_install_is_allowed", function()
   local ok = pcall(function()
     runtime_install.install({

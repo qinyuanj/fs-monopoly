@@ -32,14 +32,13 @@ end
 -- 历史 handler 契约:效果已在 handler 内部生效(含消耗),结算只负责
 -- 判定/广播/兜底动画;消耗事实经 apply 前后计数回填台账。
 -- 该路径随 step 3 各 kind 迁入 settlement 后仅剩注入式测试 handler 使用。
-local function _settle_applied_handler(game, player, item_id, context, res, before_count, fallback_reason)
+local function _settle_applied_handler(game, player, item_id, res, before_count, fallback_reason)
   return settlement.execute(game, player, item_id, function()
     return res
   end, {
     consume = "already_applied",
     fallback_reason = fallback_reason,
     preapplied_count = before_count,
-    context_preconsumed = context.item_preconsumed == true,
   })
 end
 
@@ -62,7 +61,7 @@ function executor.use_item(game, player, item_id, context)
   -- waiting 形状不在这里判:use_result.canonicalize 是 raw 形状的唯一解码点,
   -- 它把 waiting 归为 await_choice,settlement 再原样放行 raw、不落任何账。
   -- executor 自己再判一次只会把「谁认识 waiting」重新摊回两处。
-  return _settle_applied_handler(game, player, item_id, context, res, before_count, fallback_reason)
+  return _settle_applied_handler(game, player, item_id, res, before_count, fallback_reason)
 end
 
 return executor

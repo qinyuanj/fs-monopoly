@@ -33,7 +33,6 @@ while index <= #arg do
     list:close()
     assert(#opts.files > count, "empty spec file list")
   elseif value:match("^%-%-durations%-out=") then opts.durations_out = value:match("=(.*)$")
-  elseif value:match("^%-%-backend%-manifest=") then error("backend manifests are no longer supported")
   elseif value == "--run" or value == "--output" or value == "--helper" or value == "--pattern" then
     index = index + 1
     local name = value:sub(3)
