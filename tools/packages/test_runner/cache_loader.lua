@@ -59,7 +59,7 @@ local function worker_context(root)
   real_directory(worker)
   real_directory(source .. "/.toolcache/luarocks")
   assert(lfs.attributes(source .. "/.git", "mode"), "mutation source is not a source repository")
-  for _, entry in ipairs({ "src", "test", "tools", "tools/tools.lock" }) do
+  for _, entry in ipairs({ "src", "test", "tools", "tools/cli.lua" }) do
     assert(lfs.attributes(source .. "/" .. entry, "mode"), "mutation source repository missing: " .. entry)
   end
   return { worker = worker, cache = source .. "/.toolcache/luarocks" }

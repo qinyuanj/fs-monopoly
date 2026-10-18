@@ -23,12 +23,6 @@ function M.install_package_paths()
   _package_paths_installed = true
 end
 
-function M.ensure_tool(name)
-  M.install_package_paths()
-  local bootstrap = dofile(_module_dir() .. "/../tools/foundation/bootstrap.lua")
-  return bootstrap.ensure_tool(name)
-end
-
 function M.dofile_first(paths)
   for _, path in ipairs(paths or {}) do
     local file = io.open(path, "r")

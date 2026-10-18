@@ -9,7 +9,7 @@ require("test.bootstrap").install_package_paths()
 -- entries 是保留开关入口的单一真源:增删入口必须同步本清单,否则扫描用例判红。
 -- 每个入口真实起进程,带/不带开关各跑一次,断言退出码与核心输出一致、上游收到的
 -- argv 完全相同。上游 argv 由 argv_recorder 经 LUA_INIT_5_4 注入观测(只记录不改
--- 行为):upstream 为 process:<脚本> 时看跨进程转发,module:<函数> 时看进程内直调。
+-- 行为),按 process:<脚本> 看跨进程转发。
 local check = assert
 local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")

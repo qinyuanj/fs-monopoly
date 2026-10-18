@@ -34,7 +34,7 @@ local function _looks_like_repo_root(path)
     "src",
     "test",
     "tools",
-    "tools/tools.lock",
+    "tools/cli.lua",
   }
 
   for _, entry in ipairs(required_entries) do

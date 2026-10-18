@@ -121,9 +121,9 @@ APS 三件（`gherkin-parser` / `ir-dry-checker` / `gherkin-mutator`）的 PATH 
 
 ## ADR 0068 — 质量控制全量交接到 uml-viewer
 
-CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异经 `./uml crap` / `./uml mutate` 走 crapper / mutator 的 Lua 路径，架构面经 `./uml ir` 走 policy 与 IR。`tools/tools.lock` 的 `crap4lua` / `mutate4lua` / `arch_view` 三钉、`tools/packages/{crap,mutate,coverage,arch_view}` 与对应 verify 车道随之退场。`docs/architecture.md` 与 `test/guards/` 仍是「人能读懂、机器能拦」的层边界执行真源，policy 是同一份边界在 uml-viewer 侧的表达式，不构成第二真源。
+CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异经 `./uml crap` / `./uml mutate` 走 crapper / mutator 的 Lua 路径，架构面经 `./uml ir` 走 policy 与 IR。当时在 `tools/tools.lock` 里的 `crap4lua` / `mutate4lua` / `arch_view` 三钉、`tools/packages/{crap,mutate,coverage,arch_view}` 与对应 verify 车道随之退场。`docs/architecture.md` 与 `test/guards/` 仍是「人能读懂、机器能拦」的层边界执行真源，policy 是同一份边界在 uml-viewer 侧的表达式，不构成第二真源。
 
-理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。留下的是 uml-viewer 没有对应物的 `dry4lua`（结构重复检测），仍按 `tools/tools.lock` 跟随上游主干装载；`acceptance4lua` 连同中文 Gherkin 验收管线已由 #147 整体删除（母规格 #146）。
+理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。最后两个跟随上游主干的工具随后也退役：`dry4lua` 由 #148 改由 `qinyuanj/dryer` 承接，`acceptance4lua` 连同中文 Gherkin 验收管线由 #147 整体删除（母规格 #146）。两只工具退场后，整套「工具跟随上游主干」装载机制——`tools/tools.lock` 及其解析、HEAD 解析缓存、源码浅克隆与按锁安装——由 #149 一并删除。
 
 落地（#93）：本仓的受支持入口是 `lua tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 cmd 批处理里调用同一个 `uml-command.ps1`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，会从全局 `%APPDATA%\luarocks` tree 解析出假绿。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。契约见 `tools/specs/uml_quality.prompt`。
 
