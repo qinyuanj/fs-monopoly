@@ -273,14 +273,6 @@ it("test_does_not_close_canvas_when_result_does_not_request_close", function()
     "close result without panel_should_close must not hide the skin canvas")
 end)
 
--- catalog injection
-it("test_configure_replaces_the_active_catalog_and_reset_restores_the_default", function()
-  skin_panel.configure_catalog_for_tests(_make_catalog(3))
-  luassert.truthy(#skin_panel.catalog == 3, "catalog size should be 3")
-  skin_panel.reset_for_tests()
-  luassert.truthy(#skin_panel.catalog == 4, "default catalog has 4 skins")
-end)
-
 -- unlock and equip
 it("test_is_slot_equipped_returns_false_for_an_empty_slot", function()
   skin_panel.configure_catalog_for_tests(_make_catalog(1))

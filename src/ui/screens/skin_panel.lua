@@ -2,8 +2,7 @@
 --
 -- 这是 canvas 面,不是选择屏:没有 descriptor / open / canvas 三契约(详见
 -- screens_registry 的说明)。面板
--- 门面住 skin_panel/panel.lua(>100 mutation sites 拆分,公开 API 与 catalog
--- 契约面经本文件再导出/镜像保持调用方不变);画廊/面板态/装备动作三卫星住
+-- 门面住 skin_panel/panel.lua，公开动作 API 经本文件再导出；画廊/面板态/装备动作三卫星住
 -- skin_panel/ 子目录(require 路径 src.ui.screens.skin_panel.*)。
 local append_intent_spec = require("src.ui.input.route_specs")
 local cosmetics_ports = require("src.ui.seams.cosmetics")
@@ -43,14 +42,6 @@ end
 
 -- ===== 面板门面:panel.lua 再导出保持公开 API =====
 
--- skin_panel.catalog 供行为测试通过公开面核对选择、装备与宿主资源装配；
--- 真源在 transaction_context。configure/reset/port 注入时经 panel.sync_catalog
--- 拉新镜像，供调用方观察当前目录。
-local function _sync_catalog()
-  panel.sync_catalog()
-  skin_panel.catalog = panel.catalog
-end
-
 skin_panel.apply_transaction_result = panel.apply_transaction_result
 skin_panel.is_slot_equipped = panel.is_slot_equipped
 skin_panel.configure_equip = panel.configure_equip
@@ -62,20 +53,11 @@ skin_panel.unlock = panel.unlock
 skin_panel.equip = panel.equip
 skin_panel.handle_action = panel.handle_action
 
-function skin_panel.configure_catalog_for_tests(catalog)
-  panel.configure_catalog_for_tests(catalog)
-  _sync_catalog()
-end
+skin_panel.configure_catalog_for_tests = panel.configure_catalog_for_tests
+skin_panel.reset_for_tests = panel.reset_for_tests
 
-function skin_panel.reset_for_tests()
-  panel.reset_for_tests()
-  _sync_catalog()
-end
-
--- 模块加载期的默认装配跟随 port 注入时机(工单 #244):catalog 镜像与默认
--- result applier 在 transaction 实现注入(compose_game 装配)后立即生效。
+-- 默认 result applier 在 transaction 实现注入(compose_game 装配)后立即生效。
 cosmetics_ports.when_installed(function()
-  _sync_catalog()
   panel.install_default_result_applier()
 end)
 

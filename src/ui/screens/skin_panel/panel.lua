@@ -1,6 +1,5 @@
 -- skin_panel 面板门面(自 screens/skin_panel.lua 拆分,>100 mutation sites
 -- 行为保持):事务派发、结果应用(canvas 切换/槽位刷新/提示)、公开动作 API。
--- catalog 公开契约面在装配主文件镜像同步(skin_panel.catalog)。
 local cosmetics_ports = require("src.ui.seams.cosmetics")
 local transaction = cosmetics_ports.build().transaction
 local tip_queue = require("src.foundation.tips")
@@ -25,8 +24,7 @@ local function _notify(text, key)
   })
 end
 
--- configure/reset/open 时从 transaction_context 拉新排序目录，供槽位渲染
--- 与 skin_panel.catalog 的行为测试观察面共同使用。
+-- configure/reset/open 时从 transaction_context 拉新排序目录，供槽位渲染使用。
 function panel.sync_catalog()
   transaction.refresh_catalog()
   panel.catalog = transaction.catalog
