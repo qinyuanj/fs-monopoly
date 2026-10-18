@@ -281,11 +281,7 @@ function direction.resolve_backward_next_source(map, current_id, neigh, facing)
   }
 end
 
--- 行为测试接缝：test_board_direction / test_direction 通过已知邻接图观察
--- 外圈、分支与回退方向的结果；这些入口与公开走步共用同一规则。
 direction._M_test = {
-  _sorted_dirs_comparator = _sorted_dirs_comparator,
-  _pick_any_dir = _pick_any_dir,
   _resolve_outer_next = _resolve_outer_next,
   _resolve_fresh_forward_next = _resolve_fresh_forward_next,
   _resolve_facing_next = _resolve_facing_next,

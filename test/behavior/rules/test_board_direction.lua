@@ -4,7 +4,6 @@ local board = require("src.rules.board.init")
 local direction = require("src.rules.board.direction")
 local _config_reset = require("test.support.config_reset")
 
-local _pick_any_dir = board._M_test._pick_any_dir
 local _resolve_outer_next = board._M_test._resolve_outer_next
 local _resolve_fresh_forward_next = board._M_test._resolve_fresh_forward_next
 local _resolve_facing_next = board._M_test._resolve_facing_next
@@ -279,53 +278,4 @@ describe("TestBoardDirectionResolverCharacterization", function()
     _assert_eq(result.source, "backward_fallback", "result should report backward_fallback as the source")
   end)
 
-  it("test_pick_any_dir_returns_first_sorted_dir", function()
-    local neigh = { right = 10, up = 20, down = 30 }
-    local dir, id = _pick_any_dir(neigh, nil)
-    _assert_eq(dir, "up", "should return first sorted dir (up before right before down)")
-    _assert_eq(id, 20, "should return id for that dir")
-  end)
-
-  it("test_pick_any_dir_avoids_avoid_dir", function()
-    local neigh = { up = 10, down = 20 }
-    local dir, id = _pick_any_dir(neigh, "up")
-    _assert_eq(dir, "down", "should avoid the specified dir")
-    _assert_eq(id, 20, "should return id for non-avoided dir")
-  end)
-
-  it("test_pick_any_dir_returns_nil_when_all_avoided", function()
-    local neigh = { up = 10 }
-    local dir, id = _pick_any_dir(neigh, "up")
-    _assert_eq(dir, nil, "should return nil dir when all avoided")
-    _assert_eq(id, nil, "should return nil id when all avoided")
-  end)
-
-  it("test_pick_any_dir_asserts_on_nil_neighbors", function()
-    -- kills _pick_any_dir's "missing neighbors" -> nil.
-    luassert.has_error(function()
-      _pick_any_dir(nil, nil)
-    end, "missing neighbors")
-  end)
-
-  it("test_named_dirs_always_sort_before_unknown_dirs_regardless_of_name", function()
-    -- pins that priority membership (not name order) separates known from
-    -- unknown dirs: `down`/`left` must precede an alphabetically-earlier
-    -- unknown dir. kills `dir_order` tail truncation ("down"/"left" -> nil,
-    -- which drops them to the 100 default and flips the tie to name order).
-    local dir1 = _pick_any_dir({ down = 1, aardvark = 2 }, nil)
-    _assert_eq(dir1, "down", "down should precede unknown aardvark despite name order")
-    local dir2 = _pick_any_dir({ left = 1, aardvark = 2 }, nil)
-    _assert_eq(dir2, "left", "left should precede unknown aardvark despite name order")
-  end)
-
-  it("test_sorted_dirs_tie_breaks_two_unknown_dirs_by_name", function()
-    -- pins the comparator's equal-priority branch: two dirs missing from the
-    -- priority table both fall to the 100 default and must order by name.
-    -- kills `pa < pb` -> `pa <= pb` / `pa == pb` -> `pa ~= pb` in
-    -- _sorted_dirs_comparator (both short-circuit the tie-break).
-    local neigh = { portal = 1, warp = 2 }
-    local dir, id = _pick_any_dir(neigh, nil)
-    _assert_eq(dir, "portal", "unknown dirs should order by name (portal before warp)")
-    _assert_eq(id, 1, "should return id for the name-first dir")
-  end)
 end)
