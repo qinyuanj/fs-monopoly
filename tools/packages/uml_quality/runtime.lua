@@ -5,6 +5,9 @@
 -- 不起进程、不落盘;起进程与写终端在 cli.lua。
 local M = {}
 
+-- 模块来源判定只有一个实现(ADR 0072):foundation.lua_env.is_inside。
+local lua_env = require("foundation.lua_env")
+
 M.MIN_PYTHON = { 3, 11 }
 
 -- crapper/mutator 的 Lua 默认路径(busted.runner + luacov + lcov reporter)要的模块。
@@ -17,13 +20,6 @@ end
 local function _within(path, prefix)
   local candidate, base = _normalize(path):lower(), _normalize(prefix):lower() .. "/"
   return candidate:sub(1, #base) == base
-end
-
-local function _in_roots(path, roots)
-  for _, root in ipairs(roots or {}) do
-    if _within(path, root) then return true end
-  end
-  return false
 end
 
 -- 子进程环境,按序写入。LUA_PATH_5_4 优先于 LUA_PATH,两者都钉同一值,避免
@@ -80,7 +76,7 @@ function M.module_verdict(name, resolved, roots)
   if resolved == nil or resolved == "" then
     return { ok = false, message = name .. ": not found in pinned package.path" }
   end
-  if not _in_roots(resolved, roots) then
+  if not lua_env.is_inside(resolved, roots) then
     return { ok = false, message = name .. ": resolved outside controlled Lua environment: " .. resolved }
   end
   return { ok = true, message = name .. ": " .. _normalize(resolved) }
