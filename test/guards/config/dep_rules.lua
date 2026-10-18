@@ -6,9 +6,11 @@ local rules = {
     roots = { "tools/foundation" },
     forbidden_patterns = {
       "%f[%w_]require%s*%(?%s*[\"']packages%.",
-      "%f[%w_]run_command%s*%([^\n]-tools[/\\]+packages[/\\]+",
-      "%f[%w_]dofile%s*%(?%s*[\"'][^\"']*tools[/\\]+packages[/\\]+",
-      "%f[%w_]loadfile%s*%(?%s*[\"'][^\"']*tools[/\\]+packages[/\\]+",
+    },
+    forbidden_call_paths = {
+      run_command = "tools[/\\]+packages[/\\]+",
+      dofile = "tools[/\\]+packages[/\\]+",
+      loadfile = "tools[/\\]+packages[/\\]+",
     },
     description = "tools/foundation must not depend on packages.* modules or execute tools/packages scripts directly",
   },

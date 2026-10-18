@@ -40,6 +40,7 @@ local function _tool_foundation_rules(fixture)
       rules[#rules + 1] = {
         roots = { _fixture_path("dep_rules/tool_packages/" .. fixture) },
         forbidden_patterns = rule.forbidden_patterns,
+        forbidden_call_paths = rule.forbidden_call_paths,
         description = rule.description,
       }
     end
@@ -54,7 +55,10 @@ it("test_dep_rules_rejects_tool_packages_in_foundation", function()
   luassert.matches("tool_packages/bad.lua", result.violation.path, 1, true)
 end)
 
-for _, fixture in ipairs({ "script_argv.lua", "script_command.lua", "script_dofile.lua", "script_loadfile.lua" }) do
+for _, fixture in ipairs({
+  "script_argv.lua", "script_command.lua", "script_dofile.lua", "script_loadfile.lua",
+  "multiline_argv.lua", "multiline_dofile.lua", "multiline_loadfile.lua",
+}) do
   it("test_dep_rules_rejects_direct_tool_package_script_" .. fixture, function()
     local result = dep_rules.run({ rules = _tool_foundation_rules(fixture) })
     luassert.is_false(result.ok, "foundation must reject direct tool package scripts")
