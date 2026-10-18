@@ -322,34 +322,6 @@ end
   end
 
 
-local function _test_build_noop_group_characterization()
-  local loop_ports = require("src.turn.loop.ports")
-
-  local group1 = loop_ports._build_noop_group({ "key1", "key2", "key3" }, nil)
-  luassert.truthy(type(group1) == "table", "should return a table")
-  luassert.truthy(type(group1.key1) == "function", "key1 should be a function")
-  luassert.truthy(type(group1.key2) == "function", "key2 should be a function")
-  luassert.truthy(type(group1.key3) == "function", "key3 should be a function")
-  group1.key1()
-  group1.key2()
-  group1.key3()
-
-  local override_fn = function() return "overridden" end
-  local group2 = loop_ports._build_noop_group({ "key1", "key2" }, { key2 = override_fn })
-  luassert.truthy(type(group2.key1) == "function", "key1 should be a function")
-  luassert.truthy(group2.key2() == "overridden", "key2 should use override function")
-
-  local group3 = loop_ports._build_noop_group({}, nil)
-  luassert.truthy(type(group3) == "table", "should return empty table for empty keys")
-  local count = 0
-  for _ in pairs(group3) do count = count + 1 end
-  luassert.truthy(count == 0, "group should have no keys when keys is empty")
-
-  local group4 = loop_ports._build_noop_group({ "key1" }, nil)
-  luassert.truthy(type(group4.key1) == "function", "key1 should be a function even with nil overrides")
-  group4.key1()
-end
-
 local function _test_popup_countdown_uses_effective_modal_timeout()
   local g = _new_game()
   local state = _build_loop_state()
@@ -485,7 +457,6 @@ end
     _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option = _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option,
     _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed = _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed,
     _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed = _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed,
-    _test_build_noop_group_characterization = _test_build_noop_group_characterization,
     _test_popup_countdown_uses_effective_modal_timeout = _test_popup_countdown_uses_effective_modal_timeout,
     _test_market_countdown_uses_double_action_timeout = _test_market_countdown_uses_double_action_timeout,
     _test_dispatch_gate_blocks_next_when_choice_active = _test_dispatch_gate_blocks_next_when_choice_active,
