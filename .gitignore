@@ -11,8 +11,6 @@
 /luacov.stats.out
 
 # ── 外部 overlay 与编辑器缓存 ────────────────────────────────────
-# 已批准保留的外部共享 scripts overlay：本地状态，不版本化。
-/swarmforge/scripts/
 # Clojure 编辑器/linter 缓存兜底。
 .clj-kondo/
 .lsp/
