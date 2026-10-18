@@ -38,13 +38,6 @@ end
 
 local entries = {
   {
-    script = "tools/packages/dry/runner.lua",
-    upstream = "module:dry4lua.cli.run",
-    argv = function()
-      return { "tools/packages/dry/test/fixtures/duplicate_pair" }
-    end,
-  },
-  {
     script = "tools/packages/acceptance_mutate/mutate_lane.lua",
     upstream = "process:tools/packages/acceptance_mutate/mutator.lua",
     argv = _mutate_args,

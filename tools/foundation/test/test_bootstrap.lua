@@ -106,16 +106,14 @@ describe("bootstrap", function()
 it("parses the repo url lockfile format", function()
   local lock, err = tool_lockfile.parse_contents(table.concat({
     "# comment",
-    "acceptance4lua http://example.invalid/eggy/acceptance4lua",
-    "dry4lua http://example.invalid/eggy/dry4lua.git",
+    "acceptance4lua http://example.invalid/eggy/acceptance4lua.git",
     "",
   }, "\n"))
 
   check.is_nil(err)
   check.is_not_nil(lock)
-  check.equal("http://example.invalid/eggy/acceptance4lua", lock.tools.acceptance4lua.url)
-  check.equal("http://example.invalid/eggy/dry4lua.git", lock.tools.dry4lua.url)
-  check.same({ "acceptance4lua", "dry4lua" }, lock.ordered)
+  check.equal("http://example.invalid/eggy/acceptance4lua.git", lock.tools.acceptance4lua.url)
+  check.same({ "acceptance4lua" }, lock.ordered)
 end)
 
 it("rejects unknown tools", function()
@@ -129,7 +127,7 @@ end)
 
 -- #94:旧 CRAP/变异/架构工具退场后,锁文件白名单不再接受它们。
 it("rejects retired quality tools", function()
-  for _, name in ipairs({ "arch_view", "crap4lua", "mutate4lua" }) do
+  for _, name in ipairs({ "arch_view", "crap4lua", "mutate4lua", "dry4lua" }) do
     local lock, err = tool_lockfile.parse_contents(name .. " http://example.invalid/eggy/" .. name .. "\n")
     check.is_nil(lock)
     check.truthy(tostring(err):find("unknown tool", 1, true) ~= nil, name)
@@ -823,6 +821,7 @@ it("ensure tool keeps lockfile defects as real failures", function()
   local ok, err, unavailable = bootstrap.ensure_tool("dry4lua", env)
   fs_lib.remove_path(env.repo_root)
   check.is_nil(ok)
+  -- dry4lua 已随 #148 退役,锁文件里不再有它。
   check.equal("tool missing from lockfile: dry4lua", err)
   check.is_nil(unavailable)
 end)

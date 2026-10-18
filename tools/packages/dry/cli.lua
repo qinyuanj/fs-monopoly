@@ -1,49 +1,130 @@
--- packages/dry/cli.lua —— dry 子命令(wayfinder #304 骨架 / #320 包退场)
+-- packages/dry/cli.lua —— dry 子命令(#148 / 父 spec #146):结构重复检测改由 dryer 承接。
 --
--- 统一接口形态(#300 决议):本文件 return 纯接口模块:
---   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误)
---   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
+-- 统一接口形态(#300 决议):
+--   M.main(args, env) -> 退出码(0 有效结果 / 1 真实失败 / 2 用法错误 / 3 不可用)
+--   M.usage()         -> 完整 usage 文本
 --
--- 实现(#320/#322):薄壳已随包迁落位,进程内调用 packages.dry.runner(不再
--- 子进程转发 tools/wrappers/dry.lua);进程内适配收敛在 foundation.tool_cli
--- 单点。runner.lua 顶部的 script_bootstrap + ensure_tool 是唯一一次引导
--- (原 cli 侧重做的双重 bootstrap 形态已随 #322 消亡),runner 同时保留
--- CLI 脚本形态,供 verify/lint 类直接以入口引用。
---
--- #122:上游文件发现已改为纯 Lua,dry 撤出平台边界(#96),原生 Windows 上真实
--- 扫描;有效结果 / 不可用 / 真实失败三态由 runner 判定。
+-- dryer 检出放邻接目录 .uml-viewer/dryer(按 tools/specs/dryer.prompt 手动 clone 并建
+-- venv);本包只核对、不安装,直接调 venv Python(-I -m dryer),绕过上游 `sh` 启动器。
+-- 三态互相可辨:
+--   * 不可用:检出或 venv 缺失 —— stderr status=unavailable,退 3,不启动工具;
+--   * 真实失败:预检其余不过、dryer 非零退出、零候选文件、本次未写出 .metrics/dry.edn;
+--   * 有效结果:退 0。重复项只提示,不进判据(软车道口径不变)。
+-- env.root / env.proc / env.fs 可注入替身(测试用);缺省走真实仓根与子进程。
 local M = {}
 
-local tool_cli = require("foundation.tool_cli")
-
-local RUN_OPTS = {
-  runner_module = "packages.dry.runner",
-  runner_script = "tools/packages/dry/runner.lua",
-}
+local dryer = require("packages.dry.dryer")
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua dry [args...]",
+    "用法: lua tools/cli.lua dry [dryer 选项] [路径或过滤词 ...]",
     "",
-    "结构重复检测(软车道,dry4lua):抽函数 / 重构前扫候选;选项经 args 直通。",
-    "详细语义见 dry skill 与 tools/packages/dry/runner.lua。",
+    "结构重复检测(软车道,dryer):抽函数 / 重构前扫候选;选项经 args 直通 dryer",
+    "(--threshold / --min-lines / --min-nodes / --edn / --root / -s / --changed ...)。",
+    "dryer 检出在邻接 .uml-viewer/dryer(手动 clone + venv,契约见 tools/specs/dryer.prompt),",
+    "本命令只核对、不安装,直接用 venv 的 Python 运行。",
     "",
-    "原生 Windows 上真实扫描(#122)。stderr 先报 [dry] candidate_files=N(实际扫描的",
-    ".lua 文件数);N=0 或路径不存在是真实失败、退 1,不会报成「没有重复」。",
-    "退出码:0 有效结果 / 1 真实失败 / 2 用法错误 / 3 不可用(工具自举的网络/下载",
-    "类失败,stderr 打 status=unavailable tool=dry4lua step=<步>,未扫描)。",
+    "有效结果 = dryer 退 0、候选文件数 > 0 且本次新写出 " .. dryer.METRICS .. "(入库);",
+    "否则退 1 并点名原因,绝不把空扫描报成「没有重复」。重复项只提示,不致失败。",
+    "退出码:0 有效结果 / 1 真实失败 / 2 用法错误 / 3 不可用(检出或 venv 缺失,",
+    "stderr 打 status=unavailable tool=dryer step=<checkout|venv>,未启动工具)。",
     "",
   }, "\n") .. "\n"
 end
 
+local function _absolute_root(env)
+  if env.root ~= nil then return env.root end
+  local env_lib = require("foundation.env")
+  return require("foundation.path").resolve_path(env_lib.current_dir(), env.repo_root or ".")
+end
+
+local function _unavailable(info)
+  local boundary = require("foundation.platform_boundary")
+  local verdict = boundary.unavailable_verdict("dry", " tool=" .. dryer.TOOL .. " step=" .. info.step, {
+    "dryer 的 " .. (info.step == "checkout" and "邻接检出" or "venv") .. "不可用: " .. info.detail,
+    "本次未运行任何检查;退出码 " .. boundary.UNAVAILABLE_EXIT_CODE .. " 表示环境不可用,不是检测结论。",
+    "处理: 按 tools/specs/dryer.prompt 手动 clone qinyuanj/dryer 到 .uml-viewer/dryer 并建 venv,再重跑。",
+  })
+  return boundary.emit(verdict)
+end
+
+local function _probe_python(root, proc, python)
+  local result = proc.run_command({ python, "-I", "-c", dryer.PYTHON_PROBE }, { cwd = root })
+  if result.ok ~= true then
+    return false, "dryer: 导入探针失败: " .. tostring(result.output)
+  end
+  local verdict = require("packages.uml_quality.runtime").python_verdict(dryer.TOOL, result.output, root)
+  return verdict.ok, verdict.message
+end
+
+-- 运行前把旧的 .metrics/dry.edn 挪到备份:此后「文件存在」即「本次新写出」。
+-- 失败时放回(软车道失败不应弄丢入库的基线)。
+local function _stash_metrics(fs, path)
+  if not fs.path_exists(path) then return nil end
+  local backup = require("foundation.env").make_temp_path("dry_metrics_backup", ".edn")
+  assert(fs.copy_file(path, backup), "dry: 无法备份 " .. path)
+  fs.remove_path(path)
+  return backup
+end
+
+local function _settle_metrics(fs, path, backup, ok)
+  if ok then
+    if backup ~= nil then fs.remove_path(backup) end
+    return
+  end
+  fs.remove_path(path)
+  if backup ~= nil then
+    fs.copy_file(backup, path)
+    fs.remove_path(backup)
+  end
+end
+
 function M.main(args, env)
-  for _, value in ipairs(args or {}) do
+  env = env or {}
+  args = args or {}
+  for _, value in ipairs(args) do
     if value == "--help" or value == "-h" then
       io.write(M.usage())
       return 0
     end
   end
-  return tool_cli.run(RUN_OPTS, args, env)
+
+  local root = _absolute_root(env)
+  local proc = env.proc or require("foundation.proc")
+  local fs = env.fs or require("foundation.fs")
+
+  local missing = dryer.availability(root, {
+    checkout = fs.path_exists(dryer.checkout_dir(root) .. "/pyproject.toml"),
+    python = fs.path_exists(dryer.python_path(root)),
+  })
+  if missing ~= nil then return _unavailable(missing) end
+
+  local probed, message = _probe_python(root, proc, dryer.python_path(root))
+  if not probed then
+    io.stderr:write("[dry] " .. tostring(message) .. "\n")
+    return 1
+  end
+
+  local metrics_root = dryer.metrics_root(args, root)
+  local metrics = metrics_root and (metrics_root .. "/" .. dryer.METRICS) or nil
+  local backup = metrics and _stash_metrics(fs, metrics) or nil
+
+  local argv = { dryer.python_path(root), "-I", "-m", "dryer" }
+  for _, value in ipairs(args) do argv[#argv + 1] = value end
+  local result = proc.run_command(argv, { cwd = root })
+  io.write(result.output or "")
+
+  if metrics == nil then
+    -- --root 缺值:dryer 自己报用法错(退 1),没有可核验的产物路径。
+    return result.code == 0 and 1 or result.code
+  end
+  local verdict = dryer.judge(result.code, result.output, fs.path_exists(metrics))
+  _settle_metrics(fs, metrics, backup, verdict.ok)
+  if not verdict.ok then
+    io.stderr:write("[dry] " .. verdict.reason .. "\n")
+    return 1
+  end
+  return 0
 end
 
 return M
