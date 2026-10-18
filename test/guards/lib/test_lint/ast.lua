@@ -16,7 +16,9 @@ function M.parser()
   if roots == nil then
     return nil, roots_err
   end
-  local ok, mod = pcall(lua_env.require_controlled, "luacheck.parser", roots)
+  -- 进程内测试辅助:require 结束后恢复原装载面,避免后续 spec 的 require 失去
+  -- 仓内路径;lint 子进程走默认的持续受限口径。
+  local ok, mod = pcall(lua_env.require_controlled, "luacheck.parser", roots, { restore_paths = true })
   if not ok then
     return nil, tostring(mod)
   end
