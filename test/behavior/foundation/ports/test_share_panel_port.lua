@@ -7,12 +7,11 @@ local share_panel = require("src.foundation.ports.share_panel")
 
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
--- share_panel 是纯契约 port(#463,与 card_reveal #329 同构):宿主调用实现下沉
--- src/host/share_panel,由装配侧 configure 注入(host_install / 测试基线 /
--- acceptance 绑定三处同款),本文件不反向依赖实现。测试用假实现钉转发契约——
--- actor_role_id/tag 参数与返回值原样穿透;与 card_reveal 不同,未配置时
--- try_show 安全降级返回 false 而非报错(分享面板是锦上添花能力,装配遗漏
--- 不该砸断调用方)。
+-- share_panel 是纯契约 port(#463):宿主调用实现在 src/host/share_panel,
+-- 由装配侧 configure 注入(host_install / 测试基线),本文件不反向依赖实现。
+-- 测试用假实现钉转发契约:actor_role_id/tag 参数与返回值原样穿透;
+-- 未配置时 try_show 安全降级返回 false 而非报错(分享面板是锦上添花能力,
+-- 装配遗漏不该砸断调用方)。
 
 describe("TestSharePanelPort", function()
 

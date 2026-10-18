@@ -1,7 +1,7 @@
 -- 「宿主分享面板」（GLOSSARY.md 词条）触发口的纯契约 port（#463）：resolve Role、
--- pcall 宿主方法属宿主逻辑（boundaries.md 规则 4「宿主逻辑不回流内层」），实现
--- 下沉 src/host/share_panel.lua，由装配侧 configure 注入（host_install / 测试
--- 基线 / acceptance 绑定三处同款，与 card_reveal #329 同构）。契约留在
+-- pcall 宿主方法属宿主逻辑（docs/architecture.md「宿主接口经 port 进入内层」），
+-- 实现在 src/host/share_panel.lua，由装配侧 configure 注入（host_install / 测试
+-- 基线）。契约留在
 -- foundation/ports 的落层理由不变：两个调用方（turn 的托管首点、ui/ports 的
 -- 分享按钮）都够不到 app 层，foundation 是唯一双方可达的层。签名与被转发实现
 -- 同形，本模块不叠加任何规则结论。

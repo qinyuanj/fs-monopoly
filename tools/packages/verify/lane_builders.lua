@@ -22,7 +22,8 @@ local function _spec_lane_cmd(profile, evidence_dir)
   return shell_lib.build_command(argv)
 end
 
--- lint 要 luacheck + lua5.4 两者俱在,缺任一就跳过而不是让车道变红。
+-- lint 用钉定 Lua 5.4 从受控 tree 装载 luacheck;缺依赖或版本越界由 runner 报失败。
+-- 此处仅在未解析到 Lua 5.4 时登记跳过;正常 verify 在构造车道前已校验解释器。
 -- #449: lint 按目录拆三条并行子车道(lint-src / lint-test / lint-tools),
 -- 每条独立报 PASS/FAIL、可按 lane 名下钻;即便 luacheck 单进程回退
 -- (LuaLanes 缺失),车道级并行也能把 wall 压进 slim 预算。
