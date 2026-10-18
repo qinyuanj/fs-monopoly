@@ -197,6 +197,33 @@ it("fails on a nonzero dryer exit and restores the committed metrics file", func
   check.equal("COMMITTED", fs.files[ROOT .. "/.metrics/dry.edn"])
 end)
 
+-- P2(#148):恢复失败时不能把备份也删掉,必须点名失败并保留唯一可用的基线。
+it("keeps the backup and reports when restoring the metrics file fails", function()
+  local fs = _ready_fs({ [ROOT .. "/.metrics/dry.edn"] = "COMMITTED" })
+  local copies = {}
+  local real_copy = fs.copy_file
+  fs.copy_file = function(from, to)
+    copies[#copies + 1] = { from = from, to = to }
+    if to == ROOT .. "/.metrics/dry.edn" then return false end
+    return real_copy(from, to)
+  end
+  local proc = _fake_proc(function(argv)
+    if argv[#argv - 1] == "-c" then return PROBE_OK end
+    fs.files[ROOT .. "/.metrics/dry.edn"] = "PARTIAL"
+    return { ok = false, code = 1, output = "boom\n" }
+  end)
+  local code, _, err = _capture(function()
+    return cli.main({ "src" }, { root = ROOT, proc = proc, fs = fs })
+  end)
+
+  check.same(1, code)
+  check.truthy(err:find("恢复", 1, true) ~= nil, err)
+  local backup = copies[#copies].from
+  check.truthy(backup ~= ROOT .. "/.metrics/dry.edn", "restore should start from the backup")
+  check.truthy(fs.files[backup] ~= nil, "backup must be kept when restore fails")
+  check.is_nil(fs.files[ROOT .. "/.metrics/dry.edn"], "partial output must not survive")
+end)
+
 it("judges the metrics file under --root, not the repo root", function()
   local fs = _ready_fs({ [ROOT .. "/.metrics/dry.edn"] = "COMMITTED" })
   local proc = _fake_proc(function(argv)
