@@ -10,8 +10,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local effect_timeline = require("src.ui.render.support.effect_timeline")
 
 -- _with_default_scheduler 在用例结尾把共享端口基线拆到未配置态,必须装回,
--- 否则 mutate 车道窄 suite 子集会撞空端口(#217)。注意钩子必须挂在 describe 内部:
--- 文件级 after_each 会被 mutate 车道 catalog 的捕获静默丢弃。
+-- 避免后续用例读到未配置的调度端口。
 local function _restore_baseline()
   support.restore_runtime_services()
 end
@@ -177,10 +176,4 @@ describe("TestEffectTimelinePlay", function()
     _assert_eq(#recorder.steps, 1, "only the real step is scheduled")
     _assert_eq(recorder.steps[1].delay, 0.3, "the scheduled step is the timeline step")
   end)
-
-
-  -- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
-  -- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
-  -- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
-  -- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
 end)

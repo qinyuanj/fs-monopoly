@@ -13,7 +13,6 @@ local M = {}
 local _WHITELIST = {
   ["main.lua"] = true,
   ["Data"] = true,
-  ["features"] = true,
   ["EggyAPI.lua"] = true,
   -- 宿主 API 参考面第二件:编辑器 EUI 节点 API(2f6fb3d),与 EggyAPI.lua 同类,
   -- 宿主目录里即住根部。
@@ -26,26 +25,15 @@ local _WHITELIST = {
   ["CODING_STANDARDS.md"] = true,
   -- 项目使命。
   ["mission.md"] = true,
-  -- 运营方任务书 tasks/<task-name>.md：由 master 角色随该任务首次 git 工作提交
-  -- （Tool Startup 约定），是版本化的运营意图真源，不是运行时状态，故白名单而非忽略。
-  ["tasks"] = true,
   [".gitignore"] = true,
   -- 文本源码统一 LF 的唯一真源（#475）：部署目录 = 仓库字节级 LF 镜像契约的源侧保证。
   [".gitattributes"] = true,
   ["src"] = true,
-  -- spec 改名 test(xUnit 风格):commit 前 HEAD 仍跟踪 spec/、test/ 为未跟踪项,
-  -- 两个名字都得在白名单里;commit 后 spec 条目自然不再被 ls-tree 列出,保留无害。
-  ["spec"] = true,
   ["test"] = true,
   ["docs"] = true,
   ["tools"] = true,
   [".agents"] = true,
   [".claude"] = true,
-  -- triage 技能 KB（.agents/skills/triage/OUT-OF-SCOPE.md）:被拒绝 enhancement
-  -- 请求的持久记录,防止重复提议;按概念一文件。
-  [".out-of-scope"] = true,
-  -- mutate4lua 外部 store 已随 #283 退场(manifest 内嵌源码 footer),
-  -- 根级 .mutate4lua 不再需要白名单条目。
   ["skills-lock.json"] = true,
   -- 邻接 uml-viewer 的质量配置(#93):uml-command.ps1 只在项目根读 uml-quality.json,
   -- 位置由上游契约决定。.uml-viewer/、target/ 等本地产物走 .gitignore,不进白名单。
@@ -61,8 +49,6 @@ local _WHITELIST = {
   [".githooks"] = true,
   -- `uml ir` 生成的仓根 policy.edn(ADR 0070 / #99)走 .gitignore,不进白名单;
   -- 人手维护的推演在 docs/architecture.proposals.edn。
-  -- #490 为 squad analyst 放行的 dependency-checker.edn / implementation-order.md
-  -- 条目随 squad 范式退役，guard 恢复报违规，spec 有退役钉。
 }
 
 local function _top_level_name(path)
