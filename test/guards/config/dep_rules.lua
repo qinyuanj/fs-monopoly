@@ -3,6 +3,18 @@
 
 local rules = {
   {
+    roots = { "tools/foundation" },
+    forbidden_patterns = {
+      "%f[%w_]require%s*%(?%s*[\"']packages%.",
+    },
+    forbidden_call_paths = {
+      run_command = "tools[/\\]+packages[/\\]+",
+      dofile = "tools[/\\]+packages[/\\]+",
+      loadfile = "tools[/\\]+packages[/\\]+",
+    },
+    description = "tools/foundation must not depend on packages.* modules or execute tools/packages scripts directly",
+  },
+  {
     roots = { "src/host/entity_pool.lua" },
     forbidden_patterns = {
       'require%("src%.ui%.',
