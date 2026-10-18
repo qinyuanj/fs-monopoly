@@ -2,7 +2,7 @@
 if arg then rawset(arg, 0, "tools/foundation/test/test_skip_flag_contract.lua") end
 require("test.bootstrap").install_package_paths()
 
--- --skip-if-unavailable 入口契约(#129)。#122/#123 让 dry / acceptance-mutate 撤出
+-- --skip-if-unavailable 入口契约(#129)。#122/#123 让 dry 撤出
 -- 平台边界后,该开关仍兼容接受,由各入口经 platform_boundary.strip_skip_flag 消费;
 -- 漏给上游会被当成未知选项退 2(cb44141 前 dry 即如此)。
 --
@@ -22,41 +22,12 @@ local recorder = repo_root .. "/tools/foundation/test/fixtures/skip_flag_contrac
 -- 定义处(含 evaluate 内部调用)不是入口。
 local definition = "tools/foundation/platform_boundary.lua"
 
--- 无 Examples 的 feature:变异体为 0,mutator 秒回,探针仍真实跑通 parser → worker。
-local minimal_feature = table.concat({
-  "Feature: skip flag contract",
-  "",
-  "Scenario: no examples",
-  "  Given nothing happens",
-  "",
-}, "\n")
-
--- 车道与 mutator 共用同一份参数,才能保证两次运行的上游 argv 逐字可比。
-local function _mutate_args(root)
-  return { "--feature", root .. "/min.feature", "--work-dir", root .. "/work", "--level", "full", "--workers", "1" }
-end
-
 local entries = {
   {
     script = "tools/packages/dry/runner.lua",
     upstream = "module:dry4lua.cli.run",
     argv = function()
       return { "tools/packages/dry/test/fixtures/duplicate_pair" }
-    end,
-  },
-  {
-    script = "tools/packages/acceptance_mutate/mutate_lane.lua",
-    upstream = "process:tools/packages/acceptance_mutate/mutator.lua",
-    argv = _mutate_args,
-  },
-  {
-    script = "tools/packages/acceptance_mutate/mutator.lua",
-    upstream = "module:acceptance4lua.cli.mutator.main",
-    argv = function(root)
-      local args = _mutate_args(root)
-      args[#args + 1] = "--runner-worker"
-      args[#args + 1] = lua .. " tools/packages/acceptance/runner_worker.lua"
-      return args
     end,
   },
 }
@@ -131,7 +102,6 @@ local function _with_root(fn)
   local root = env_lib.make_temp_path("skip_flag_contract", ""):gsub("\\", "/")
   fs_lib.remove_path(root)
   assert(fs_lib.ensure_dir(root), "夹具目录建不起来: " .. root)
-  assert(fs_lib.write_file(root .. "/min.feature", minimal_feature))
   local ok, err = xpcall(fn, debug.traceback, root)
   fs_lib.remove_path(root)
   if not ok then

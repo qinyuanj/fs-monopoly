@@ -34,10 +34,4 @@ describe("platform boundary", function()
     check.same("windows", boundary.host_platform())
     check.same(3, boundary.UNAVAILABLE_EXIT_CODE)
   end)
-  it("runs all restored acceptance mutation engine tests", function()
-    check.same({}, boundary.test_capabilities)
-    for _, name in ipairs({ "test_mutator_level.lua", "test_mutator_status.lua" }) do
-      check.is_nil(boundary.test_verdict("tools/packages/acceptance_mutate/test/" .. name))
-    end
-  end)
 end)

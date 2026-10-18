@@ -241,46 +241,6 @@ sharded_failure_prints_lane_file_list_in_execution_order()
   end
 end
 
--- #112:工具自举网络失败 = 环境不可用,不是测试失败——退 3、status=unavailable,
--- 诊断点名工具与步骤,一个测试都不跑,也不报 failed。
-local function
-bootstrap_network_failure_reports_unavailable_not_failed()
-  local result = spec_lane.run({
-    profile = "tooling",
-    ensure_tool = function(name)
-      local detail = "git ls-remote failed for https://example.invalid/" .. name .. ".git: Could not resolve host"
-      return nil, detail, require("foundation.tool_availability").unavailable(name, "resolve", detail)
-    end,
-    run_command = function() error("tests must not run when the tool is unavailable") end,
-    run_lanes = function() error("tests must not run when the tool is unavailable") end,
-  })
-
-  check.equal(3, result.code)
-  check.equal("unavailable", result.status)
-  check.equal(0, result.passed)
-  check.equal(0, result.failed)
-  check.equal("", result.stdout)
-  check.matches("[spec-lane] status=unavailable tool=acceptance4lua step=resolve", result.stderr, 1, true)
-  check.matches("未运行", result.stderr, 1, true)
-  check.matches("Could not resolve host", result.stderr, 1, true)
-  check.is_nil(result.stderr:find("failed=1", 1, true))
-end
-
--- 不是不可用(无第三返回值,如锁文件缺项)的自举错误照旧是真实失败。
-local function
-bootstrap_repo_defect_stays_a_real_failure()
-  local result = spec_lane.run({
-    profile = "tooling",
-    ensure_tool = function(name) return nil, "tool missing from lockfile: " .. name end,
-    run_command = function() error("tests must not run when bootstrap fails") end,
-    run_lanes = function() error("tests must not run when bootstrap fails") end,
-  })
-
-  check.equal(1, result.code)
-  check.is_nil(result.status)
-  check.matches("tool bootstrap failed: tool missing from lockfile: acceptance4lua", result.stdout, 1, true)
-end
-
 -- #131:runner 子进程自举 busted 断网时退 3 并打状态词;spec-lane 原样认领为
 -- 不可用(退 3、诊断转 stderr),不能压缩成「0 passed」记失败。
 local _RUNNER_UNAVAILABLE = "[test_runner] status=unavailable tool=busted step=install\n"
@@ -638,9 +598,6 @@ describe("spec lane public contracts", function()
   it("sharded_failure_aggregates_into_failed_summary", sharded_failure_aggregates_into_failed_summary)
   it("sharded_failure_prints_lane_file_list_in_execution_order",
     sharded_failure_prints_lane_file_list_in_execution_order)
-  it("bootstrap_network_failure_reports_unavailable_not_failed",
-    bootstrap_network_failure_reports_unavailable_not_failed)
-  it("bootstrap_repo_defect_stays_a_real_failure", bootstrap_repo_defect_stays_a_real_failure)
   it("serial_runner_bootstrap_unavailable_reports_unavailable_not_failed",
     serial_runner_bootstrap_unavailable_reports_unavailable_not_failed)
   it("serial_runner_bootstrap_build_error_stays_failed_with_reason",

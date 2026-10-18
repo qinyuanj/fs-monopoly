@@ -1,7 +1,5 @@
 # ── 生成物 / 构建产物 ─────────────────────────────────────────────
 # 全部由各自的正牌生产者重生成，永不版本化。
-# acceptance 生成 specs：由 `lua tools/cli.lua acceptance` 重生成。
-/tools/packages/acceptance/generated/
 # 扫描/构建产物目录与标记文件。
 /build/
 *.luac
