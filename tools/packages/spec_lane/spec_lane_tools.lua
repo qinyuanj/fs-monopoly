@@ -4,7 +4,7 @@ local spec_lane_tools = {}
 
 local _PROFILE_TOOLS = {
   acceptance = { "acceptance4lua" },
-  -- dry 集成用例按需自行 ensure dry4lua。
+  -- dry 集成用例按需自行检查邻接 dryer 检出。
   tooling = { "acceptance4lua" },
 }
 

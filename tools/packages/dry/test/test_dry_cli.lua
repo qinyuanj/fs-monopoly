@@ -20,7 +20,8 @@ local PYTHON = dryer.python_path(ROOT)
 
 local function _capture(fn)
   local out, err = {}, {}
-  local real_out, real_err = io.stdout, io.stderr
+  -- rawset：直接赋值全局 io 的字段会触发 luacheck W122。
+  local real_out, real_err, real_write = io.stdout, io.stderr, io.write
   local function sink(list)
     return setmetatable({}, { __index = function(_, key)
       if key == "write" then
@@ -29,11 +30,13 @@ local function _capture(fn)
       return function() end
     end })
   end
-  io.stdout, io.stderr = sink(out), sink(err)
-  local real_write = io.write
-  io.write = function(...) for _, v in ipairs({ ... }) do out[#out + 1] = tostring(v) end end
+  rawset(io, "stdout", sink(out))
+  rawset(io, "stderr", sink(err))
+  rawset(io, "write", function(...) for _, v in ipairs({ ... }) do out[#out + 1] = tostring(v) end end)
   local ok, result = pcall(fn)
-  io.stdout, io.stderr, io.write = real_out, real_err, real_write
+  rawset(io, "stdout", real_out)
+  rawset(io, "stderr", real_err)
+  rawset(io, "write", real_write)
   assert(ok, result)
   return result, table.concat(out), table.concat(err)
 end
