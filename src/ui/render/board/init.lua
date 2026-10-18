@@ -76,8 +76,6 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
   board_runtime.board_last_positions = snapshot
 end
 
-M.refresh_board = M.refresh
-
 M.on_tile_upgraded = events.on_tile_upgraded
 M.on_tile_owner_changed = events.on_tile_owner_changed
 M.sync_many = events.sync_many

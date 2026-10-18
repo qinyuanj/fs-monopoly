@@ -5,10 +5,6 @@ local command_policy = require("src.ui.input.command_policy")
 
 local policy = {}
 
-function policy.is_actor_bound_ui_button(action_id)
-  return command_policy.requires_event_actor({ type = "ui_button", id = action_id })
-end
-
 function policy.requires_event_actor(intent)
   return command_policy.requires_event_actor(intent)
 end

@@ -90,9 +90,6 @@ M.resolve_min_player_y = placement_snap.resolve_min_player_y
 M.place_players = placement_snap.place_players
 M.build_snapshot = _build_snapshot
 
--- Exported for testing
-M._resolve_occupant_slot = placement_snap._resolve_occupant_slot
-
 return M
 
 --[[ mutate4lua-manifest

@@ -118,10 +118,6 @@ function M.ensure_tile_anchors(state, board, scene, tile_count, log_once, build_
   log_once(state, "info", "tiles_ready", build_log_prefix(), "tile anchors ready:", tostring(tile_count))
 end
 
-M._M_test = {
-  _find_owner_name = _find_owner_name,
-}
-
 return M
 
 --[[ mutate4lua-manifest

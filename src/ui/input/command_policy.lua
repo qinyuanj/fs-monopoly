@@ -33,10 +33,6 @@ function command_policy.reason(intent)
   return _read(intent, "reason")
 end
 
-function command_policy.is_view_command(intent)
-  return _read(intent, "view_command") == true
-end
-
 function command_policy.dispatches_before_game(intent)
   return _read(intent, "dispatch_before_game") == true
 end

@@ -111,21 +111,6 @@ it("test_set_texture_native_size_resets_size", function()
   luassert.truthy(image.image_texture == 12, "texture key should be stored on the node")
 end)
 
-it("test_reset_size_replays_the_current_texture_with_reset_flag_for_all_roles", function()
-  support.install_roles({ role_a, role_b })
-  local image = EImage:new(508, "img")
-  image:set_texture_keep_size(13)
-
-  image:reset_size()
-
-  for _, role in ipairs({ role_a, role_b }) do
-    local calls = support.calls_of(role, "set_image_texture_by_key_with_auto_resize")
-    luassert.truthy(#calls == 2, "reset_size should issue a second texture call per role")
-    luassert.truthy(calls[2].args[2] == 13, "reset_size should replay the stored texture key")
-    luassert.truthy(calls[2].args[3] == true, "reset_size should pass reset_size=true")
-  end
-end)
-
 it("test_transition_time_setter_stores_the_fixed_value_without_host_calls", function()
   support.install_roles({ role_a })
   local image = EImage:new(509, "img")

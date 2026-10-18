@@ -74,18 +74,6 @@ function touch_policy.set_share_decor_touch(ui)
   end
 end
 
-function touch_policy.set_runtime_nodes_touch_enabled(nodes, enabled)
-  if type(nodes) ~= "table" then
-    return
-  end
-  local value = enabled == true
-  for _, node in ipairs(nodes) do
-    if node then
-      node.disabled = not value
-    end
-  end
-end
-
 local function _disable_button(ui, name)
   if name then
     ui:set_touch_enabled(name, false)

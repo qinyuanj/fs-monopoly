@@ -3,21 +3,6 @@ local role_id_utils = require("src.foundation.identity")
 
 local ui_event_state = {}
 
-local function _has_active_modal(ui)
-  return ui.market_active or ui.choice_active or ui.popup_active
-end
-
-function ui_event_state.is_base_screen_active(state)
-  local ui = state and state.ui
-  if not ui then
-    return false
-  end
-  if _has_active_modal(ui) then
-    return false
-  end
-  return true
-end
-
 local function _resolve_client_role_id()
   local role = runtime.get_client_role()
   return runtime.resolve_role_id(role)

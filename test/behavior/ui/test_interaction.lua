@@ -778,20 +778,6 @@ it("test_route_base_input_lock_blocks_optional_end_intent", function()
     "input lock should block optional end button dispatch")
 end)
 
-it("test_ui_event_state_base_screen_active_requires_modal_free_ui", function()
-  local ui_event_state = require("src.ui.coord.event_state")
-  _assert_eq(ui_event_state.is_base_screen_active({ ui = {} }), true,
-    "base screen should be active when no modal flags are set")
-  _assert_eq(ui_event_state.is_base_screen_active({ ui = { market_active = true } }), false,
-    "market screen should disable base screen")
-  _assert_eq(ui_event_state.is_base_screen_active({ ui = { choice_active = true } }), false,
-    "choice screen should disable base screen")
-  _assert_eq(ui_event_state.is_base_screen_active({ ui = { popup_active = true } }), false,
-    "popup should disable base screen")
-  _assert_eq(ui_event_state.is_base_screen_active({}), false,
-    "missing ui state should disable base screen")
-end)
-
 it("test_ui_sync_ports_rebuilds_model_before_reopening_choice", function()
   local ui_sync_ports = require("src.ui.ports.ui_sync")
   local runtime_state_local = require("src.state.runtime")

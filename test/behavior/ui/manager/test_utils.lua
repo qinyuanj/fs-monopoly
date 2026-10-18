@@ -83,13 +83,5 @@ it("test_query_nodes_by_name_returns_the_mapped_array_or_an_empty_table", functi
   luassert.truthy(type(empty) == "table" and #empty == 0, "unknown name yields empty table")
 end)
 
-it("test_typeof_matches___name_exactly", function()
-  local label = { __name = "UIManager.ELabel" }
-
-  luassert.truthy(UIManager.typeof(label, "UIManager.ELabel") == true, "same type name matches")
-  luassert.truthy(UIManager.typeof(label, "UIManager.ENode") == false, "different type name rejected")
-  luassert.truthy(UIManager.typeof(nil, "UIManager.ELabel") == false, "nil node rejected")
-end)
-
 
 end)

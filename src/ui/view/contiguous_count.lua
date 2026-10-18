@@ -35,6 +35,7 @@ local function _bfs_component(neighbors, board, start_tile_id, owner_id)
   end)
 end
 
+-- 行为测试公共查询：连片视图场景以独立 flood-fill 真源核对单地块计数和批量投影。
 function M.for_tile(board, tile_id, owner_id)
   if not (board and tile_id ~= nil and owner_id ~= nil) then
     return 0

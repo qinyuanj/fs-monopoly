@@ -23,10 +23,6 @@ it("test_describes_turn_optional_end_and_panel_command_meaning_from_one_seam", f
     "optional end reason should be stable")
   luassert.truthy(action_reason ~= optional_end_reason,
     "action button and optional end command meanings must be distinct")
-  _assert_eq(command_policy.is_view_command({ type = "ui_button", id = "next" }), false,
-    "action button should not be a view command")
-  _assert_eq(command_policy.is_view_command({ type = "open_skin_panel" }), true,
-    "skin panel opener should be a view command")
   _assert_eq(command_policy.dispatches_before_game({ type = "open_skin_panel" }), true,
     "skin panel opener should be handled before game dispatch")
   _assert_eq(command_policy.panel_id({ type = "open_skin_panel" }), "skin",
@@ -66,8 +62,6 @@ it("test_routes_every_view_command_through_a_port_handler_with_the_same_meaning"
 
   for _, intent_type in ipairs(view_commands) do
     local intent = { type = intent_type }
-    _assert_eq(command_policy.is_view_command(intent), true,
-      intent_type .. " should be a view command")
     _assert_eq(command_policy.port_handler(intent), intent_type,
       intent_type .. " should declare a port handler matching the command meaning")
   end

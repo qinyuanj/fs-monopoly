@@ -13,6 +13,7 @@ function panel_interrupt.register_panel_closer(name, close_fn)
   _panel_closers[name] = close_fn
 end
 
+-- 行为测试装配接缝：临时替换面板关闭端口后注销，隔离中断场景的副作用。
 function panel_interrupt.unregister_panel_closer(name)
   _panel_closers[name] = nil
 end

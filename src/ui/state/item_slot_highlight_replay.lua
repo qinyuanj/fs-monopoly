@@ -161,6 +161,7 @@ function M.needs_phase_advance_reset(state, slot_pickable)
   return true
 end
 
+-- GLOSSARY「可用槽位高亮重放」的逐视角记忆查询，供冻结/隔离行为性质测试观察。
 function M.remembered_signature(state, perspective)
   _assert_public_args(state, perspective)
   return _signature_in(_memory_of(state, perspective))

@@ -112,6 +112,7 @@ function M.close(state, role_id)
   return _set_visibility(state, role_id, false)
 end
 
+-- 行为测试公共查询：日志开合与面板中断场景用角色可见性验证结果。
 function M.is_open(state, role_id)
   local ui = state and state.ui
   if not ui or type(ui.debug_visible_by_role) ~= "table" then

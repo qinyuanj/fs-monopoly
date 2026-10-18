@@ -91,14 +91,10 @@ end
 
 describe("TestMarketPanel", function()
 
-  it("test_01_market_selection_updates_icon_without_resize", function()
+  it("test_01_market_selection_updates_icon_and_price", function()
     local entry = assert(market_cfg[1], "missing market cfg entry")
     local option_id = entry.product_id
     local selected_node = {}
-    local reset_calls = 0
-    selected_node.reset_size = function()
-      reset_calls = reset_calls + 1
-    end
     local labels = {}
     local state = {
       runtime_asset_context = _build_asset_context({
@@ -119,7 +115,6 @@ describe("TestMarketPanel", function()
     market_view.refresh_market_selection(state, option_id)
 
     _assert_eq(selected_node.image_texture, 1002, "market selected icon should update")
-    _assert_eq(reset_calls, 0, "market selected icon should not call reset_size")
     _assert_eq(labels[market_layout.price_label], tostring(entry.price) .. " " .. entry.currency,
       "market price label should update")
   end)
@@ -131,14 +126,9 @@ describe("TestMarketPanel", function()
       "coin market price should render as integer text")
   end)
 
-  it("test_03_market_close_resets_icon_without_resize", function()
-    local reset_calls = 0
+  it("test_03_market_close_resets_icon_and_selection", function()
     local visible = {}
-    local selected_node = {
-      reset_size = function()
-        reset_calls = reset_calls + 1
-      end,
-    }
+    local selected_node = {}
     local state = {
       choice_visible_option_ids = { 1, 2 },
       pending_choice_selected_option_id = 1,
@@ -165,7 +155,6 @@ describe("TestMarketPanel", function()
     _assert_eq(_ui_runtime(state).choice_visible_option_ids, nil, "market options should clear")
     _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, nil, "selected market option should clear")
     _assert_eq(selected_node.image_texture, 4321, "market selected icon should reset to empty key")
-    _assert_eq(reset_calls, 0, "market close should not call reset_size")
     for _, name in ipairs(market_layout.item_selection_frames) do
       _assert_eq(visible[name], false, "market close should hide selection frame")
     end

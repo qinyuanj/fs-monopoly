@@ -161,7 +161,7 @@ M.store_target_button_labels = _store_target_button_labels
 M.set_action_button = _set_action_button
 M.resolve_player_or_remote_options = _resolve_player_or_remote_options
 
--- #332:二次确认开屏经 screen_openers 契约接缝(不反向 require screens 模块)。
+-- 行为测试公共接缝：商店确认场景由此开屏，验证后续选择派单；经 screen_openers 委派。
 function M.open_secondary_confirm_screen(state, choice, choice_id)
   return screen_openers.open_secondary_confirm(state, choice, choice_id)
 end

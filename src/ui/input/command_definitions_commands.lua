@@ -15,7 +15,6 @@ local COMMANDS = {
   },
   toggle_action_log = {
     reason = "toggle_action_log",
-    view_command = true,
     dispatch_before_game = true,
     panel_id = "action_log",
     requires_event_actor = true,
@@ -24,7 +23,6 @@ local COMMANDS = {
   },
   open_skin_panel = {
     reason = "open_skin_panel",
-    view_command = true,
     dispatch_before_game = true,
     panel_id = "skin",
     requires_event_actor = true,
@@ -34,7 +32,6 @@ local COMMANDS = {
   },
   open_gallery_panel = {
     reason = "open_gallery_panel",
-    view_command = true,
     dispatch_before_game = true,
     panel_id = "gallery",
     requires_event_actor = true,
@@ -46,7 +43,6 @@ local COMMANDS = {
   -- 不开 panel_id——宿主面板在 Lua 面板体系之外，不参与面板中断/回屏。
   open_share_panel = {
     reason = "open_share_panel",
-    view_command = true,
     dispatch_before_game = true,
     requires_event_actor = true,
     actor_source = "local",
@@ -54,7 +50,6 @@ local COMMANDS = {
   },
   skin_panel_action = {
     reason = "skin_panel_action",
-    view_command = true,
     dispatch_before_game = true,
     requires_event_actor = true,
     actor_source = "local",
@@ -62,7 +57,6 @@ local COMMANDS = {
   },
   item_atlas_action = {
     reason = "item_atlas_action",
-    view_command = true,
     dispatch_before_game = true,
     requires_event_actor = true,
     actor_source = "local",
@@ -70,7 +64,6 @@ local COMMANDS = {
   },
   skin_gallery_action = {
     reason = "skin_gallery_action",
-    view_command = true,
     dispatch_before_game = true,
     requires_event_actor = true,
     actor_source = "local",
@@ -78,12 +71,10 @@ local COMMANDS = {
   },
   market_select = {
     reason = "market_select",
-    view_command = true,
     port_handler = "market_select",
   },
   popup_confirm = {
     reason = "popup_confirm",
-    view_command = true,
     -- 广播弹窗按点击者判关闭权,必须带上事件里的操作者;缺 role 上下文时
     -- 不拒绝(optional),非广播弹窗维持谁点谁关。
     requires_event_actor = true,
