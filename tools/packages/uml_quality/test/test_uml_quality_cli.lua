@@ -3,10 +3,10 @@ if arg then rawset(arg, 0, "tools/packages/uml_quality/test/test_uml_quality_cli
 require("test.bootstrap").install_package_paths()
 
 -- uml 子命令(#93)的退出码契约。真跑 crapper/mutator 不在本套件内;
--- 预检失败面用一个不含 .uml-viewer 检出、项目缓存装不上的临时仓根驱动。
+-- 预检失败面用一个不含 .uml-viewer 检出、受控 Lua 环境不可用的临时仓根驱动。
 local check = require("luassert")
 local cli = require("packages.uml_quality.cli")
-local bootstrap = require("foundation.bootstrap")
+local lua_env = require("foundation.lua_env")
 local env_lib = require("foundation.env")
 local fs = require("foundation.fs")
 
@@ -23,15 +23,11 @@ local function _quiet(fn)
   return result, table.concat(captured)
 end
 
-local function _with_offline_rocks(fn)
-  local saved = {}
-  for _, key in ipairs({ "ensure_busted_tree", "ensure_luassert_tree", "ensure_luacov_tree",
-    "ensure_luacov_reporter_lcov_tree" }) do
-    saved[key] = bootstrap[key]
-    bootstrap[key] = function() return nil, "offline" end
-  end
+local function _with_unavailable_lua_env(fn)
+  local saved = lua_env.preflight
+  lua_env.preflight = function() return nil, "controlled Lua environment unavailable" end
   local ok, err = pcall(fn)
-  for key, value in pairs(saved) do bootstrap[key] = value end
+  lua_env.preflight = saved
   if not ok then error(err, 0) end
 end
 
@@ -58,14 +54,14 @@ it("fails preflight loudly and clears a stale quality result", function()
   fs.ensure_parent_dir(stale)
   fs.write_file(stale, '{"version":1,"exitCode":0,"validResult":true}')
   local code, output
-  _with_offline_rocks(function()
+  _with_unavailable_lua_env(function()
     code, output = _quiet(function() return cli.main({ "crap" }, { repo_root = root }) end)
   end)
   local stale_left = fs.path_exists(stale)
   fs.remove_path(root)
   check.equal(1, code)
   check.is_false(stale_left)
-  check.truthy(output:find("FAIL project cache rock luacov-reporter-lcov: offline", 1, true))
+  check.truthy(output:find("FAIL controlled Lua environment: controlled Lua environment unavailable", 1, true))
   check.truthy(output:find("uml-command.ps1 missing", 1, true))
   check.truthy(output:find("crapper: ", 1, true))
   check.truthy(output:find("crap was not started", 1, true))
@@ -177,11 +173,12 @@ it("ir writes nothing and starts nothing when the preflight fails", function()
   check.equal(0, #calls.launch)
 end)
 
--- view 用预检钉死的 LUA_PATH/LUA_CPATH(项目缓存)启动上游;PATH 原序下传,
+-- view 用预检钉死的 LUA_PATH/LUA_CPATH(受控 Lua 环境)启动上游;PATH 原序下传,
 -- herdr 由上游从中选(不钉版本、不置前)。钉环境只发生在子进程里,父进程环境不变。
 it("view launches with the preflight's pinned environment and leaves the parent environment unchanged", function()
   local before = { os.getenv("PATH"), os.getenv("LUA_PATH"), os.getenv("LUA_CPATH") }
-  local pinned = require("packages.uml_quality.runtime").pinned_env("C:/repo", "C:/lua/bin", "C:/sys;C:/herdr/0.9.4")
+  local pinned = require("packages.uml_quality.runtime").pinned_env("C:/repo", { "C:/rocks/tree" },
+    "C:/lua/bin", "C:/sys;C:/herdr/0.9.4")
   local calls, hooks = _stubs({ ok = true, scripts = "/up/scripts", env_list = pinned }, 0)
   hooks.repo_root = "."
   local code = _quiet(function() return cli.main({ "view", "--restart" }, hooks) end)
@@ -203,7 +200,7 @@ it("view fails before launching when no herdr >= 0.9.3 is on PATH or the upstrea
   fs.ensure_dir(root)
   local launched = 0
   local code, output
-  _with_offline_rocks(function()
+  _with_unavailable_lua_env(function()
     code, output = _quiet(function()
       return cli.main({ "view" }, { repo_root = root, path = root,
         launch = function() launched = launched + 1 return 0 end })

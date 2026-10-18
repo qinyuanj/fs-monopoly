@@ -117,11 +117,11 @@ local function _build_shard_cmd(profile, files, durations_out)
 end
 
 -- 实测时长缓存(#107):基线实测 tooling 按 it 计数分 3 lane 为 112.8/83.6/72.6s
--- 失衡(单文件 it 数与墙钟无关),改按上次实测秒数做 LPT。缓存落 .toolcache
--- (gitignored),键为仓库相对路径以跨 worktree 复用;首次运行无缓存仍按 it 计数。
+-- 失衡(单文件 it 数与墙钟无关),改按上次实测秒数做 LPT。缓存落仓内生成物目录
+-- tmp/(gitignored、由 clean 清理),键为仓库相对路径;首次运行无缓存仍按 it 计数。
 -- 每 lane 经 runner --durations-out 落本次每文件秒数,跑完合并回缓存。
 local function _cache_path(profile)
-  return bootstrap_env.repo_root .. "/.toolcache/spec_durations/" .. profile .. ".tsv"
+  return bootstrap_env.repo_root .. "/tmp/spec_durations/" .. profile .. ".tsv"
 end
 
 local function _repo_relative(file)

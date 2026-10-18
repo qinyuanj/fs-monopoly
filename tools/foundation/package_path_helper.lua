@@ -40,12 +40,6 @@ local function _prepend_path(path_pattern)
   end
 end
 
-local function _prepend_cpath(path_pattern)
-  if not _contains_path(package.cpath, path_pattern) then
-    package.cpath = path_pattern .. ";" .. package.cpath
-  end
-end
-
 function package_path_helper.install_eggy_package_paths(opts)
   opts = opts or {}
   local repo_root = _normalize_path(opts.repo_root or ".")
@@ -67,19 +61,7 @@ function package_path_helper.install_eggy_package_paths(opts)
   end
 end
 
--- 把 luarocks 本地 tree 的 Lua 模块路径接进 package.path / package.cpath。
--- tree 由 bootstrap 按需写入 <repo_root>/.toolcache/luarocks(由 .gitignore 排除)。
--- cpath 是 tree 内 C 扩展(lib/lua/5.4/*.so)的装载面。
-function package_path_helper.install_luarocks_tree_paths(opts)
-  opts = opts or {}
-  local repo_root = _normalize_path(opts.repo_root or ".")
-  local share_root = _join(repo_root, ".toolcache/luarocks/share/lua/5.4")
-  local lib_root = _join(repo_root, ".toolcache/luarocks/lib/lua/5.4")
-
-  _prepend_path(_join(share_root, "?.lua"))
-  _prepend_path(_join(share_root, "?/init.lua"))
-  _prepend_cpath(_join(lib_root, "?.so"))
-  _prepend_cpath(_join(lib_root, "?.dll"))
-end
+-- LuaRocks 模块路径不在这里装配:测试与质量工具统一从受控 Lua 环境装载
+-- (foundation.lua_env.install_paths / require_controlled),本仓不自举、不写任何 tree。
 
 return package_path_helper

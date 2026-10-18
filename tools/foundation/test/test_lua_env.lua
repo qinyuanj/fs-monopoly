@@ -133,6 +133,41 @@ describe("controlled lua environment preflight", function()
   end)
 end)
 
+describe("controlled lua environment roots", function()
+  it("resolves the tree roots without listing packages", function()
+    local calls = {}
+    local roots, err = lua_env.roots({
+      luarocks_exe = "luarocks.exe",
+      run_command = function(command)
+        calls[#calls + 1] = command
+        return { ok = true, output = TREES }
+      end,
+    })
+    check.is_nil(err)
+    check.equal(ROOT, roots[1])
+    check.equal(1, #calls)
+    check.equal("config", calls[1][4])
+  end)
+
+  it("fails when luarocks config fails", function()
+    local roots, err = lua_env.roots({
+      luarocks_exe = "luarocks.exe",
+      run_command = function() return { ok = false, output = "boom" } end,
+    })
+    check.is_nil(roots)
+    check.matches("boom", err, 1, true)
+  end)
+
+  it("fails when luarocks config yields no tree", function()
+    local roots, err = lua_env.roots({
+      luarocks_exe = "luarocks.exe",
+      run_command = function() return { ok = true, output = "{}" } end,
+    })
+    check.is_nil(roots)
+    check.matches("rocks_trees", err, 1, true)
+  end)
+end)
+
 describe("controlled lua environment module origin", function()
   local roots = { ROOT }
 

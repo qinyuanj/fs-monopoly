@@ -106,7 +106,7 @@ describe("real busted execution", function()
       check.matches(text, result.output, 1, true)
     end
   end)
-  it("cache provenance rejects preloaded fake busted", function()
+  it("controlled provenance rejects preloaded fake busted", function()
     local script = 'dofile("tools/foundation/bootstrap.lua").install("tools/cli.lua"); package.loaded["busted.core"]={}; require("packages.test_runner.cache_loader").install("' .. root .. '")'
     local result = proc.run_command({ lua54.lua54_bin(), "-e", script })
     check.equal(1, result.code, result.output)

@@ -95,14 +95,12 @@ local ok, err = pcall(function()
     end
   end
   assert(#files > 0, "no available spec files selected")
-  -- #131:自举 busted 的网络/下载类失败退 3 + 状态词(入口经 child_diagnostic 认领),
-  -- 不跑测试;构建错误等仍走 assert 退 1。
-  local busted_ok, busted_err, unavailable = bootstrap.ensure_busted_tree(root)
-  if unavailable ~= nil then
-    local availability = require("foundation.tool_availability")
-    os.exit(boundary.emit(availability.verdict(unavailable, "test_runner")))
-  end
-  assert(busted_ok, busted_err)
+  -- 受控 Lua 环境预检(#151):busted / luassert 只从机器 LuaRocks tree 装载,
+  -- 版本口径不满足是真实失败(退 1),不再在项目内自举安装。
+  local lua_env = require("foundation.lua_env")
+  local verified_env, env_err, env_info = lua_env.preflight()
+  assert(verified_env, env_err)
+  lua_env.install_paths(env_info.roots)
   require("packages.test_runner.cache_loader").install(root)
   -- --durations-out:busted file start/end 事件之间的墙钟秒数(Windows os.clock
   -- 即墙钟),格式见 spec_sharding.format_durations,供 spec_lane 实测时长缓存分片(#107)。

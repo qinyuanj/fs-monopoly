@@ -1,7 +1,7 @@
 -- packages/uml_quality/runtime.lua —— uml 质量入口的纯演算面(#93)。
 --
 -- 质量算法与派发全在邻接 uml-viewer(scripts/uml-command.ps1)与 crapper/mutator;
--- 本模块只决定「子进程在什么装载环境里跑」以及「解析结果是否来自项目缓存」。
+-- 本模块只决定「子进程在什么装载环境里跑」以及「解析结果是否来自受控 Lua 环境」。
 -- 不起进程、不落盘;起进程与写终端在 cli.lua。
 local M = {}
 
@@ -19,17 +19,28 @@ local function _within(path, prefix)
   return candidate:sub(1, #base) == base
 end
 
-function M.cache_root(repo_root)
-  return _normalize(repo_root) .. "/.toolcache/luarocks"
+local function _in_roots(path, roots)
+  for _, root in ipairs(roots or {}) do
+    if _within(path, root) then return true end
+  end
+  return false
 end
 
 -- 子进程环境,按序写入。LUA_PATH_5_4 优先于 LUA_PATH,两者都钉同一值,避免
 -- 继承用户指向全局 %APPDATA%\luarocks tree 的 LUA_PATH;不留 ";;" 默认路径。
-function M.pinned_env(repo_root, lua_dir, inherited_path)
-  local root = _normalize(repo_root)
-  local share = M.cache_root(root) .. "/share/lua/5.4"
-  local lua_path = table.concat({ root .. "/?.lua", root .. "/?/init.lua", share .. "/?.lua", share .. "/?/init.lua" }, ";")
-  local lua_cpath = M.cache_root(root) .. "/lib/lua/5.4/?.dll"
+-- 装载面 = 仓根 + 受控 Lua 环境的每个 tree(share/lib 5.4)。
+function M.pinned_env(repo_root, roots, lua_dir, inherited_path)
+  local path_parts = { _normalize(repo_root) .. "/?.lua", _normalize(repo_root) .. "/?/init.lua" }
+  local cpath_parts = {}
+  for _, root in ipairs(roots or {}) do
+    local base = _normalize(root)
+    path_parts[#path_parts + 1] = base .. "/share/lua/5.4/?.lua"
+    path_parts[#path_parts + 1] = base .. "/share/lua/5.4/?/init.lua"
+    cpath_parts[#cpath_parts + 1] = base .. "/lib/lua/5.4/?.dll"
+    cpath_parts[#cpath_parts + 1] = base .. "/lib/lua/5.4/?.so"
+  end
+  local lua_path = table.concat(path_parts, ";")
+  local lua_cpath = table.concat(cpath_parts, ";")
   local path = _normalize(lua_dir)
   if inherited_path ~= nil and inherited_path ~= "" then path = path .. ";" .. inherited_path end
   return {
@@ -65,12 +76,12 @@ function M.herdr_verdict(version_output)
   return { ok = false, message = "herdr >= " .. minimum .. " required, got " .. (line ~= "" and line or "nothing") }
 end
 
-function M.module_verdict(name, resolved, repo_root)
+function M.module_verdict(name, resolved, roots)
   if resolved == nil or resolved == "" then
     return { ok = false, message = name .. ": not found in pinned package.path" }
   end
-  if not _within(resolved, M.cache_root(repo_root)) then
-    return { ok = false, message = name .. ": resolved outside project cache: " .. resolved }
+  if not _in_roots(resolved, roots) then
+    return { ok = false, message = name .. ": resolved outside controlled Lua environment: " .. resolved }
   end
   return { ok = true, message = name .. ": " .. _normalize(resolved) }
 end
@@ -86,14 +97,14 @@ end
 
 -- 探针(probe_lua_modules.lua)输出逐行判定;任何一行不过或没有任何判定都算失败,
 -- 空输出不能读成「全部通过」。
-function M.probe_verdicts(output, repo_root)
+function M.probe_verdicts(output, roots)
   local verdicts, ok = {}, true
   for line in tostring(output or ""):gmatch("[^\r\n]+") do
     local fields = {}
     for field in (line .. "\t"):gmatch("([^\t]*)\t") do fields[#fields + 1] = field end
     local kind, verdict = fields[1], nil
     if kind == "resolve" or kind == "load" then
-      verdict = M.module_verdict(fields[2], fields[3], repo_root)
+      verdict = M.module_verdict(fields[2], fields[3], roots)
     elseif kind == "loader" then
       verdict = M.loader_verdict(fields[2])
     elseif kind == "error" then
