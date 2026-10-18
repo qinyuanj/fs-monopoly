@@ -178,6 +178,25 @@ describe("controlled lua environment preflight", function()
     check.matches("受控 Lua 环境", err, 1, true)
   end)
 
+  -- 模块按 roots 顺序解析:earlier tree 里的同名文件若不是被核对的安装物,
+  -- 也不能冒充受控来源。
+  it("fails when a module resolves from a tree that holds no in-range copy", function()
+    local earlier, later = EARLIER:gsub("\\", "/"), LATER:gsub("\\", "/")
+    local ok, err = _preflight(nil, {
+      copies = _copies(GOOD, LATER),
+      roots = { EARLIER, LATER },
+      exists = function(path)
+        if path:find(earlier, 1, true) ~= nil then
+          return path:find("busted", 1, true) ~= nil
+        end
+        return path:find(later, 1, true) ~= nil
+      end,
+    })
+    check.is_nil(ok)
+    check.matches("busted.runner", err, 1, true)
+    check.matches("被核对 tree 以外", err, 1, true)
+  end)
+
   it("fails when luarocks config yields no tree", function()
     local ok, err = lua_env.preflight({
       luarocks_exe = "luarocks.exe",

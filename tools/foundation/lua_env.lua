@@ -184,11 +184,12 @@ function lua_env.preflight(opts)
   local search = _module_search_path(roots)
   for _, requirement in ipairs(lua_env.REQUIREMENTS) do
     local copies = _installed_copies(run, exe, requirement.name, roots)
-    local described, out_of_range, chosen = {}, 0, nil
+    local described, out_of_range, chosen, verified_roots = {}, 0, nil, {}
     for _, copy in ipairs(copies) do
       described[#described + 1] = copy.version .. " (" .. copy.root .. ")"
       if lua_env.version_in_range(copy.version, requirement) then
         chosen = chosen or copy.version
+        verified_roots[#verified_roots + 1] = copy.root
       else
         out_of_range = out_of_range + 1
       end
@@ -212,6 +213,14 @@ function lua_env.preflight(opts)
       if file == nil then
         problems[#problems + 1] = {
           text = requirement.name .. ": " .. tostring(locate_err),
+          command = _install_command(requirement),
+        }
+      elseif not lua_env.is_inside(file, verified_roots) then
+        -- 模块落在某个受控 tree 里、但该 tree 并没有本包在口径内的副本:
+        -- 这份文件不是被核对的安装物,不能当成受控来源。
+        problems[#problems + 1] = {
+          text = requirement.name .. ": 模块 " .. requirement.module
+            .. " 从被核对 tree 以外解析: " .. file,
           command = _install_command(requirement),
         }
       else
