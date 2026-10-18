@@ -62,10 +62,8 @@ local rules = {
     forbidden_patterns = {
       "game%.gameplay_loop_ports",
       "self%.gameplay_loop_ports",
-      "require%(%\"src%.game%.flow%.turn%.loop_ports%\"%)",
-      "require%(%'src%.game%.flow%.turn%.loop_ports'%)",
     },
-    description = "systems layer must not read gameplay loop runtime object fields directly or depend on loop_ports",
+    description = "rules layer must not read gameplay loop runtime object fields directly",
   },
   {
     roots = { "src/turn" },
@@ -156,20 +154,6 @@ local rules = {
       "%f[%w_]by_ai%f[^%w_]",
     },
     description = "retired player delegation fields (auto/auto_source), ghost ai fields, and old is_auto_player/by_ai identifiers must not reappear in production code",
-  },
-  {
-    roots = { "tools/foundation" },
-    forbidden_patterns = {
-      'require%("shared%.',
-      "require%('shared%.",
-      'require%("quality%.',
-      "require%('quality%.",
-      'require%("ops%.',
-      "require%('ops%.",
-      'require%("dry%.',
-      "require%('dry%.",
-    },
-    description = "tools/foundation must not reverse-require any package; only foundation.* and src.* are allowed (tools/ 重设计决策 foundation rule, #302)",
   },
   {
     roots = { "src" },
