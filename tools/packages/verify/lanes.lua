@@ -3,8 +3,8 @@
 --
 -- 纯函数:环境探测的结果由调用方通过 opts.env 注入(lua54_bin),
 -- 这里不自己探测,所以 verify_full_spec 能把任意 env 喂进来断言。
--- luacheck 不再走"PATH 上有没有"的探测——lint 车道按需把它装进项目 tree 后经
--- 钉定 5.4 解释器调用。
+-- luacheck 不再走"PATH 上有没有"的探测——lint 车道经钉定 5.4 解释器,
+-- 从受控 Lua 环境(机器 LuaRocks tree,#150)装载,只核对不安装。
 -- 车道表本身在 lane_builders,这里只决定走哪张。
 local builders = require("packages.verify.lane_builders")
 
