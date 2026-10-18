@@ -6,7 +6,7 @@ local tables = require("src.foundation.tables")
 -- ui.coord 消费 plan_refresh 的三态计划去驱动动画。
 --
 -- 记忆锚定「可选槽位编号集合」而非卡牌身份或窗口快照:同槽换卡、choice_id
--- 翻新、窗口开关与阶段空翻都不改变集合,故不重放(CONTEXT「可用槽位高亮重放」)。
+-- 翻新、窗口开关与阶段空翻都不改变集合,故不重放。
 local M = {}
 
 -- 三态计划:整组重播 / 只清除旧高亮 / 什么都不做。
@@ -95,7 +95,7 @@ end
 -- 冻结期间的计划:永不整组重播,但集合真的变了要清除旧高亮 —— 旧高亮框指向的
 -- 槽位已经不是可选的了,留在屏上是错的视觉(#595 场景 012)。集合没变则什么都
 -- 不做,不反复清除。照记新集合:否则解冻时会补一次陈旧重放,而槽位命令本身
--- 只解冻、不强制重放(CONTEXT「可用槽位高亮重放」)。
+-- 只解冻、不强制重放。
 local function _plan_while_frozen(memory, signature)
   local remembered = _signature_in(memory)
   memory.signature = signature

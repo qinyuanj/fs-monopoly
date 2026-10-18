@@ -63,7 +63,7 @@ end
 
 local function _resolve_stay_turns_remaining(game, player)
   local stay_turns = player.status and player.status.stay_turns or 0
-  -- 扣留剩余回合 uses the 含当前回合 (inclusive) convention (CONTEXT「扣留剩余回合」). During the player's
+  -- 扣留剩余回合 uses the 含当前回合 (inclusive) convention. During the player's
   -- own frozen turn the stay_turns counter has already decremented at turn start, so the
   -- inclusive remaining is +1 - the same number the detention tip shows, and never 0 while
   -- detained. Between turns (and at landing) the raw counter already is the inclusive value.

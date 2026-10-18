@@ -30,7 +30,7 @@ local function _player_items(player)
     and player.inventory.items or _empty_items
 end
 
--- CONTEXT「道具槽位」 稳定槽位:槽位 i 直映射背包第 i 格,不做密排压缩——
+-- 稳定槽位:槽位 i 直映射背包第 i 格,不做密排压缩——
 -- 空洞(false 占位)与无 id 条目渲染为空槽,后面的卡不补位。
 local function _fill_item_slots(item_slots, items, slot_count)
   -- 复用池表需先清空:slot_count 缩小时不残留尾部残槽(#526)。
