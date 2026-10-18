@@ -34,32 +34,3 @@ validator_gate.should_block_action = turn_action_gate.should_block_action
 
 return validator_gate
 
---[[ mutate4lua-manifest
-version=4
-projectHash=cb1df15023a299a0
-scope.0.id=chunk:src/turn/actions/validator_gate.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=36
-scope.0.semanticHash=5c84ed9f5942698e
-scope.1.id=function:_extract_turn_state
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=11
-scope.1.semanticHash=88d9353b49d78aaf
-scope.2.id=function:_gate_flags
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=20
-scope.2.semanticHash=6f523b4d1f193759
-scope.3.id=function:_apply_turn_flags
-scope.3.kind=function
-scope.3.startLine=22
-scope.3.endLine=26
-scope.3.semanticHash=4f926d7da10e46a1
-scope.4.id=function:validator_gate.resolve_gate_state
-scope.4.kind=function
-scope.4.startLine=28
-scope.4.endLine=31
-scope.4.semanticHash=bc44dc0e6e386b1e
-]]

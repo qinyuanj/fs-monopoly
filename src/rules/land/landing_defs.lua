@@ -12,12 +12,3 @@ return {
   { id = "tax", mandatory = true },
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=a729673334f68ee1
-scope.0.id=chunk:src/rules/land/landing_defs.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=14
-scope.0.semanticHash=801a5dbbd37c55b3
-]]

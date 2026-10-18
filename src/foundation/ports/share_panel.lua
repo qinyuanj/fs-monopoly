@@ -40,37 +40,3 @@ end
 
 return share_panel
 
---[[ mutate4lua-manifest
-version=4
-projectHash=18b8d21865b4f4df
-scope.0.id=chunk:src/foundation/ports/share_panel.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=42
-scope.0.semanticHash=bd7851771c34c30b
-scope.1.id=function:_assert_impl_shape
-scope.1.kind=function
-scope.1.startLine=11
-scope.1.endLine=15
-scope.1.semanticHash=fd9f02b0dc8a5fa6
-scope.2.id=function:share_panel.configure
-scope.2.kind=function
-scope.2.startLine=17
-scope.2.endLine=19
-scope.2.semanticHash=4afb02f78251fcb2
-scope.3.id=function:share_panel.reset_for_tests
-scope.3.kind=function
-scope.3.startLine=21
-scope.3.endLine=23
-scope.3.semanticHash=f308d8708726be18
-scope.4.id=function:share_panel.is_configured
-scope.4.kind=function
-scope.4.startLine=27
-scope.4.endLine=29
-scope.4.semanticHash=70efc1221c5d6d62
-scope.5.id=function:share_panel.try_show
-scope.5.kind=function
-scope.5.startLine=34
-scope.5.endLine=39
-scope.5.semanticHash=e15cd7cc0fb621e8
-]]

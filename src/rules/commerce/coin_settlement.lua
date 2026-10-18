@@ -64,37 +64,3 @@ end
 
 return coin_settlement
 
---[[ mutate4lua-manifest
-version=4
-projectHash=bdda8dcfce5a262d
-scope.0.id=chunk:src/rules/commerce/coin_settlement.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=66
-scope.0.semanticHash=278ef20f44af2cc8
-scope.1.id=function:_resolve_reason
-scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=15
-scope.1.semanticHash=6a5ecf4533bccebf
-scope.2.id=function:_settle_bankruptcy
-scope.2.kind=function
-scope.2.startLine=20
-scope.2.endLine=29
-scope.2.semanticHash=4bffd4ced731cfec
-scope.3.id=function:coin_settlement.charge
-scope.3.kind=function
-scope.3.startLine=33
-scope.3.endLine=40
-scope.3.semanticHash=e5c814f5f4daf6ea
-scope.4.id=function:_build_transfer_opts
-scope.4.kind=function
-scope.4.startLine=42
-scope.4.endLine=50
-scope.4.semanticHash=7d2d763e77ec6f9b
-scope.5.id=function:coin_settlement.transfer
-scope.5.kind=function
-scope.5.startLine=54
-scope.5.endLine=63
-scope.5.semanticHash=64c262f1b97eca0e
-]]

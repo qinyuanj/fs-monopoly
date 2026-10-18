@@ -20,12 +20,3 @@ market_service.auto.execute = auto.execute
 
 return market_service
 
---[[ mutate4lua-manifest
-version=4
-projectHash=8d5a87d08892a8b9
-scope.0.id=chunk:src/rules/market/init.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=22
-scope.0.semanticHash=74647eb830a3c546
-]]

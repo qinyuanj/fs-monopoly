@@ -6,12 +6,3 @@ local roles = {
 
 return roles
 
---[[ mutate4lua-manifest
-version=4
-projectHash=86f590c4cd38a730
-scope.0.id=chunk:src/config/content/roles.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=8
-scope.0.semanticHash=4b3840fa0db47501
-]]

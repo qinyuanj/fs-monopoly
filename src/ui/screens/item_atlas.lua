@@ -55,32 +55,3 @@ end)
 
 return item_atlas
 
---[[ mutate4lua-manifest
-version=4
-projectHash=49bcdce4d2f73cfe
-scope.0.id=chunk:src/ui/screens/item_atlas.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=57
-scope.0.semanticHash=dfe965bb7650df76
-scope.1.id=function:item_atlas.build_route_specs
-scope.1.kind=function
-scope.1.startLine=19
-scope.1.endLine=29
-scope.1.semanticHash=af9af198f0f9c803
-scope.2.id=function:item_atlas.configure_catalog_for_tests
-scope.2.kind=function
-scope.2.startLine=37
-scope.2.endLine=39
-scope.2.semanticHash=e0ca060d2052422f
-scope.3.id=function:item_atlas.reset_for_tests
-scope.3.kind=function
-scope.3.startLine=41
-scope.3.endLine=43
-scope.3.semanticHash=ad0af97a7901eaab
-scope.4.id=function:<anonymous>
-scope.4.kind=function
-scope.4.startLine=52
-scope.4.endLine=54
-scope.4.semanticHash=4ad1b5cb81e9ede6
-]]

@@ -62,27 +62,3 @@ end
 
 return monopoly_events
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b7de61155648d8e0
-scope.0.id=chunk:src/foundation/events.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=64
-scope.0.semanticHash=77195c9c5b77a154
-scope.1.id=function:_emit_event
-scope.1.kind=function
-scope.1.startLine=46
-scope.1.endLine=50
-scope.1.semanticHash=1a5c971496bc9857
-scope.2.id=function:monopoly_events.emit_intent
-scope.2.kind=function
-scope.2.startLine=52
-scope.2.endLine=57
-scope.2.semanticHash=f124950a838bed28
-scope.3.id=function:monopoly_events.emit
-scope.3.kind=function
-scope.3.startLine=59
-scope.3.endLine=61
-scope.3.semanticHash=4ad1b5cb81e9ede6
-]]

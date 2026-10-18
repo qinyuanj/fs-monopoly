@@ -33,17 +33,3 @@ end
 
 return resolver
 
---[[ mutate4lua-manifest
-version=4
-projectHash=9c39306646a7e7cc
-scope.0.id=chunk:src/rules/chance/resolver.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=35
-scope.0.semanticHash=31ca8b85e3e4845b
-scope.1.id=function:resolver.resolve
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=32
-scope.1.semanticHash=1ccd1f918c1377ca
-]]

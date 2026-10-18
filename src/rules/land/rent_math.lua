@@ -44,37 +44,3 @@ end
 
 return rent_math
 
---[[ mutate4lua-manifest
-version=4
-projectHash=aca40d19bfd2c170
-scope.0.id=chunk:src/rules/land/rent_math.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=c73624f4d2216fc5
-scope.1.id=function:_validate_contiguous_args
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=13
-scope.1.semanticHash=3f9891174805d4fe
-scope.2.id=function:_strict_neighbors_of
-scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=22
-scope.2.semanticHash=1f44c4af05edd8ef
-scope.3.id=function:<anonymous>
-scope.3.kind=function
-scope.3.startLine=17
-scope.3.endLine=21
-scope.3.semanticHash=87fd4b2d101479ee
-scope.4.id=function:rent_math.compute_contiguous_rent
-scope.4.kind=function
-scope.4.startLine=24
-scope.4.endLine=43
-scope.4.semanticHash=812d641e41164af3
-scope.5.id=function:<anonymous>#2
-scope.5.kind=function
-scope.5.startLine=29
-scope.5.endLine=33
-scope.5.semanticHash=9e82ef68be915451
-]]

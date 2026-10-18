@@ -30,17 +30,3 @@ end
 
 return angel_feedback
 
---[[ mutate4lua-manifest
-version=4
-projectHash=64eb9addc714aa59
-scope.0.id=chunk:src/rules/items/angel_feedback.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=32
-scope.0.semanticHash=cbefc85f8a58bed0
-scope.1.id=function:angel_feedback.publish
-scope.1.kind=function
-scope.1.startLine=13
-scope.1.endLine=29
-scope.1.semanticHash=9e656c21cbc95878
-]]

@@ -39,27 +39,3 @@ end
 
 return market_handlers
 
---[[ mutate4lua-manifest
-version=4
-projectHash=4ed354ae9426569a
-scope.0.id=chunk:src/turn/actions/action_dispatcher_market.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=41
-scope.0.semanticHash=b70a9ea1008ce590
-scope.1.id=function:market_handlers.apply_market_navigation
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=24
-scope.1.semanticHash=1b85e39678a6459a
-scope.2.id=function:market_handlers.handle_market_navigation
-scope.2.kind=function
-scope.2.startLine=26
-scope.2.endLine=32
-scope.2.semanticHash=174e9ac98c64f26d
-scope.3.id=function:market_handlers.handle_force_skip
-scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=38
-scope.3.semanticHash=a6997301f4e04fe1
-]]

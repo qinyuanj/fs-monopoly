@@ -23,12 +23,3 @@ local items = {
 
 return items
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5ea2a952b58f2d1a
-scope.0.id=chunk:src/config/content/items.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=25
-scope.0.semanticHash=de0ab5a7e5d5ce00
-]]

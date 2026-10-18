@@ -6,12 +6,3 @@ return {
   cancel = "通用二次确认_取消",
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f4ec4fb61e96c9be
-scope.0.id=chunk:src/ui/schema/secondary_confirm.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=8
-scope.0.semanticHash=e7a1de012873a6e5
-]]

@@ -37,22 +37,3 @@ end
 
 return share_panel
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f6591369a034cb3f
-scope.0.id=chunk:src/host/share_panel.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=39
-scope.0.semanticHash=8477e29352c02bbb
-scope.1.id=function:_invoke_show_panel
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=21
-scope.1.semanticHash=236b509b8b6709d0
-scope.2.id=function:share_panel.try_show
-scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=36
-scope.2.semanticHash=d8d297b473e9f4a1
-]]

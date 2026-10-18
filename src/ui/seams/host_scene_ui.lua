@@ -9,12 +9,3 @@ return host_slot.new({
   { name = "get_eui_node_at_scene_ui" },
 })
 
---[[ mutate4lua-manifest
-version=4
-projectHash=a0a8494ad71a29c3
-scope.0.id=chunk:src/ui/seams/host_scene_ui.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=11
-scope.0.semanticHash=f65f556987a0990f
-]]

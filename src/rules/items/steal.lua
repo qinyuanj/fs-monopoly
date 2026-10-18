@@ -86,32 +86,3 @@ end
 
 return steal
 
---[[ mutate4lua-manifest
-version=4
-projectHash=85860adbd7401f6e
-scope.0.id=chunk:src/rules/items/steal.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=88
-scope.0.semanticHash=6891f17f3ee42a8b
-scope.1.id=function:_fail_popup
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=27
-scope.1.semanticHash=6553dd3752c9cd7d
-scope.2.id=function:_consume_steal_card
-scope.2.kind=function
-scope.2.startLine=31
-scope.2.endLine=36
-scope.2.semanticHash=51001ae7df9c0745
-scope.3.id=function:steal.steal_nth_occupied
-scope.3.kind=function
-scope.3.startLine=41
-scope.3.endLine=75
-scope.3.semanticHash=2c014307deb7c0cd
-scope.4.id=function:steal.steal_random_item
-scope.4.kind=function
-scope.4.startLine=77
-scope.4.endLine=85
-scope.4.semanticHash=46ff986d2f1e94e2
-]]

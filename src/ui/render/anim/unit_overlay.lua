@@ -68,37 +68,3 @@ overlay.play_clear_obstacles = robot.play_clear_obstacles
 
 return overlay
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5ed815c822e3096c
-scope.0.id=chunk:src/ui/render/anim/unit_overlay.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=70
-scope.0.semanticHash=144d22f2aa7dfd55
-scope.1.id=function:_play_roadblock
-scope.1.kind=function
-scope.1.startLine=14
-scope.1.endLine=26
-scope.1.semanticHash=ced64edd1f5cfa2e
-scope.2.id=function:_play_mine
-scope.2.kind=function
-scope.2.startLine=28
-scope.2.endLine=39
-scope.2.semanticHash=5653bcf21c58fb5e
-scope.3.id=function:overlay.clear_overlay
-scope.3.kind=function
-scope.3.startLine=41
-scope.3.endLine=46
-scope.3.semanticHash=006fb3bc6065df83
-scope.4.id=function:overlay.play_overlay
-scope.4.kind=function
-scope.4.startLine=48
-scope.4.endLine=56
-scope.4.semanticHash=58a69d5df69c4597
-scope.5.id=function:overlay.play_missile
-scope.5.kind=function
-scope.5.startLine=58
-scope.5.endLine=65
-scope.5.semanticHash=f6767ef6063f1562
-]]

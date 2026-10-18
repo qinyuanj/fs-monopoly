@@ -37,12 +37,3 @@ context.config_list = nil
 
 return context
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f1444af1443dd80a
-scope.0.id=chunk:src/ui/manager/context.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=39
-scope.0.semanticHash=11717ef98d756be4
-]]

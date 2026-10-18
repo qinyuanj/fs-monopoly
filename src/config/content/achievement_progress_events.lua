@@ -23,12 +23,3 @@ return {
   ["使用水豚嘟嘟皮肤"] = { ids = { 43 }, default_amount = 1 },
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=39f2de15345b02f7
-scope.0.id=chunk:src/config/content/achievement_progress_events.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=25
-scope.0.semanticHash=611b3d13e125f61e
-]]

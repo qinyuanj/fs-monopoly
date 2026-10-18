@@ -161,37 +161,3 @@ return {
   turn_right = turn_right,
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=7df3babe6dd16433
-scope.0.id=chunk:src/config/content/default_map.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=163
-scope.0.semanticHash=588bff896e19aac5
-scope.1.id=function:_direction
-scope.1.kind=function
-scope.1.startLine=19
-scope.1.endLine=27
-scope.1.semanticHash=68f77a5950824ed6
-scope.2.id=function:_id_at
-scope.2.kind=function
-scope.2.startLine=29
-scope.2.endLine=33
-scope.2.semanticHash=cd80614a727bb28b
-scope.3.id=function:_to_ids
-scope.3.kind=function
-scope.3.startLine=35
-scope.3.endLine=41
-scope.3.semanticHash=a42861a62f41a049
-scope.4.id=function:_add_neighbor
-scope.4.kind=function
-scope.4.startLine=57
-scope.4.endLine=62
-scope.4.semanticHash=90bfc20615b7dd3b
-scope.5.id=function:_chain
-scope.5.kind=function
-scope.5.startLine=83
-scope.5.endLine=87
-scope.5.semanticHash=a1347e99955e6015
-]]

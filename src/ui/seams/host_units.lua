@@ -14,12 +14,3 @@ return host_slot.new({
   { name = "prewarm_unit" },
 })
 
---[[ mutate4lua-manifest
-version=4
-projectHash=c630a25aca3f4b0f
-scope.0.id=chunk:src/ui/seams/host_units.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=16
-scope.0.semanticHash=50b96c05cdc27d21
-]]

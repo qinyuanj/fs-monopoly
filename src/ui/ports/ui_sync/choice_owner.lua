@@ -79,37 +79,3 @@ end
 
 return choice_owner
 
---[[ mutate4lua-manifest
-version=4
-projectHash=589ea74cd92b0334
-scope.0.id=chunk:src/ui/ports/ui_sync/choice_owner.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=81
-scope.0.semanticHash=c25105d1e820150d
-scope.1.id=function:_current_player_index
-scope.1.kind=function
-scope.1.startLine=11
-scope.1.endLine=13
-scope.1.semanticHash=c250138038aa193a
-scope.2.id=function:_player_at_index
-scope.2.kind=function
-scope.2.startLine=15
-scope.2.endLine=17
-scope.2.semanticHash=0064648672ebc0ef
-scope.3.id=function:choice_owner.resolve_owner_role_id
-scope.3.kind=function
-scope.3.startLine=19
-scope.3.endLine=26
-scope.3.semanticHash=c8bf877ac0d23287
-scope.4.id=function:_roles_contain_owner
-scope.4.kind=function
-scope.4.startLine=59
-scope.4.endLine=67
-scope.4.semanticHash=de1435d90962fe51
-scope.5.id=function:choice_owner.owner_is_served_seat
-scope.5.kind=function
-scope.5.startLine=69
-scope.5.endLine=78
-scope.5.semanticHash=4fc5b83fe41dce96
-]]

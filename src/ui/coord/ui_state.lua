@@ -95,17 +95,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=89b9020ab1929080
-scope.0.id=chunk:src/ui/coord/ui_state.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=97
-scope.0.semanticHash=ab8bf8809578c759
-scope.1.id=function:M.build_ui_state
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=94
-scope.1.semanticHash=597cae17a1bc5213
-]]

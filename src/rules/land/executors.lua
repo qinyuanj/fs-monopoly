@@ -29,17 +29,3 @@ module._merge_executor_groups = _merge_executor_groups
 
 return module
 
---[[ mutate4lua-manifest
-version=4
-projectHash=0de9a5cd22db4d0c
-scope.0.id=chunk:src/rules/land/executors.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=31
-scope.0.semanticHash=d607ffc8b2deb024
-scope.1.id=function:_merge_executor_groups
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=16
-scope.1.semanticHash=0c23c354ed03578c
-]]

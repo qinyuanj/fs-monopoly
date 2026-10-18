@@ -28,17 +28,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f7eb0455861a3fec
-scope.0.id=chunk:src/ui/state/item_slot_pickable_signature.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=30
-scope.0.semanticHash=025a24daf7151843
-scope.1.id=function:M.of
-scope.1.kind=function
-scope.1.startLine=15
-scope.1.endLine=27
-scope.1.semanticHash=f1227da2d0d7f765
-]]

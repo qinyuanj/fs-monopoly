@@ -33,27 +33,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=31bcca6eecf0c6d0
-scope.0.id=chunk:src/app/roster_debug.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=35
-scope.0.semanticHash=f197bc3ac5a0249b
-scope.1.id=function:_add_debug_auto_player
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=12
-scope.1.semanticHash=0e17d7909c99ea8c
-scope.2.id=function:_first_auto_slot
-scope.2.kind=function
-scope.2.startLine=15
-scope.2.endLine=20
-scope.2.semanticHash=51da0d89916877c1
-scope.3.id=function:M.build_auto_players
-scope.3.kind=function
-scope.3.startLine=22
-scope.3.endLine=32
-scope.3.semanticHash=eea9f953bd9506db
-]]

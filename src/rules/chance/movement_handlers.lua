@@ -53,37 +53,3 @@ end
 
 return movement_handlers
 
---[[ mutate4lua-manifest
-version=4
-projectHash=929a12c8993f4f8b
-scope.0.id=chunk:src/rules/chance/movement_handlers.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=55
-scope.0.semanticHash=a03946c5a4cbb89d
-scope.1.id=function:movement_handlers.register
-scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=52
-scope.1.semanticHash=cc45e5420c446857
-scope.2.id=function:_backward_move_opts
-scope.2.kind=function
-scope.2.startLine=11
-scope.2.endLine=20
-scope.2.semanticHash=ed5a118649e54f91
-scope.3.id=function:handlers.move_backward
-scope.3.kind=function
-scope.3.startLine=22
-scope.3.endLine=28
-scope.3.semanticHash=ee9f353c81c5105b
-scope.4.id=function:handlers.move_forward
-scope.4.kind=function
-scope.4.startLine=30
-scope.4.endLine=32
-scope.4.semanticHash=0d144a6d54fba61a
-scope.5.id=function:handlers.forced_move
-scope.5.kind=function
-scope.5.startLine=34
-scope.5.endLine=51
-scope.5.semanticHash=203f5acaa664d601
-]]

@@ -43,32 +43,3 @@ end
 
 return gameplay_read_port
 
---[[ mutate4lua-manifest
-version=4
-projectHash=ea5168d13688dfd0
-scope.0.id=chunk:src/ui/view/gameplay_read_port.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=45
-scope.0.semanticHash=e50af4e7bd737093
-scope.1.id=function:_normalize_level
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=11
-scope.1.semanticHash=cc76062774865877
-scope.2.id=function:_purchase_price
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=22
-scope.2.semanticHash=44f92394bf760e92
-scope.3.id=function:_sum_upgrade_costs
-scope.3.kind=function
-scope.3.startLine=27
-scope.3.endLine=33
-scope.3.semanticHash=854b787498770641
-scope.4.id=function:gameplay_read_port.total_land_invested
-scope.4.kind=function
-scope.4.startLine=35
-scope.4.endLine=42
-scope.4.semanticHash=f4b0f65521332988
-]]

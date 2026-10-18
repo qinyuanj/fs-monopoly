@@ -51,27 +51,3 @@ end
 
 return land_choice_specs
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5e20374afa1fecb3
-scope.0.id=chunk:src/rules/land/choice_specs.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=53
-scope.0.semanticHash=e6f7b8351b90d7cb
-scope.1.id=function:_decorate_secondary_confirm
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=14
-scope.1.semanticHash=76e4ddbc52554aab
-scope.2.id=function:land_choice_specs.rent_prompt
-scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=39
-scope.2.semanticHash=054f8834ef19ca42
-scope.3.id=function:land_choice_specs.tax_prompt
-scope.3.kind=function
-scope.3.startLine=41
-scope.3.endLine=50
-scope.3.semanticHash=d622db8d2bc44c5e
-]]

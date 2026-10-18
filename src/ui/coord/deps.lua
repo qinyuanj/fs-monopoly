@@ -14,17 +14,3 @@ end
 
 return runtime_deps
 
---[[ mutate4lua-manifest
-version=4
-projectHash=a434022aced5b4d5
-scope.0.id=chunk:src/ui/coord/deps.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=16
-scope.0.semanticHash=c9cfb9d44e0c1926
-scope.1.id=function:runtime_deps.build
-scope.1.kind=function
-scope.1.startLine=4
-scope.1.endLine=13
-scope.1.semanticHash=8d3253c4aa31abe9
-]]

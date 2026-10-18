@@ -74,12 +74,3 @@ return {
     ["3037"] = 1622750435,
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=c140b15824b5846a
-scope.0.id=chunk:src/config/content/runtime_ref_images.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=76
-scope.0.semanticHash=bfc67dbeb37b859d
-]]

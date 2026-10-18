@@ -33,32 +33,3 @@ end
 
 return item_auto_play_context
 
---[[ mutate4lua-manifest
-version=4
-projectHash=1020f62c2ebca95a
-scope.0.id=chunk:src/turn/policies/item_play_context.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=35
-scope.0.semanticHash=227940905d5172ff
-scope.1.id=function:_is_computer_controlled
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=8
-scope.1.semanticHash=8e28a68763ad737b
-scope.2.id=function:item_auto_play_context.build
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=32
-scope.2.semanticHash=145022b4563f5a94
-scope.3.id=function:ctx.select_target_player
-scope.3.kind=function
-scope.3.startLine=20
-scope.3.endLine=22
-scope.3.semanticHash=249e4c138b486177
-scope.4.id=function:ctx.select_remote_dice
-scope.4.kind=function
-scope.4.startLine=26
-scope.4.endLine=28
-scope.4.semanticHash=9662844558837f1d
-]]

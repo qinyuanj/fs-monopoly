@@ -7,12 +7,3 @@ local skins = {
 
 return skins
 
---[[ mutate4lua-manifest
-version=4
-projectHash=4c21515719ae9389
-scope.0.id=chunk:src/config/content/skins.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=9
-scope.0.semanticHash=0ce97a60fa2612c4
-]]

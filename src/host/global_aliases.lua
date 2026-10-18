@@ -45,22 +45,3 @@ end
 
 return host_runtime_bridge
 
---[[ mutate4lua-manifest
-version=4
-projectHash=8231330c3ac809eb
-scope.0.id=chunk:src/host/global_aliases.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=47
-scope.0.semanticHash=a7ac1c5d9dc00c8c
-scope.1.id=function:_require_lua_api
-scope.1.kind=function
-scope.1.startLine=15
-scope.1.endLine=21
-scope.1.semanticHash=e0ce08dc8ea1fb0f
-scope.2.id=function:host_runtime_bridge.install
-scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=44
-scope.2.semanticHash=b70f451239a94fa5
-]]

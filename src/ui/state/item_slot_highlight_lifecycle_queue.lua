@@ -39,22 +39,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=2ddff0cd4d41c9a4
-scope.0.id=chunk:src/ui/state/item_slot_highlight_lifecycle_queue.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=41
-scope.0.semanticHash=11b3618c016a7881
-scope.1.id=function:M.push
-scope.1.kind=function
-scope.1.startLine=17
-scope.1.endLine=26
-scope.1.semanticHash=a9f9e8bfd7760c5d
-scope.2.id=function:M.drain
-scope.2.kind=function
-scope.2.startLine=30
-scope.2.endLine=38
-scope.2.semanticHash=a869b846998fc65d
-]]

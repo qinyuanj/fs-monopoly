@@ -15,17 +15,3 @@ end
 
 return catalog
 
---[[ mutate4lua-manifest
-version=4
-projectHash=e8a24f501915a22c
-scope.0.id=chunk:src/ui/render/board_feedback/catalog.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=17
-scope.0.semanticHash=503e94776220d131
-scope.1.id=function:catalog.get
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=14
-scope.1.semanticHash=bf027eb8c6436799
-]]

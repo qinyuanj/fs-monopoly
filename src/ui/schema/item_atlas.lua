@@ -16,12 +16,3 @@ end
 
 return nodes
 
---[[ mutate4lua-manifest
-version=4
-projectHash=77e267ff97b42ac9
-scope.0.id=chunk:src/ui/schema/item_atlas.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=18
-scope.0.semanticHash=07dfbfbc9418ffa1
-]]

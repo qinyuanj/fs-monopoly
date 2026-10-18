@@ -14,12 +14,3 @@ local paid_goods = {
 
 return paid_goods
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5050775cd1ea1b8a
-scope.0.id=chunk:src/rules/commerce/paid_goods.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=16
-scope.0.semanticHash=c66c5b340d3e1656
-]]

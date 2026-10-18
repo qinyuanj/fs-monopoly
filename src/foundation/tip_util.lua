@@ -74,37 +74,3 @@ end
 
 return tip_util
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b131d72c78e1f6c3
-scope.0.id=chunk:src/foundation/tip_util.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=76
-scope.0.semanticHash=7c227c096c96fc41
-scope.1.id=function:tip_util.normalize_duration
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=11
-scope.1.semanticHash=13c62d7ac7bab4eb
-scope.2.id=function:tip_util.normalize_text
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=22
-scope.2.semanticHash=84c6336a84845cf0
-scope.3.id=function:tip_util.normalize_intent
-scope.3.kind=function
-scope.3.startLine=24
-scope.3.endLine=43
-scope.3.semanticHash=a3ef6e943aa366be
-scope.4.id=function:tip_util.resolve_scope
-scope.4.kind=function
-scope.4.startLine=45
-scope.4.endLine=59
-scope.4.semanticHash=2543c2f3ccaad3f2
-scope.5.id=function:tip_util.each_scope
-scope.5.kind=function
-scope.5.startLine=61
-scope.5.endLine=73
-scope.5.semanticHash=88b0ee2102879e9a
-]]

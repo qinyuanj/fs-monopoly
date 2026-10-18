@@ -128,12 +128,3 @@ local COMMANDS = {
 
 return COMMANDS
 
---[[ mutate4lua-manifest
-version=4
-projectHash=ded095e5534d01e7
-scope.0.id=chunk:src/ui/input/command_definitions_commands.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=139
-scope.0.semanticHash=4a24abe09e8545ef
-]]

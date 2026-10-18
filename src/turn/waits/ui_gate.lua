@@ -47,32 +47,3 @@ end
 
 return tick_ui_gate
 
---[[ mutate4lua-manifest
-version=4
-projectHash=459d5d9756c1ceb2
-scope.0.id=chunk:src/turn/waits/ui_gate.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=49
-scope.0.semanticHash=a300e3f84f0c7a1f
-scope.1.id=function:_ports_ui_sync
-scope.1.kind=function
-scope.1.startLine=16
-scope.1.endLine=18
-scope.1.semanticHash=c250138038aa193a
-scope.2.id=function:_resolve_ui_gate
-scope.2.kind=function
-scope.2.startLine=20
-scope.2.endLine=28
-scope.2.semanticHash=121c9093f3e6bbc9
-scope.3.id=function:tick_ui_gate.resolve_ui_gate
-scope.3.kind=function
-scope.3.startLine=30
-scope.3.endLine=37
-scope.3.semanticHash=b92a47343d050954
-scope.4.id=function:tick_ui_gate.resolve_modal_timeout_seconds
-scope.4.kind=function
-scope.4.startLine=39
-scope.4.endLine=46
-scope.4.semanticHash=0bd831f6510e3893
-]]

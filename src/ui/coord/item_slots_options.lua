@@ -45,32 +45,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=9b10cf541a22911c
-scope.0.id=chunk:src/ui/coord/item_slots_options.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=47
-scope.0.semanticHash=90c1e7c562813fa2
-scope.1.id=function:_option_id
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=11
-scope.1.semanticHash=90c051feb9cf542f
-scope.2.id=function:_clear_option_id_set
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=17
-scope.2.semanticHash=c52367dcd62d5b7e
-scope.3.id=function:_fill_option_id_set
-scope.3.kind=function
-scope.3.startLine=19
-scope.3.endLine=27
-scope.3.semanticHash=8cad3ee5a6bae397
-scope.4.id=function:M.build
-scope.4.kind=function
-scope.4.startLine=29
-scope.4.endLine=44
-scope.4.semanticHash=87dc62a89478679a
-]]

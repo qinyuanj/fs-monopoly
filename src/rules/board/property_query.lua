@@ -34,27 +34,3 @@ end
 
 return property_query
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b169d474d381190c
-scope.0.id=chunk:src/rules/board/property_query.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=36
-scope.0.semanticHash=6cb9ac3b0d00905e
-scope.1.id=function:property_query.safe_tile_state
-scope.1.kind=function
-scope.1.startLine=3
-scope.1.endLine=8
-scope.1.semanticHash=f36da49fcc98913d
-scope.2.id=function:_state_for
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=16
-scope.2.semanticHash=676d3521b29918a8
-scope.3.id=function:property_query.resolve_rent_owner
-scope.3.kind=function
-scope.3.startLine=18
-scope.3.endLine=33
-scope.3.semanticHash=f1acfc7f3eca793f
-]]

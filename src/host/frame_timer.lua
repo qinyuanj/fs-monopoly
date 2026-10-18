@@ -30,22 +30,3 @@ end
 
 return frame_timer
 
---[[ mutate4lua-manifest
-version=4
-projectHash=bc78703f9b2125b2
-scope.0.id=chunk:src/host/frame_timer.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=32
-scope.0.semanticHash=7e2da028e507e4a5
-scope.1.id=function:frame_timer.repeat_every
-scope.1.kind=function
-scope.1.startLine=13
-scope.1.endLine=19
-scope.1.semanticHash=3a4a7f15f88cd821
-scope.2.id=function:frame_timer.stop
-scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=29
-scope.2.semanticHash=a8ef46afd74e36a9
-]]

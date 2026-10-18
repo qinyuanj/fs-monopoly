@@ -40,27 +40,3 @@ end
 
 return actor_context
 
---[[ mutate4lua-manifest
-version=4
-projectHash=1e0c0a596db7c972
-scope.0.id=chunk:src/ui/coord/actor_context.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=42
-scope.0.semanticHash=47dc1d3a0d758c15
-scope.1.id=function:_find_role_in_roster
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=18
-scope.1.semanticHash=f65734ed134c7370
-scope.2.id=function:actor_context.resolve_role_by_id
-scope.2.kind=function
-scope.2.startLine=21
-scope.2.endLine=39
-scope.2.semanticHash=823343e642df010c
-scope.3.id=function:<anonymous>
-scope.3.kind=function
-scope.3.startLine=35
-scope.3.endLine=37
-scope.3.semanticHash=1136505bd37c301e
-]]

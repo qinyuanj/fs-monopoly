@@ -33,32 +33,3 @@ end
 
 return host_runtime
 
---[[ mutate4lua-manifest
-version=4
-projectHash=1bdb09b713cb87b7
-scope.0.id=chunk:src/ui/seams/host_runtime.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=35
-scope.0.semanticHash=cb1ec256b7a45c8c
-scope.1.id=function:_forward
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=16
-scope.1.semanticHash=76813260a1fdbdd6
-scope.2.id=function:host_runtime.name
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=15
-scope.2.semanticHash=7aaca51d4b37242b
-scope.3.id=function:host_runtime.enqueue_tip
-scope.3.kind=function
-scope.3.startLine=18
-scope.3.endLine=20
-scope.3.semanticHash=f1ce1850b7232305
-scope.4.id=function:host_runtime.schedule
-scope.4.kind=function
-scope.4.startLine=22
-scope.4.endLine=24
-scope.4.semanticHash=76740e20e15eeb17
-]]

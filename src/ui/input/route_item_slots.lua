@@ -33,32 +33,3 @@ end
 
 return intents
 
---[[ mutate4lua-manifest
-version=4
-projectHash=b0d2ec92cc82cb99
-scope.0.id=chunk:src/ui/input/route_item_slots.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=35
-scope.0.semanticHash=31bcec05532560d5
-scope.1.id=function:_slot_intent_builder
-scope.1.kind=function
-scope.1.startLine=11
-scope.1.endLine=19
-scope.1.semanticHash=862e7133f78cf1d7
-scope.2.id=function:<anonymous>
-scope.2.kind=function
-scope.2.startLine=12
-scope.2.endLine=18
-scope.2.semanticHash=e471a9766b2996a5
-scope.3.id=function:_screen_nodes
-scope.3.kind=function
-scope.3.startLine=21
-scope.3.endLine=23
-scope.3.semanticHash=6011834c2cba6e03
-scope.4.id=function:intents.build
-scope.4.kind=function
-scope.4.startLine=25
-scope.4.endLine=32
-scope.4.semanticHash=395482bd2f9e3804
-]]

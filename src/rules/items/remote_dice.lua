@@ -30,17 +30,3 @@ end
 
 return remote_dice
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f6db405ee6cab950
-scope.0.id=chunk:src/rules/items/remote_dice.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=32
-scope.0.semanticHash=a8674d25f0e45aba
-scope.1.id=function:remote_dice.apply
-scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=29
-scope.1.semanticHash=24733200861f462c
-]]

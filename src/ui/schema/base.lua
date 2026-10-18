@@ -44,12 +44,3 @@ local nodes = {
 
 return nodes
 
---[[ mutate4lua-manifest
-version=4
-projectHash=6d3539fb93ff8327
-scope.0.id=chunk:src/ui/schema/base.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=6245270560e7bf79
-]]

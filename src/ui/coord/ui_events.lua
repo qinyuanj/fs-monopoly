@@ -58,37 +58,3 @@ end
 
 return ui_events
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f718496fae24e8e2
-scope.0.id=chunk:src/ui/coord/ui_events.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=60
-scope.0.semanticHash=12acfa8bc95bb0c3
-scope.1.id=function:_collect_canvas_names
-scope.1.kind=function
-scope.1.startLine=3
-scope.1.endLine=12
-scope.1.semanticHash=5aca701b2619405f
-scope.2.id=function:_build_event_maps
-scope.2.kind=function
-scope.2.startLine=14
-scope.2.endLine=21
-scope.2.semanticHash=3ce5d2b5d17f79e9
-scope.3.id=function:ui_events.set_roles
-scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=36
-scope.3.semanticHash=a9d82726f0169db1
-scope.4.id=function:ui_events.send_to_all
-scope.4.kind=function
-scope.4.startLine=38
-scope.4.endLine=48
-scope.4.semanticHash=7ca347df0683b059
-scope.5.id=function:ui_events.send_to_role
-scope.5.kind=function
-scope.5.startLine=50
-scope.5.endLine=57
-scope.5.semanticHash=8293d8c76874aa00
-]]

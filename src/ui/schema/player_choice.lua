@@ -8,12 +8,3 @@ return {
   },
 }
 
---[[ mutate4lua-manifest
-version=4
-projectHash=75f297e5092a528f
-scope.0.id=chunk:src/ui/schema/player_choice.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=10
-scope.0.semanticHash=709ab17214b57711
-]]

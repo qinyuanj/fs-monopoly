@@ -54,32 +54,3 @@ end
 
 return role_avatar
 
---[[ mutate4lua-manifest
-version=4
-projectHash=119b72c83656d2e7
-scope.0.id=chunk:src/ui/view/role_avatar.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=56
-scope.0.semanticHash=2656fd7bcaef5896
-scope.1.id=function:_safe_tostring
-scope.1.kind=function
-scope.1.startLine=7
-scope.1.endLine=13
-scope.1.semanticHash=e148bc7a657ac92e
-scope.2.id=function:_warn_invalid_image_key
-scope.2.kind=function
-scope.2.startLine=15
-scope.2.endLine=24
-scope.2.semanticHash=54c92224a2b75318
-scope.3.id=function:role_avatar.sanitize_image_key
-scope.3.kind=function
-scope.3.startLine=26
-scope.3.endLine=42
-scope.3.semanticHash=f9df58d0811dd9a3
-scope.4.id=function:role_avatar.resolve_from_role
-scope.4.kind=function
-scope.4.startLine=44
-scope.4.endLine=53
-scope.4.semanticHash=6696ef39b04bc779
-]]

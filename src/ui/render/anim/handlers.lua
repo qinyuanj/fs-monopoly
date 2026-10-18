@@ -21,17 +21,3 @@ handlers.clear_overlay = units.clear_overlay
 
 return handlers
 
---[[ mutate4lua-manifest
-version=4
-projectHash=59a6d0934671c57c
-scope.0.id=chunk:src/ui/render/anim/handlers.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=23
-scope.0.semanticHash=0a865aabfef2f312
-scope.1.id=function:handlers.play_roll_dice_screen
-scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=8
-scope.1.semanticHash=4d00d79c24f7444b
-]]

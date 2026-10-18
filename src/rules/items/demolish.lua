@@ -54,37 +54,3 @@ end
 
 return demolish
 
---[[ mutate4lua-manifest
-version=4
-projectHash=a1c04671d71c7c34
-scope.0.id=chunk:src/rules/items/demolish.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=56
-scope.0.semanticHash=f84e76b38e90c1e4
-scope.1.id=function:_human_demolish_choice
-scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=15
-scope.1.semanticHash=dacb63b1c7bde03d
-scope.2.id=function:_consume_demolish_item
-scope.2.kind=function
-scope.2.startLine=17
-scope.2.endLine=22
-scope.2.semanticHash=cef2a4ce688ac3a7
-scope.3.id=function:_resolve_demolish_target
-scope.3.kind=function
-scope.3.startLine=24
-scope.3.endLine=32
-scope.3.semanticHash=967fb2f5888de7c3
-scope.4.id=function:_apply_demolish_target
-scope.4.kind=function
-scope.4.startLine=34
-scope.4.endLine=44
-scope.4.semanticHash=6920e0968d35e52c
-scope.5.id=function:demolish.use
-scope.5.kind=function
-scope.5.startLine=46
-scope.5.endLine=53
-scope.5.semanticHash=796634d4f47ecfbe
-]]

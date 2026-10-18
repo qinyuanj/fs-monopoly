@@ -53,22 +53,3 @@ end
 
 return land_component
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5a9809a790ff69fd
-scope.0.id=chunk:src/state/land_component.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=56
-scope.0.semanticHash=f8806a2a15ceee1e
-scope.1.id=function:_collect_unvisited
-scope.1.kind=function
-scope.1.startLine=18
-scope.1.endLine=25
-scope.1.semanticHash=5ecd611716ba4823
-scope.2.id=function:land_component.same_owner
-scope.2.kind=function
-scope.2.startLine=32
-scope.2.endLine=53
-scope.2.semanticHash=91502c6e277a6b6f
-]]

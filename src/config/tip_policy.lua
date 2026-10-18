@@ -36,12 +36,3 @@ M[event_kinds.turn_end] = { log = false }
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=1df6ea7896e2fe15
-scope.0.id=chunk:src/config/tip_policy.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=33
-scope.0.semanticHash=ed1541bc8ca54043
-]]

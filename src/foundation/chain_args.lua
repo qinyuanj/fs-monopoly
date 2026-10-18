@@ -39,27 +39,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=8a9fb4c60834b92a
-scope.0.id=chunk:src/foundation/chain_args.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=41
-scope.0.semanticHash=ae13a761953c9a2c
-scope.1.id=function:M.patch
-scope.1.kind=function
-scope.1.startLine=3
-scope.1.endLine=10
-scope.1.semanticHash=92470fe6fca908d3
-scope.2.id=function:_after_action_anim_table
-scope.2.kind=function
-scope.2.startLine=12
-scope.2.endLine=21
-scope.2.semanticHash=abf463ed46af8fe6
-scope.3.id=function:M.resolve_after_action_anim
-scope.3.kind=function
-scope.3.startLine=23
-scope.3.endLine=38
-scope.3.semanticHash=4a4755108108f241
-]]

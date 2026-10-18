@@ -8,12 +8,3 @@
 -- See docs/decisions.md ADR 0001.
 return {}
 
---[[ mutate4lua-manifest
-version=4
-projectHash=01f77cc88a3345b0
-scope.0.id=chunk:src/state/player_state.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=10
-scope.0.semanticHash=ed54941aaa6f3996
-]]

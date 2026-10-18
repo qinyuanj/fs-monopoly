@@ -26,27 +26,3 @@ resolver.resolve_turn_bound = resolver.resolve_from_event
 
 return resolver
 
---[[ mutate4lua-manifest
-version=4
-projectHash=9cfbe5ee56bc4174
-scope.0.id=chunk:src/ui/render/support/local_actor_resolver.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=28
-scope.0.semanticHash=5746470d5bb7230d
-scope.1.id=function:_resolve_role_id_from_event
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=8
-scope.1.semanticHash=c96449d4e2d135bb
-scope.2.id=function:_resolve_client_role_id
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=12
-scope.2.semanticHash=4cbc7bdc8226bca5
-scope.3.id=function:resolver.resolve_from_event
-scope.3.kind=function
-scope.3.startLine=17
-scope.3.endLine=23
-scope.3.semanticHash=e2cc5b066ce597dd
-]]

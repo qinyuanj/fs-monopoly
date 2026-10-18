@@ -54,37 +54,3 @@ end
 
 return M
 
---[[ mutate4lua-manifest
-version=4
-projectHash=539cf282408a1d8c
-scope.0.id=chunk:src/config/runtime_assets/synthetic.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=56
-scope.0.semanticHash=199d14b352cc869f
-scope.1.id=function:_synthetic_name
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=11
-scope.1.semanticHash=d5bf3e089af075c1
-scope.2.id=function:_synthetic_unit_key
-scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=19
-scope.2.semanticHash=69819807b1c344f7
-scope.3.id=function:_synthetic_avatar
-scope.3.kind=function
-scope.3.startLine=21
-scope.3.endLine=27
-scope.3.semanticHash=240ecee218669e75
-scope.4.id=function:M.synthetic_ai_profile
-scope.4.kind=function
-scope.4.startLine=29
-scope.4.endLine=43
-scope.4.semanticHash=dd34e37743fcec8b
-scope.5.id=function:M.synthetic_ai_unit_key_pool
-scope.5.kind=function
-scope.5.startLine=45
-scope.5.endLine=53
-scope.5.semanticHash=29eb6c1624875ab7
-]]

@@ -76,32 +76,3 @@ land_rules.execute_pay_tax = tax_rules.execute_pay_tax
 
 return land_rules
 
---[[ mutate4lua-manifest
-version=4
-projectHash=88ecab516c07a12e
-scope.0.id=chunk:src/rules/land/landing_rules.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=78
-scope.0.semanticHash=6edb4b004a202c00
-scope.1.id=function:_resolve_player_and_tile
-scope.1.kind=function
-scope.1.startLine=19
-scope.1.endLine=23
-scope.1.semanticHash=d474e977cad0c2c1
-scope.2.id=function:_resolve_owner
-scope.2.kind=function
-scope.2.startLine=25
-scope.2.endLine=30
-scope.2.semanticHash=a206cdbae2631fe9
-scope.3.id=function:land_rules.execute_strong_card
-scope.3.kind=function
-scope.3.startLine=32
-scope.3.endLine=60
-scope.3.semanticHash=bd3a820461194586
-scope.4.id=function:land_rules.execute_free_card
-scope.4.kind=function
-scope.4.startLine=62
-scope.4.endLine=71
-scope.4.semanticHash=d13f899e964ed2b0
-]]

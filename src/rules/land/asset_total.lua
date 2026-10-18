@@ -19,17 +19,3 @@ end
 
 return asset_total
 
---[[ mutate4lua-manifest
-version=4
-projectHash=e219b0b210b80d47
-scope.0.id=chunk:src/rules/land/asset_total.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=21
-scope.0.semanticHash=2e663a2fa1a49651
-scope.1.id=function:asset_total.player_total
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=18
-scope.1.semanticHash=51fa1d4a86724a01
-]]

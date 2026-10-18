@@ -35,22 +35,3 @@ end
 
 return intent_dispatcher
 
---[[ mutate4lua-manifest
-version=4
-projectHash=5c8c7a7c12ad5d1b
-scope.0.id=chunk:src/ui/input/intent_dispatcher.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=37
-scope.0.semanticHash=056495b64c8775da
-scope.1.id=function:_dispatch_game_action
-scope.1.kind=function
-scope.1.startLine=9
-scope.1.endLine=12
-scope.1.semanticHash=38adc075895a4bb4
-scope.2.id=function:intent_dispatcher.dispatch
-scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=34
-scope.2.semanticHash=4b276260ac54f0fc
-]]

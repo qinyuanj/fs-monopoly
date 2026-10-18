@@ -15,22 +15,3 @@ end
 
 return actor_context_ports
 
---[[ mutate4lua-manifest
-version=4
-projectHash=f9130564d94120f5
-scope.0.id=chunk:src/ui/ports/actor_context.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=17
-scope.0.semanticHash=0b273bec8e187db6
-scope.1.id=function:actor_context_ports.build
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=14
-scope.1.semanticHash=ba26ec36cfdb45c9
-scope.2.id=function:<anonymous>
-scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=12
-scope.2.semanticHash=f1ce1850b7232305
-]]

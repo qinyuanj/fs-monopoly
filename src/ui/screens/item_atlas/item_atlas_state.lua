@@ -44,37 +44,3 @@ end
 
 return atlas_state
 
---[[ mutate4lua-manifest
-version=4
-projectHash=47eb35be0225b9e4
-scope.0.id=chunk:src/ui/screens/item_atlas/item_atlas_state.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=9edc366fd7b56870
-scope.1.id=function:atlas_state.ensure
-scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=21
-scope.1.semanticHash=d801c9ed66c47684
-scope.2.id=function:atlas_state.clamp_page
-scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=29
-scope.2.semanticHash=f7b2fea0bf24d5db
-scope.3.id=function:atlas_state.item_at
-scope.3.kind=function
-scope.3.startLine=31
-scope.3.endLine=34
-scope.3.semanticHash=659abe4c7c82db24
-scope.4.id=function:atlas_state.catalog
-scope.4.kind=function
-scope.4.startLine=36
-scope.4.endLine=38
-scope.4.semanticHash=1136505bd37c301e
-scope.5.id=function:atlas_state.set_catalog
-scope.5.kind=function
-scope.5.startLine=40
-scope.5.endLine=43
-scope.5.semanticHash=b0df8632502e77dd
-]]

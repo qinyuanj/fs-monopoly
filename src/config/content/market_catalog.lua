@@ -56,27 +56,3 @@ end
 
 return market_catalog
 
---[[ mutate4lua-manifest
-version=4
-projectHash=a5354cef25e30d1a
-scope.0.id=chunk:src/config/content/market_catalog.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=1196283246bc7f16
-scope.1.id=function:_ensure_entries_by_id
-scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=35
-scope.1.semanticHash=e05a6a1f166810c3
-scope.2.id=function:market_catalog.entries
-scope.2.kind=function
-scope.2.startLine=37
-scope.2.endLine=39
-scope.2.semanticHash=1136505bd37c301e
-scope.3.id=function:market_catalog.entry_by_id
-scope.3.kind=function
-scope.3.startLine=41
-scope.3.endLine=43
-scope.3.semanticHash=4ef652f409460644
-]]
