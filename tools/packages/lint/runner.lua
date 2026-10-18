@@ -30,8 +30,8 @@ local function _help_text(command_name)
     "",
     "默认检查 src、test、tools。",
     "Default targets are src, test, and tools.",
-    "按需安装 luacheck 1.2.0-1 到项目 LuaRocks 5.4 tree；安装失败（网络）报 status=unavailable 退 3，不是检查结论。",
-    "Installs luacheck into the project LuaRocks tree; an install failure exits 3 (status=unavailable), not a lint verdict.",
+    "luacheck 从受控 Lua 环境（机器 LuaRocks 5.4 tree）装载；只核对不安装，口径不满足退 1 并打印安装命令。",
+    "luacheck loads from the controlled Lua environment (machine LuaRocks 5.4 tree); verified only, never installed.",
   }, "\n") .. "\n"
 end
 
@@ -76,8 +76,8 @@ local function _failure(message)
 end
 
 -- 跑一次 lint,不写终端:返回 { code, stdout, stderr },由 run 统一写出。
--- options.targets 已归一;options.ensure_luacheck_tree / options.run_command 是
--- 注入缝(默认取 foundation.bootstrap / foundation.proc),测试不必替换模块字段。
+-- options.targets 已归一;options.preflight / options.run_command 是
+-- 注入缝(默认取 foundation.lua_env / foundation.proc),测试不必替换模块字段。
 function M.execute(options)
   options = options or {}
   if not fs_lib.path_exists(CONFIG_PATH) then
@@ -92,21 +92,22 @@ function M.execute(options)
     return _failure(err)
   end
 
-  local ensure_luacheck_tree = options.ensure_luacheck_tree or require("foundation.bootstrap").ensure_luacheck_tree
-  local ensured, ensure_err, unavailable = ensure_luacheck_tree(REPO_ROOT)
-  -- luacheck 装不上(网络,#112)是环境不可用:退 3,不冒充 lint 失败。
-  if unavailable ~= nil then
-    local verdict = require("foundation.tool_availability").verdict(unavailable, "lint")
-    return { code = verdict.exit_code, stdout = "", stderr = verdict.message, status = verdict.status }
+  -- 受控 Lua 环境预检(#150):只核对机器 LuaRocks tree,不安装、不写入;
+  -- 不满足是真实失败(退 1),诊断里带可直接执行的安装命令。
+  local preflight = options.preflight or require("foundation.lua_env").preflight
+  local verified, preflight_err, info = preflight()
+  if not verified then
+    return _failure(preflight_err)
   end
-  if not ensured then
-    return _failure(ensure_err)
+  local roots = {}
+  for _, root in ipairs(info.roots) do
+    -- 单引号 + 正斜杠:与整条 -e 的原生 argv 定界不冲突。
+    roots[#roots + 1] = "'" .. path_lib.normalize_path(root) .. "'"
   end
   local command = {
     require("foundation.lua54").lua54_bin(),
-    "-e", "dofile('tools/foundation/bootstrap.lua').install('tools/cli.lua'); "
-      .. "assert(package.searchpath('luacheck.main',package.path):find('/.toolcache/luarocks/',1,true)); "
-      .. "require('luacheck.main')()",
+    "-e", "local e=dofile('tools/foundation/lua_env.lua'); "
+      .. "e.require_controlled('luacheck.main',{" .. table.concat(roots, ",") .. "})()",
     "--", "luacheck",
     "--config", "tools/packages/lint/.luacheckrc",
     "-j", "1",

@@ -3,37 +3,43 @@ if arg then rawset(arg, 0, "tools/packages/lint/test/test_lint_runner.lua") end
 require("test.bootstrap").install_package_paths()
 
 local check = require("luassert")
-local availability = require("foundation.tool_availability")
 local runner = require("packages.lint.runner")
 
--- 经注入缝替换 luacheck 自举跑一次 lint;自举失败时 luacheck 不得被拉起。
-local function _execute_with_luacheck_bootstrap(ensure)
-  return runner.execute({
+local ROOT = "C:\\Users\\dev\\AppData\\Roaming\\luarocks"
+
+describe("lint runner controlled lua environment", function()
+
+-- 预检失败:luacheck 不得被拉起,诊断原样透出(含安装命令),退 1 而非 3。
+it("preflight failure is a real failure and never launches luacheck", function()
+  local message = "受控 Lua 环境不满足本仓口径\n  luarocks --lua-version 5.4 install luacheck 1.2.0-1"
+  local result = runner.execute({
     targets = { "tools/packages/lint" },
-    ensure_luacheck_tree = ensure,
-    run_command = function() error("luacheck must not run when its bootstrap failed") end,
+    preflight = function() return nil, message end,
+    run_command = function() error("luacheck must not run when preflight failed") end,
   })
-end
-
-describe("lint runner bootstrap", function()
-
--- #112:luacheck 装不上(网络)是不可用,不是 lint 失败——退 3,诊断点名工具与步骤。
-it("luacheck install network failure reports unavailable", function()
-  local result = _execute_with_luacheck_bootstrap(function()
-    local detail = "luarocks install failed for luacheck: Error: Failed downloading luacheck"
-    return nil, detail, availability.unavailable("luacheck", "install", detail)
-  end)
-  check.equal(3, result.code)
+  check.equal(1, result.code)
   check.equal("", result.stdout)
-  check.matches("[lint] status=unavailable tool=luacheck step=install", result.stderr, 1, true)
-  check.matches("未运行", result.stderr, 1, true)
-  check.matches("Failed downloading luacheck", result.stderr, 1, true)
+  check.equal(message .. "\n", result.stderr)
 end)
 
-it("non network bootstrap failure stays a real failure", function()
-  local result = _execute_with_luacheck_bootstrap(function() return nil, "mkdir failed" end)
-  check.equal(1, result.code)
-  check.equal("mkdir failed\n", result.stderr)
+-- 预检通过:luacheck 经受控 Lua 环境装载器拉起,不再引用项目缓存。
+it("preflight success loads luacheck through the controlled environment", function()
+  local seen
+  local result = runner.execute({
+    targets = { "tools/packages/lint" },
+    preflight = function() return true, nil, { roots = { ROOT } } end,
+    run_command = function(command)
+      seen = command
+      return { ok = true, output = "Total: 0 warnings\n" }
+    end,
+  })
+  check.equal(0, result.code)
+  local joined = table.concat(seen, " ")
+  check.matches("lua_env.lua", joined, 1, true)
+  check.matches("require_controlled('luacheck.main'", joined, 1, true)
+  check.matches("'C:/Users/dev/AppData/Roaming/luarocks'", joined, 1, true)
+  check.is_nil(joined:find(".toolcache", 1, true), joined)
+  check.is_nil(joined:find("bootstrap", 1, true), joined)
 end)
 
 end)
