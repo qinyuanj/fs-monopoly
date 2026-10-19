@@ -3,6 +3,26 @@ local runtime_state = require("src.ui.state.runtime")
 
 local lock_policy = {}
 
+-- 角色名册也含观战者；只有局内匹配玩家明确淘汰时，才放弃其单位句柄。
+local function _is_eliminated(state, role_id)
+  local players = state.game and state.game.players or {}
+  for _, player in ipairs(players) do
+    if role_id_utils.equals(player.id, role_id) and player.eliminated == true then
+      return true
+    end
+  end
+  return false
+end
+
+local function _discard_eliminated_locks(state, lock_state)
+  for role_id in pairs(lock_state.by_role) do
+    if _is_eliminated(state, role_id) then
+      -- 破产已销毁单位，不能经释放锁路径回读或移除 Buff。
+      lock_state.by_role[role_id] = nil
+    end
+  end
+end
+
 local function _resolve_lock_state(state)
   local lock_state = state.role_control_lock
   if lock_state then
@@ -147,7 +167,7 @@ local function _sync_role_callback(role)
     return
   end
   local role_id = role_id_utils.normalize(_sync_runtime.resolve_role_id(role) or tostring(role))
-  if role_id == nil then
+  if role_id == nil or _is_eliminated(_sync_state, role_id) then
     return
   end
   _sync_seen_roles[role_id] = true
@@ -178,6 +198,7 @@ function lock_policy.sync(state, enabled, deps)
   _assert_sync_args(state, deps)
   local runtime = deps.runtime
   local lock_state = _resolve_lock_state(state)
+  _discard_eliminated_locks(state, lock_state)
   local exempt_by_role = state.role_control_lock_exempt_by_role or {}
   local buff_id = _resolve_buff_id()
   if not buff_id then

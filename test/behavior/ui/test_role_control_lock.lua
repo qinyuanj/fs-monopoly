@@ -8,6 +8,9 @@ local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
 local role_control_lock_policy = require("src.ui.input.role_control_lock")
+local bankruptcy = require("src.rules.endgame.bankruptcy")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local default_ports = require("src.host.default_ports")
 
 local function _with_buff_enums(buff_id, fn)
   local original = _G.Enums
@@ -28,7 +31,107 @@ local function _single_role_runtime(unit, role_id)
   }
 end
 
+-- 宿主边界替身：销毁后仍保留非 nil 句柄，Buff API 只记录错误并返回 nil。
+local function _host_unit(initial_count)
+  local unit = { count = initial_count or 0, dead = false, destroyed = false, invalid_buff_calls = {} }
+  local function usable(op)
+    if unit.destroyed then
+      unit.invalid_buff_calls[#unit.invalid_buff_calls + 1] = op
+      return false
+    end
+    return true
+  end
+  unit.get_state_count = function()
+    if usable("get_state_count") then return unit.count end
+    return nil
+  end
+  unit.add_state = function()
+    if usable("add_state") then unit.count = unit.count + 1 end
+  end
+  unit.remove_state = function()
+    if usable("remove_state") then unit.count = unit.count - 1 end
+  end
+  unit.die = function() unit.dead = true end
+  unit.is_die_status = function() return unit.dead end
+  return unit
+end
+
+local function _with_bankruptcy_roles(fn)
+  local game = support.new_game({ players = { "P1", "P2" } })
+  local lost, live, spectator = _host_unit(), _host_unit(), _host_unit(1)
+  local current = lost
+  local lost_role = { id = game.players[1].id, get_ctrl_unit = function() return current end }
+  local roles = {
+    lost_role,
+    { id = game.players[2].id, get_ctrl_unit = function() return live end },
+    { id = "spectator", get_ctrl_unit = function() return spectator end },
+  }
+  local api = { destroy_unit = function(unit) unit.destroyed = true end }
+  local context = { roles = roles, env = { GameAPI = api } }
+  local runtime = {
+    for_each_role_or_global = function(callback)
+      for _, role in ipairs(roles) do callback(role) end
+    end,
+    resolve_role_id = function(role) return tostring(role.id) end,
+  }
+  local state = { game = game }
+  local function eliminate()
+    bankruptcy.eliminate(game, game.players[1])
+    luassert.is_true(game.players[1].eliminated)
+    luassert.is_true(lost.destroyed, "the real host death adapter must destroy the unit")
+    luassert.are.equal(lost, lost_role.get_ctrl_unit(), "the host role retains its dead handle")
+  end
+  local ok, err = pcall(function()
+    support.with_patches({ { key = "GameAPI", value = api } }, function()
+      runtime_ports.configure(default_ports.build({ current = function() return context end }))
+      _with_buff_enums(70, function()
+        fn(state, { runtime = runtime }, eliminate, lost, live, spectator, roles,
+          function(unit) current = unit end)
+      end)
+    end)
+  end)
+  support.restore_runtime_services()
+  if not ok then error(err, 0) end
+end
+
 describe("TestRoleControlLock", function()
+
+it("bankruptcy leaves a retained dead role untouched while live roles keep lock ownership", function()
+  _with_bankruptcy_roles(function(state, deps, eliminate, lost, live, spectator)
+    eliminate()
+    role_control_lock_policy.sync(state, true, deps)
+    role_control_lock_policy.sync(state, true, deps)
+    luassert.are.same({}, lost.invalid_buff_calls)
+    luassert.are.equal(1, live.count)
+    luassert.are.equal(1, spectator.count)
+    role_control_lock_policy.sync(state, false, deps)
+    luassert.are.equal(0, live.count, "release our live lock")
+    luassert.are.equal(1, spectator.count, "preserve the spectator's externally owned lock")
+  end)
+end)
+
+for _, cleanup in ipairs({ "retained", "disable", "unseen", "swap", "exempt" }) do
+  it("bankruptcy discards an owned dead lock safely during " .. cleanup, function()
+    _with_bankruptcy_roles(function(state, deps, eliminate, lost, live, spectator, roles, swap)
+      role_control_lock_policy.sync(state, true, deps)
+      luassert.are.equal(1, lost.count, "acquire ownership through public sync before bankruptcy")
+      eliminate()
+      local replacement = _host_unit()
+      if cleanup == "unseen" then table.remove(roles, 1) end
+      if cleanup == "swap" then swap(replacement) end
+      if cleanup == "exempt" then
+        state.role_control_lock_exempt_by_role = { [state.game.players[1].id] = true }
+      end
+      role_control_lock_policy.sync(state, cleanup ~= "disable", deps)
+      luassert.are.same({}, lost.invalid_buff_calls, "never query or remove buffs on the destroyed unit")
+      luassert.are.equal(0, replacement.count, "an eliminated role cannot acquire a replacement lock")
+      role_control_lock_policy.sync(state, false, deps)
+      luassert.are.same({}, lost.invalid_buff_calls, "later disable must not revisit a cached dead lock")
+      luassert.are.equal(0, live.count)
+      luassert.are.equal(1, spectator.count)
+    end)
+  end)
+end
 
 it("test__sync_falls_back_to_tostring_role_id_when_resolve_fails", function()
   -- kills L149 `resolve_role_id(role) or tostring(role)` -> `or nil`:
