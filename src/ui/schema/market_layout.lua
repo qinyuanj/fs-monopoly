@@ -21,6 +21,14 @@ local market_layout = {
   cash_shadow = "黑市_现金显示底框投影",
   countdown = "黑市_倒计时",
   countdown_line = "黑市_倒计时横线",
+  -- #178 点背景关闭:背景随黑市开关切换触摸;叠在背景/关闭按钮上的
+  -- 纯展示节点一律关闭触摸,点击落到下方背景或按钮。
+  background = "黑市_背景矩形",
+  passthrough_nodes = {
+    "黑市_关闭黑市文本",
+    "黑市_关闭黑市文本提示",
+    "黑市_关闭黑市按钮底图",
+  },
   item_buttons = {},
   item_labels = {},
   item_frames = {},

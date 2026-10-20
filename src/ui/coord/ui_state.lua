@@ -31,6 +31,7 @@ function M.build_ui_state()
     root = bankruptcy_nodes.canvas,
     text = bankruptcy_nodes.text,
     avatar = bankruptcy_nodes.avatar,
+    close_hint = bankruptcy_nodes.close_hint,
   }
   local auto_control_nodes = { base_nodes.auto_button, base_nodes.auto_label }
   local canvas_state = {

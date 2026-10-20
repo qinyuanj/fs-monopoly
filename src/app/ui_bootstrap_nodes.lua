@@ -4,6 +4,9 @@ local player_choice_nodes = require("src.ui.schema.player_choice")
 local target_choice_nodes = require("src.ui.schema.target_choice")
 local remote_choice_nodes = require("src.ui.schema.remote_choice")
 local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
+local market_nodes = require("src.ui.schema.market")
+local skin_nodes = require("src.ui.schema.skin")
+local item_atlas_nodes = require("src.ui.schema.item_atlas")
 
 local bootstrap_nodes = {}
 
@@ -20,6 +23,10 @@ local function _required_click_nodes()
     target_choice_nodes.cancel,
     secondary_confirm_nodes.confirm,
     secondary_confirm_nodes.cancel,
+    -- #178 点背景关闭:背景节点改名/缺失会让点背景关闭静默失效,开局 fail-fast。
+    market_nodes.background,
+    skin_nodes.activity_background,
+    item_atlas_nodes.background,
   }
   return required
 end

@@ -27,6 +27,17 @@ local function _set_enlarged_overlay_visible(ui, visible)
   end
   if ui.set_touch_enabled then
     ui:set_touch_enabled(nodes.close_blank, visible == true)
+    -- #178:放大态下背景不接点击,点空白只收起放大卡(逐层退出)。
+    ui:set_touch_enabled(nodes.background, visible ~= true)
+  end
+end
+
+local function _disable_passthrough_touch(ui)
+  if not ui.set_touch_enabled then
+    return
+  end
+  for _, node_name in ipairs(nodes.passthrough_nodes) do
+    ui:set_touch_enabled(node_name, false)
   end
 end
 
@@ -97,6 +108,7 @@ function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   end
 
   _refresh_page_arrows(ui, page_index, number_utils.page_count(#catalog, PAGE_SIZE))
+  _disable_passthrough_touch(ui)
 end
 
 local function _apply_enlarged_texture(runtime, image_key)

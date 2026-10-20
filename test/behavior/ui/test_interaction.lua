@@ -635,6 +635,54 @@ it("test_ui_event_router_injects_actor_for_market_confirm_and_cancel", function(
   _assert_eq(captured[2] and captured[2].actor_role_id, 3, "market_close should inject actor_role_id")
 end)
 
+it("test_ui_event_router_market_background_click_equals_close_click_for_operator_and_spectator", function()
+  -- #178 点背景关闭:操作者与旁观者点黑市背景,派发的意图(含 actor)与点关闭按钮逐字段一致,
+  -- 权限由回合层对同一 choice_cancel 的同一校验裁定。
+  local market_nodes = require("src.ui.schema.market")
+  local node_map = {
+    [market_nodes.close] = _new_listenable_node(),
+    [market_nodes.background] = _new_listenable_node(),
+  }
+  local captured
+
+  _with_patches(_router_env_patches(node_map), function()
+    local state
+    state, captured = _make_dispatch_state({
+      ui_model = {
+        current_player_id = "3",
+        choice = {
+          id = 12,
+          kind = "market_buy",
+          route_key = "market",
+          allow_cancel = true,
+          options = { { id = 34, label = "X" } },
+        },
+        market = {
+          choice_id = 12,
+          options = { { id = 34, label = "X" } },
+        },
+      },
+    })
+    _bind_ui_runtime(state)
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    local operator = { get_roleid = function() return 3 end }
+    local spectator = { get_roleid = function() return 4 end }
+    node_map[market_nodes.close]._listener_cb({ role = operator })
+    node_map[market_nodes.background]._listener_cb({ role = operator })
+    node_map[market_nodes.close]._listener_cb({ role = spectator })
+    node_map[market_nodes.background]._listener_cb({ role = spectator })
+  end)
+
+  _assert_eq(#captured, 4, "every close/background click must reach the dispatcher")
+  _assert_eq(captured[1].type, "choice_cancel", "operator close dispatches choice_cancel")
+  _assert_eq(captured[1].actor_role_id, 3, "operator close carries operator actor")
+  luassert.same(captured[1], captured[2], "operator background click must equal operator close click")
+  _assert_eq(captured[3].actor_role_id, 4, "spectator close carries spectator actor")
+  luassert.same(captured[3], captured[4], "spectator background click must equal spectator close click")
+end)
+
 it("test_ui_event_router_optional_end_button_blocked_when_choice_modal_open", function()
   local base_nodes = require("src.ui.schema.base")
   local modal = require("src.ui.coord.modal")

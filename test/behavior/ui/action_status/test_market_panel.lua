@@ -926,6 +926,27 @@ describe("TestMarketPanel", function()
       "market countdown line must stay dark while the market is inactive")
   end)
 
+  it("test_29_market_open_enables_background_touch_and_passes_through_close_texts", function()
+    -- #178 点背景关闭:黑市打开时背景可点;"关闭"文字、提示文字与关闭按钮底图关闭触摸,
+    -- 点击落到下方背景或按钮;购买项与关闭按钮照常可点。关屏后背景触摸收回。
+    local entry_a, entry_b = _first_two_market_entries()
+    local state, _, _, touch = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    _bind_ui_runtime(state)
+
+    _refresh_two_entry_market(state, 7, entry_a, entry_b, nil)
+
+    _assert_eq(touch["黑市_背景矩形"], true, "market background must accept touch while open")
+    for _, name in ipairs({ "黑市_关闭黑市文本", "黑市_关闭黑市文本提示", "黑市_关闭黑市按钮底图" }) do
+      _assert_eq(touch[name], false, name .. " must not swallow touch")
+    end
+    _assert_eq(touch[market_layout.item_buttons[1]], true, "item buttons above background stay clickable")
+    _assert_eq(touch[market_layout.cancel_button], true, "close button stays clickable")
+
+    market_view.close_market_panel(state)
+
+    _assert_eq(touch["黑市_背景矩形"], false, "market background touch must be withdrawn after close")
+  end)
+
   it("test_28_market_close_hides_countdown_nodes", function()
     local state, visible, labels = _build_market_state({})
     _bind_ui_runtime(state)

@@ -115,6 +115,35 @@ it("test_cancel_and_close_both_call_choice_cancel_intent_with_market_close", fun
   _assert_eq(cancel_calls[2], "market_close", "reason 'market_close' literal stable across both")
 end)
 
+-- #178 点背景关闭:黑市背景与黑市关闭按钮产出同一取消意图,不允许取消时同为 nil。
+it("test_background_click_builds_same_cancel_intent_as_close_button", function()
+  local function _intents_for(allow_cancel)
+    local model = {
+      choice = { id = 12, kind = "market_buy", allow_cancel = allow_cancel, options = {} },
+      market = { choice_id = 12, options = {} },
+    }
+    local background, close
+    _with_patches({
+      { target = runtime_state, key = "get_ui_model", value = function() return model end },
+    }, function()
+      local specs = market_route.build_route_specs({})
+      local background_spec = _find_spec(specs, "黑市_背景矩形")
+      luassert.is_not_nil(background_spec, "market background must be routed")
+      background = background_spec.build_intent()
+      close = _find_spec(specs, "黑市_关闭").build_intent()
+    end)
+    return background, close
+  end
+
+  local background, close = _intents_for(true)
+  luassert.same({ type = "choice_cancel", choice_id = 12 }, close, "close button cancels the market choice")
+  luassert.same(close, background, "background click must equal close button intent")
+
+  local blocked_background, blocked_close = _intents_for(false)
+  _assert_eq(blocked_close, nil, "close yields nothing when cancel is not allowed")
+  _assert_eq(blocked_background, nil, "background yields nothing when cancel is not allowed")
+end)
+
 -- Targets architect-listed L40 _resolve_market check + L75 "market_page_next" literal capture.
 it("test_page_prev intent: nil market → nil", function()
   _with_patches({

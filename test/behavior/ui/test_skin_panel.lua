@@ -709,6 +709,22 @@ it("test_shows_action_buttons_and_card_frames_only_for_occupied_slots", function
     "empty slot frame should be hidden")
 end)
 
+it("test_open_render_enables_background_touch_and_passes_through_close_texts", function()
+  -- #178 点背景关闭:背景可点,"关闭"文字与提示文字关闭触摸;关闭按钮与卡牌照常可点。
+  local state, calls = _make_render_state()
+  skin_panel_view.refresh_slots(state, _make_catalog(3))
+  _assert_eq(_find_call(calls, "set_touch_enabled", "皮肤商店-活动背景"), true,
+    "skin shop background must accept touch")
+  _assert_eq(_find_call(calls, "set_touch_enabled", "皮肤_关闭皮肤文本"), false,
+    "close text must not swallow touch")
+  _assert_eq(_find_call(calls, "set_touch_enabled", "皮肤_关闭皮肤文本提示"), false,
+    "click-background hint must not swallow touch")
+  _assert_eq(_find_call(calls, "set_touch_enabled", skin_nodes.close_button), true,
+    "close button stays clickable")
+  _assert_eq(_find_call(calls, "set_touch_enabled", skin_nodes.card_images[1]), true,
+    "occupied card stays clickable")
+end)
+
 it("test_price_icon_visible_for_purchase_skin_hidden_for_gift_skin", function()
   local catalog = _make_rich_catalog()
   local state, calls = _make_render_state()
@@ -1342,6 +1358,22 @@ it("test_build_route_specs_pins_close_and_equip_actions", function()
   luassert.truthy(equip_intent ~= nil, "card image should be routed")
   luassert.truthy(equip_intent.action.type == "equip", "card intent action type should be equip")
   luassert.truthy(equip_intent.action.slot_index == 1, "card intent slot index should pass through")
+end)
+
+it("test_background_click_routes_same_intent_as_close_button", function()
+  -- #178 点背景关闭:皮肤商店背景与关闭按钮产出同一面板动作意图。
+  local specs = skin_panel.build_route_specs(_make_state())
+  local close_intent, background_intent = nil, nil
+  for _, spec in ipairs(specs) do
+    if spec.name == "皮肤商店-关闭" then
+      close_intent = spec.build_intent()
+    end
+    if spec.name == "皮肤商店-活动背景" then
+      background_intent = spec.build_intent()
+    end
+  end
+  luassert.same({ type = "skin_panel_action", action = "close" }, close_intent, "close button intent")
+  luassert.same(close_intent, background_intent, "background click must equal close button intent")
 end)
 
 it("test_notification_payloads_pin_source_blocking_and_unknown_action_key", function()

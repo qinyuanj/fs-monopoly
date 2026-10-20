@@ -12,6 +12,8 @@ local _resolve_runtime = panel_runtime.resolve
 
 local function _refresh_static_nodes(ui)
   ui_controls.set_controls_state(ui, nodes.static_visual_nodes, { visible = true, touch_enabled = false })
+  ui_controls.set_control_state(ui, nodes.activity_background, { visible = true, touch_enabled = true })
+  ui_controls.set_controls_state(ui, nodes.passthrough_nodes, { touch_enabled = false })
   ui_controls.set_control_state(ui, nodes.close_button, { visible = true, touch_enabled = true })
 end
 
