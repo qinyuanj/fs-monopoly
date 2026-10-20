@@ -625,7 +625,8 @@ it("test_canvas_intents_cover_remote_target_and_market_paths", function()
   _assert_eq(market_item_specs[1].build_intent().type, "market_select", "market item should build selection intent")
   _assert_eq(market_control_specs[1].build_intent().type, "market_confirm", "market confirm should use selected option")
   _assert_eq(market_control_specs[2].build_intent().type, "choice_cancel", "market cancel should map to choice cancel")
-  _assert_eq(#market_control_specs, 6, "market controls should expose item-only entries")
+  -- #178:黑市背景(点背景关闭)作为第 7 个控件入口。
+  _assert_eq(#market_control_specs, 7, "market controls should expose item-only entries plus background close")
 end)
 
 it("test_target_slot_taps_always_commit_choice_select_for_the_tapped_option", function()

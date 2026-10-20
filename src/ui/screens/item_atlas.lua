@@ -20,6 +20,8 @@ function item_atlas.build_route_specs(_state)
   local specs = {}
   _append(specs, item_atlas_nodes.close_button, "close")
   _append(specs, item_atlas_nodes.close_blank, "dismiss")
+  -- #178 点背景关闭:与关闭按钮同一动作。
+  _append(specs, item_atlas_nodes.background, "close")
   _append(specs, item_atlas_nodes.page_prev, "prev")
   _append(specs, item_atlas_nodes.page_next, "next")
   for slot_index, name in ipairs(item_atlas_nodes.card_images) do

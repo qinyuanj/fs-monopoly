@@ -372,6 +372,31 @@ it("test_bankruptcy_show_marks_root_visible", function()
     "bankruptcy root must be visible after show")
 end)
 
+it("test_bankruptcy_show_hides_click_background_hint", function()
+  -- #178:破产屏不做点背景关闭,只靠约 2 秒自动关闭;"点击背景关闭"提示必须隐藏。
+  local popup_controller = require("src.ui.coord.popup")
+  local state, nodes, query_nodes = _build_popup_view_state({
+    ["Empty"] = "EMPTY",
+  }, {
+    set_texture_keep_size = function() end,
+  })
+  nodes["破产_关闭破产文本提示"] = { visible = true }
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn) fn(nil) end },
+  }, function()
+    popup_controller.show_popup(state, {
+      kind = "bankruptcy",
+      text = "破产测试",
+    })
+  end)
+
+  _assert_eq(nodes["破产_关闭破产文本提示"].visible, false,
+    "bankruptcy click-background hint must be hidden on show")
+end)
+
 it("test_resolve_bankruptcy_text_prefers_payload_text", function()
   local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({

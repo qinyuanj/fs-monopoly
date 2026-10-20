@@ -15,11 +15,17 @@ local nodes = {
   action_buttons = {},
 }
 
+-- activity_background 不在此表:#178 点背景关闭要求它可点,由渲染单独开触摸。
 nodes.static_visual_nodes = {
-  nodes.activity_background,
   nodes.title_label,
   nodes.panel_frames[1],
   nodes.panel_frames[2],
+}
+
+-- #178:叠在背景/关闭按钮上的纯展示文字,运行时关闭触摸让点击穿透。
+nodes.passthrough_nodes = {
+  "皮肤_关闭皮肤文本",
+  "皮肤_关闭皮肤文本提示",
 }
 
 for i = 1, nodes.page_size do

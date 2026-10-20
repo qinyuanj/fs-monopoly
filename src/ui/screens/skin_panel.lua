@@ -31,6 +31,8 @@ end
 function skin_panel.build_route_specs(_state)
   local specs = {}
   _append(specs, skin_nodes.close_button, "close")
+  -- #178 点背景关闭:与关闭按钮同一面板动作。
+  _append(specs, skin_nodes.activity_background, "close")
   for slot_index, name in ipairs(skin_nodes.action_buttons) do
     _append_action_button(specs, name, slot_index)
   end
