@@ -134,6 +134,67 @@ it("test_resolves_owner_automation_from_the_player_control_snapshot", function()
   luassert.is.equal(false, gate.expects_ui, "AI owner should not expect served choice UI")
 end)
 
+it("test_model_and_choice_restore_install_current_control_versions", function()
+  local model_sync = require("src.ui.ports.ui_sync")._model
+  _with_client_and_seats(1, function()
+    local game = support.new_game({ ai = {} })
+    local state = _make_state({ ui = { item_slots = { 1, 2, 3, 4, 5 } } })
+    local player = game.players[1]
+    local initial_model = model_sync.build_model(state, game)
+    local direct = game.player_control_snapshots
+    luassert.is_false(initial_model.delegated_by_player[1])
+    local repeated_model = model_sync.build_model(state, game)
+    luassert.is_false(repeated_model.delegated_by_player[1])
+    luassert.equal(direct, game.player_control_snapshots)
+
+    control.enable_afk_delegation(player)
+    local choice = _make_choice("target", 1)
+    luassert.is_false(model_sync.reopen_choice_modal_if_needed(game, state, choice),
+      "a newly delegated owner must not reopen a human choice screen")
+    local afk = game.player_control_snapshots
+    luassert.not_equal(direct, afk)
+    luassert.is_true(afk[1].is_delegated)
+    luassert.is_false(model_sync.reopen_choice_modal_if_needed(game, state, choice))
+    luassert.equal(afk, game.player_control_snapshots)
+    luassert.is_true(model_sync.build_model(state, game).delegated_by_player[1])
+    luassert.equal(afk, game.player_control_snapshots)
+
+    control.toggle_manual_delegation(player)
+    local restored_model = model_sync.build_model(state, game)
+    luassert.is_false(restored_model.delegated_by_player[1])
+    luassert.not_equal(afk, game.player_control_snapshots)
+    luassert.is_false(direct[1].is_delegated)
+    luassert.is_true(afk[1].is_delegated)
+  end)
+end)
+
+it("test_restored_direct_owner_reopens_choice_using_a_new_snapshot", function()
+  local model_sync = require("src.ui.ports.ui_sync")._model
+  _with_client_and_seats(1, function()
+    local game = support.new_game({ ai = {} })
+    local state, nodes, query = support.build_choice_modal_state()
+    local player = game.players[1]
+    local choice = {
+      id = 184, kind = "landing_optional_effect", route_key = "secondary_confirm",
+      owner_role_id = 1, options = { { id = "confirm", label = "确认" } },
+    }
+    game.turn.phase, game.turn.pending_choice = "wait_choice", choice
+    control.toggle_manual_delegation(player)
+    local delegated = player_control_snapshot.install(game)
+    control.toggle_manual_delegation(player)
+    support.with_patches({
+      { key = "UIManager", value = { query_nodes_by_name = query } },
+    }, function()
+      luassert.is_true(model_sync.reopen_choice_modal_if_needed(game, state, choice))
+    end)
+    luassert.is_true(state.ui.choice_active)
+    luassert.is_true(nodes["通用二次确认屏"].visible)
+    luassert.not_equal(delegated, game.player_control_snapshots)
+    luassert.is_false(player_control_snapshot.find(game, 1).is_delegated)
+    luassert.is_true(delegated[1].is_delegated)
+  end)
+end)
+
 it("test_falls_back_to_players_when_find_player_by_id_is_unavailable", function()
   local game = _make_game({
     players = { _make_player(2, { delegated = true }) },
