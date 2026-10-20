@@ -94,10 +94,10 @@ describe("TestSkinSchemaContract", function()
 
   it("test_static_visual_nodes_reference_existing_frames", function()
     -- 杀 L21 的 panel_frames[1] -> panel_frames[0]:静态可见节点表不得出现 nil 条目。
-    _assert_eq(skin_nodes.static_visual_nodes[3], skin_nodes.panel_frames[1],
-      "static visual node 3 should be the first panel frame")
-    _assert_eq(skin_nodes.static_visual_nodes[4], skin_nodes.panel_frames[2],
-      "static visual node 4 should be the second panel frame")
+    _assert_eq(skin_nodes.static_visual_nodes[2], skin_nodes.panel_frames[1],
+      "static visual node 2 should be the first panel frame")
+    _assert_eq(skin_nodes.static_visual_nodes[3], skin_nodes.panel_frames[2],
+      "static visual node 3 should be the second panel frame")
   end)
 
   it("test_card_slot_tables_start_at_index_one", function()

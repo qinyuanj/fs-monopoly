@@ -166,6 +166,26 @@ it("test_owner_refresh_uses_the_state_presentation_runtime", function()
   luassert.truthy(refresh_role == role, "owner refresh should run under the provided presentation runtime")
 end)
 
+it("test_open_disables_passthrough_touch_on_the_open_path_itself", function()
+  -- #176 review:passthrough 文字(关闭文字/提示文字)的关触摸不得只依赖
+  -- refresh_page 内部顺手做;open 是公共接缝,开屏路径自身就必须把它们关掉。
+  -- 用不存在的 role_id 走全局 fallback 分支,refresh_page 不执行仍能观测开屏调用。
+  local s, calls = _make_render_state()
+  _with_patches({
+    { target = runtime_ports, key = "resolve_role", value = function()
+      return nil
+    end },
+  }, function()
+    item_atlas.open(s, 99)
+  end)
+  luassert.equal(true, _find_call(calls, "set_touch_enabled", item_atlas_nodes.background),
+    "open path must arm background touch for click-background close")
+  for _, node_name in ipairs(item_atlas_nodes.passthrough_nodes) do
+    luassert.equal(false, _find_call(calls, "set_touch_enabled", node_name),
+      "open path must disable passthrough touch for " .. node_name)
+  end
+end)
+
 it("test_marks_atlas_closed_after_close", function()
   local s = _make_state()
   item_atlas.open(s, 1)
@@ -296,6 +316,39 @@ it("test_select_and_reselect_refresh_enlarged_card_visibility", function()
     "reselecting the selected item should hide the close layer")
   luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.close_blank) == false,
     "reselecting the selected item should disable the close layer")
+end)
+
+it("test_background_click_closes_atlas_but_enlarged_state_backs_out_one_layer", function()
+  -- #178 点背景关闭:图鉴背景与"关闭"同一动作;放大态下背景触摸关闭,
+  -- 点空白先收起放大卡,收起后背景重新可点。
+  item_atlas.configure_catalog_for_tests(_make_catalog(8))
+  local s, calls = _make_render_state()
+  s.runtime_asset_context = { refs = { images = { item_2 = "tex_item_2" } } }
+  s.presentation_runtime = { runtime = _stub_runtime() }
+
+  local intents = {}
+  for _, spec in ipairs(item_atlas.build_route_specs(s)) do
+    intents[spec.name] = spec.build_intent()
+  end
+  luassert.same({ type = "item_atlas_action", action = "close" }, intents["图鉴_关闭图鉴"], "close button intent")
+  luassert.same(intents["图鉴_关闭图鉴"], intents["图鉴-背景"], "background click must equal close button intent")
+
+  item_atlas.open(s, 1)
+  luassert.equal(true, _find_call(calls, "set_touch_enabled", "图鉴-背景"), "background touchable once atlas opens")
+  luassert.equal(false, _find_call(calls, "set_touch_enabled", "图鉴_关闭图鉴文本"), "close text passes touch through")
+  luassert.equal(false, _find_call(calls, "set_touch_enabled", "图鉴_关闭图鉴文本提示"), "hint text passes touch through")
+  luassert.equal(true, _find_call(calls, "set_touch_enabled", item_atlas_nodes.card_images[1]), "cards stay clickable")
+
+  item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
+  luassert.equal(false, _find_call(calls, "set_touch_enabled", "图鉴-背景"), "enlarged state withdraws background touch")
+  luassert.equal(true, _find_call(calls, "set_touch_enabled", item_atlas_nodes.close_blank), "blank layer collapses the card")
+
+  item_atlas.handle_action(s, intents[item_atlas_nodes.close_blank].action, 1)
+  luassert.equal(true, s.ui.item_atlas.open, "tapping blank only collapses the enlarged card")
+  luassert.equal(true, _find_call(calls, "set_touch_enabled", "图鉴-背景"), "background touchable again after collapse")
+
+  item_atlas.handle_action(s, intents["图鉴-背景"].action, 1)
+  luassert.equal(false, s.ui.item_atlas.open, "background click then closes the atlas")
 end)
 
 it("test_page_next_advances_page_when_multiple_pages_exist", function()

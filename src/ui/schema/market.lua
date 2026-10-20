@@ -3,6 +3,8 @@ local nodes = {
   confirm = "黑市_购买按钮",
   cancel = "黑市_取消按钮",
   close = "黑市_关闭",
+  -- #178 点背景关闭:等同 close。
+  background = "黑市_背景矩形",
   page_prev = "黑市-上一页箭头",
   page_next = "黑市-下一页箭头",
   tab_item = "黑市-道具商店按钮",

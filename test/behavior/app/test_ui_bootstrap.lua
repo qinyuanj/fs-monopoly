@@ -65,9 +65,23 @@ local function _test_bootstrap_nodes_build_required_click_nodes_includes_schema_
     "required nodes should include the base cancel button (sole followup cancel exit)")
   luassert.truthy(_contains(required, player_choice_nodes.slots[1]), "required nodes should include player choice slots")
   luassert.truthy(_contains(required, remote_choice_nodes.options[1]), "required nodes should include remote choice options")
+  luassert.truthy(_contains(required, "遥控骰子_退出灰底"),
+    "required nodes should include the remote choice underlay (click-background close, #177)")
   luassert.truthy(_contains(required, base_contract.action_log.toggle_targets[1]),
     "required nodes should include action log toggle targets")
   luassert.truthy(_contains(required, "额外_按钮"), "required nodes should include caller extras")
+end
+
+-- #178 点背景关闭:三个背景节点进入开局必需点击节点,且都存在于仓内 UI 节点表。
+local function _test_required_click_nodes_cover_click_background_close_nodes()
+  local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
+  local required = bootstrap_nodes.build_required_click_nodes()
+
+  for _, name in ipairs({ "黑市_背景矩形", "皮肤商店-活动背景", "图鉴-背景" }) do
+    luassert.truthy(_contains(required, name), name .. " should be a required click node")
+  end
+  local missing = bootstrap_nodes.validate_required_nodes(require("Data.UIManagerNodes"), required)
+  luassert.same({}, missing, "every required click node must exist in the UI node table")
 end
 
 local function _test_bootstrap_nodes_ignores_non_table_extra_nodes()
@@ -595,6 +609,8 @@ it("test_bootstrap_nodes_ignores_non_table_extra_nodes", _test_bootstrap_nodes_i
 it("test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes", _test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes)
 it("test_bootstrap_nodes_assert_reports_single_missing_node", _test_bootstrap_nodes_assert_reports_single_missing_node)
 it("test_required_click_nodes_appends_extras", _test_required_click_nodes_appends_extras)
+it("test_required_click_nodes_cover_click_background_close_nodes",
+  _test_required_click_nodes_cover_click_background_close_nodes)
 it("test_reports_missing_host_child_nodes_before_building_ui_manager", _test_reports_missing_host_child_nodes_before_building_ui_manager)
 it("test_scheduled_callback_switches_canvas_to_base_to_hide_non_base_canvases", _test_scheduled_callback_switches_canvas_to_base_to_hide_non_base_canvases)
 it("test_install_uses_existing_current_game_ref_without_start_runtime", _test_install_uses_existing_current_game_ref_without_start_runtime)

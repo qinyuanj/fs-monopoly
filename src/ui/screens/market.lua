@@ -134,6 +134,11 @@ function M.build_controls(state)
       build_intent = _build_cancel_intent,
     },
     {
+      -- #178 点背景关闭:与 close 同一取消意图,权限由同一校验裁定。
+      name = nodes.background,
+      build_intent = _build_cancel_intent,
+    },
+    {
       name = nodes.page_prev,
       build_intent = _build_choice_intent("market_page_prev"),
     },

@@ -2,6 +2,7 @@ local nodes = require("src.ui.schema.item_atlas")
 local number_utils = require("src.foundation.number")
 local panel_runtime = require("src.ui.render.support.panel_runtime")
 local runtime_assets = require("src.config.runtime_assets")
+local ui_controls = require("src.ui.render.support.ui_controls")
 
 local item_atlas_view = {}
 
@@ -27,7 +28,25 @@ local function _set_enlarged_overlay_visible(ui, visible)
   end
   if ui.set_touch_enabled then
     ui:set_touch_enabled(nodes.close_blank, visible == true)
+    -- #178:放大态下背景不接点击,点空白只收起放大卡(逐层退出)。
+    ui:set_touch_enabled(nodes.background, visible ~= true)
   end
+end
+
+local function _disable_passthrough_touch(ui)
+  -- 与黑市/皮肤商店同口径走 ui_controls:set_touch_enabled 缺失时静默跳过,
+  -- 宿主不含该方法的面板(测试替身/裁剪宿主)不因此崩。
+  ui_controls.set_controls_state(ui, nodes.passthrough_nodes, { touch_enabled = false })
+end
+
+-- #176 review:开屏路径自身就要把 passthrough 文字(关闭文字/提示文字)的
+-- 触摸关掉、把背景触摸打开,不依赖后续翻页的 refresh_page 顺手兜底。
+function item_atlas_view.prepare_open(state)
+  local ui = assert(state.ui, "missing ui")
+  if ui.set_touch_enabled then
+    ui:set_touch_enabled(nodes.background, true)
+  end
+  _disable_passthrough_touch(ui)
 end
 
 local function _item_image_key(refs, item_id)
@@ -97,6 +116,7 @@ function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   end
 
   _refresh_page_arrows(ui, page_index, number_utils.page_count(#catalog, PAGE_SIZE))
+  _disable_passthrough_touch(ui)
 end
 
 local function _apply_enlarged_texture(runtime, image_key)

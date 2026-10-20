@@ -162,6 +162,10 @@ local function _render_bankruptcy_popup(state, payload)
     ui:set_label(screen.text, popup_assets.resolve_bankruptcy_text(payload))
   end
   popup_assets.set_bankruptcy_avatar_image(state, payload)
+  -- #178:破产屏只自动关闭、不接点背景关闭,隐藏"点击背景关闭"提示。
+  if screen and screen.close_hint then
+    ui:set_visible(screen.close_hint, false)
+  end
   if screen and screen.root then
     ui:set_visible(screen.root, true)
   end

@@ -49,6 +49,8 @@ end
 function market_view_controls.set_market_container_active(ui, active)
   ui_controls.set_control_state(ui, market_layout.container, { visible = active })
   ui.market_active = active == true
+  ui_controls.set_control_state(ui, market_layout.background, { touch_enabled = active == true })
+  ui_controls.set_controls_state(ui, market_layout.passthrough_nodes, { touch_enabled = false })
   if not active then
     ui_controls.set_controls_state(ui, market_layout.sold_out_badges, { visible = false, touch_enabled = false })
     ui_controls.set_controls_state(ui, market_layout.sold_out_labels, { visible = false, touch_enabled = false })

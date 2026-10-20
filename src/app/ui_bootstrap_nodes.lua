@@ -4,6 +4,9 @@ local player_choice_nodes = require("src.ui.schema.player_choice")
 local target_choice_nodes = require("src.ui.schema.target_choice")
 local remote_choice_nodes = require("src.ui.schema.remote_choice")
 local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
+local market_nodes = require("src.ui.schema.market")
+local skin_nodes = require("src.ui.schema.skin")
+local item_atlas_nodes = require("src.ui.schema.item_atlas")
 
 local bootstrap_nodes = {}
 
@@ -20,6 +23,10 @@ local function _required_click_nodes()
     target_choice_nodes.cancel,
     secondary_confirm_nodes.confirm,
     secondary_confirm_nodes.cancel,
+    -- #178 点背景关闭:背景节点改名/缺失会让点背景关闭静默失效,开局 fail-fast。
+    market_nodes.background,
+    skin_nodes.activity_background,
+    item_atlas_nodes.background,
   }
   return required
 end
@@ -43,6 +50,8 @@ function bootstrap_nodes.build_required_click_nodes(opts)
   for _, name in ipairs(remote_choice_nodes.options) do
     required[#required + 1] = name
   end
+  -- 遥控骰子灰底是点背景关闭出口(#177),节点缺失必须开局 fail-fast。
+  required[#required + 1] = remote_choice_nodes.underlay
   _append_click_nodes(required, base_contract.action_log.toggle_targets)
   _append_click_nodes(required, _extra_nodes(opts))
   return required
