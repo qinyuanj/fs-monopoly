@@ -166,6 +166,26 @@ it("test_owner_refresh_uses_the_state_presentation_runtime", function()
   luassert.truthy(refresh_role == role, "owner refresh should run under the provided presentation runtime")
 end)
 
+it("test_open_disables_passthrough_touch_on_the_open_path_itself", function()
+  -- #176 review:passthrough 文字(关闭文字/提示文字)的关触摸不得只依赖
+  -- refresh_page 内部顺手做;open 是公共接缝,开屏路径自身就必须把它们关掉。
+  -- 用不存在的 role_id 走全局 fallback 分支,refresh_page 不执行仍能观测开屏调用。
+  local s, calls = _make_render_state()
+  _with_patches({
+    { target = runtime_ports, key = "resolve_role", value = function()
+      return nil
+    end },
+  }, function()
+    item_atlas.open(s, 99)
+  end)
+  luassert.equal(true, _find_call(calls, "set_touch_enabled", item_atlas_nodes.background),
+    "open path must arm background touch for click-background close")
+  for _, node_name in ipairs(item_atlas_nodes.passthrough_nodes) do
+    luassert.equal(false, _find_call(calls, "set_touch_enabled", node_name),
+      "open path must disable passthrough touch for " .. node_name)
+  end
+end)
+
 it("test_marks_atlas_closed_after_close", function()
   local s = _make_state()
   item_atlas.open(s, 1)

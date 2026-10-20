@@ -48,6 +48,11 @@ function panel.open(state, role_id)
   atlas.role_id = role_id
   atlas.page_index = atlas_state.clamp_page(atlas.page_index)
   canvas.switch_by_role_id(state and state.ui, item_atlas_nodes.canvas, role_id)
+  -- #176 review:开屏准备(背景开触摸/passthrough 关触摸)与翻页刷新、清放大卡
+  -- 同口径走 owner 角色作用域,开屏瞬间即生效,不等下一次翻页。
+  panel_helpers.with_owner_role(state, atlas.role_id, function()
+    return item_atlas_view.prepare_open(state)
+  end)
   _refresh_page_for_owner(state, atlas)
   _clear_enlarged(state, atlas)
   _notify("图鉴已打开", "item_atlas:open:" .. tostring(role_id))

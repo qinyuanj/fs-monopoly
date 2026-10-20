@@ -60,6 +60,27 @@ it("test_close_notifies_with_the_exact_tip_payload", function()
   _assert_eq(tips[1].text, "已关闭", "close tip should carry the closed text")
   _assert_eq(tips[1].key, "item_atlas:close", "close tip should carry the close key")
 end)
+it("test_open_runs_every_render_step_through_the_owner_role_scope", function()
+  -- #176 review:开屏路径的 passthrough 文字(关闭文字/提示文字)在开屏瞬间
+  -- 就要关触摸,不得只在后续翻页的 refresh_page 里顺手做。view 的开屏准备
+  -- (背景开触摸 + passthrough 关触摸)与翻页刷新同属 open 的渲染步,与
+  -- 清放大卡同口径经 with_owner_role 路由到 owner 角色作用域。
+  local scopes = {}
+  _with_patches({
+    { target = panel_tip, key = "enqueue", value = function() end },
+    { target = panel_helpers, key = "with_owner_role", value = function(_, role_id, fn)
+      scopes[#scopes + 1] = role_id
+      return fn()
+    end },
+    { target = canvas, key = "switch_by_role_id", value = function() end },
+    { target = item_atlas_view, key = "prepare_open", value = function() end },
+    { target = item_atlas_view, key = "refresh_page", value = function() end },
+    { target = item_atlas_view, key = "hide_enlarged", value = function() end },
+  }, function()
+    item_atlas.open({ ui = {} }, 5)
+  end)
+  _assert_eq(#scopes, 3, "open should route prepare + refresh + enlarged cleanup through owner scope")
+end)
 
 
 end)
