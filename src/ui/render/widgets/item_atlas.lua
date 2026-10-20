@@ -41,6 +41,16 @@ local function _disable_passthrough_touch(ui)
   end
 end
 
+-- #176 review:开屏路径自身就要把 passthrough 文字(关闭文字/提示文字)的
+-- 触摸关掉、把背景触摸打开,不依赖后续翻页的 refresh_page 顺手兜底。
+function item_atlas_view.prepare_open(state)
+  local ui = assert(state.ui, "missing ui")
+  if ui.set_touch_enabled then
+    ui:set_touch_enabled(nodes.background, true)
+  end
+  _disable_passthrough_touch(ui)
+end
+
 local function _item_image_key(refs, item_id)
   local image = runtime_assets.image_for_item(item_id, refs)
   return image.ok == true and image.image_key or nil
