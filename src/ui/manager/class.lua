@@ -31,43 +31,43 @@ local function Class(class_name, ...)
         end
     })
 
-    function class_table:new(...)
-        local instance = {}
+    -- 派发只捕获类表；按类共享，成员仍在每次访问时沿继承链动态解析。
+    local instance_meta = {
+        __index = function(t, key)
+            -- 1. 先检查是否有getter方法
+            local getter = class_table["__get_" .. key]
+            if getter then
+                return getter(t)
+            end
 
-        local instance_meta = {
-            __index = function(t, key)
-                -- 1. 先检查是否有getter方法
-                local getter = class_table["__get_" .. key]
-                if getter then
-                    return getter(t)
-                end
-
-                -- 2. 然后尝试自定义索引方法（递归查找继承链）
-                local custom_index = class_table["__custom_index"]
-                if custom_index then
-                    local result = custom_index(t, key)
-                    if result ~= nil then
-                        return result
-                    end
-                end
-
-                -- 3. 最后尝试在类继承链中查找
-                local value = class_table[key]
-                if value ~= nil then
-                    return value
-                end
-            end,
-
-            __newindex = function(t, key, value)
-                local setter = class_table["__set_" .. key]
-                if setter then
-                    setter(t, value)
-                else
-                    rawset(t, key, value)
+            -- 2. 然后尝试自定义索引方法（递归查找继承链）
+            local custom_index = class_table["__custom_index"]
+            if custom_index then
+                local result = custom_index(t, key)
+                if result ~= nil then
+                    return result
                 end
             end
-        }
 
+            -- 3. 最后尝试在类继承链中查找
+            local value = class_table[key]
+            if value ~= nil then
+                return value
+            end
+        end,
+
+        __newindex = function(t, key, value)
+            local setter = class_table["__set_" .. key]
+            if setter then
+                setter(t, value)
+            else
+                rawset(t, key, value)
+            end
+        end
+    }
+
+    function class_table:new(...)
+        local instance = {}
         setmetatable(instance, instance_meta)
 
         -- 调用初始化方法（支持Init和init两种命名）
@@ -84,4 +84,3 @@ local function Class(class_name, ...)
 end
 
 return Class
-
