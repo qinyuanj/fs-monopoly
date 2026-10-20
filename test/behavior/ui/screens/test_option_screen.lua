@@ -11,7 +11,7 @@ local modal_state = require("src.ui.state.modal")
 
 -- openers/modal_state 全桩:open_screen 给 ui 触摸捕获 + screen 节点名,
 -- set_action_button 全参捕获,open_choice 记选择面。
-local function _drive(choice)
+local function _drive(choice, screen_overrides)
   local captured = { touch = {}, buttons = {}, opened = nil }
   local ui = {
     set_touch_enabled = function(_, name, enabled)
@@ -19,6 +19,9 @@ local function _drive(choice)
     end,
   }
   local screen = { underlay = "underlay_node", confirm = "confirm_node", cancel = "cancel_node" }
+  for key, value in pairs(screen_overrides or {}) do
+    screen[key] = value
+  end
 
   _with_patches({
     { target = openers, key = "open_screen", value = function()
@@ -57,6 +60,19 @@ it("test_opens_with_underlay_touch_through_and_armed_confirm_cancel_buttons", fu
   _assert_eq(captured.buttons.cancel_node.label, "取消", "cancel label should default to 取消")
   _assert_eq(captured.opened.choice_id, 7, "open_choice should carry the choice id")
   _assert_eq(captured.opened.selected, 10, "open_choice should carry the selection")
+end)
+
+it("test_underlay_touch_policy_differs_per_screen", function()
+  -- #177:遥控骰子与玩家选择共享本 helper;仅遥控骰子开灰底触摸(点背景关闭),
+  -- 玩家选择灰底保持穿透到基础屏取消按钮。
+  local remote = require("src.ui.screens.remote_choice").descriptor()
+  local player = require("src.ui.screens.player_choice").descriptor()
+
+  local remote_captured = _drive({}, remote)
+  local player_captured = _drive({}, player)
+
+  _assert_eq(remote_captured.touch[remote.underlay], true, "remote underlay must catch clicks")
+  _assert_eq(player_captured.touch[player.underlay], false, "player underlay must stay touch-through")
 end)
 
 it("test_disarms_the_cancel_button_when_the_choice_disallows_cancel", function()

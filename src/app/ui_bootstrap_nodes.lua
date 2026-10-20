@@ -43,6 +43,8 @@ function bootstrap_nodes.build_required_click_nodes(opts)
   for _, name in ipairs(remote_choice_nodes.options) do
     required[#required + 1] = name
   end
+  -- 遥控骰子灰底是点背景关闭出口(#177),节点缺失必须开局 fail-fast。
+  required[#required + 1] = remote_choice_nodes.underlay
   _append_click_nodes(required, base_contract.action_log.toggle_targets)
   _append_click_nodes(required, _extra_nodes(opts))
   return required

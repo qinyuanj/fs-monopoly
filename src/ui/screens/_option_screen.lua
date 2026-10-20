@@ -6,11 +6,11 @@ local M = {}
 
 function M.open(state, screen_key, choice, choice_id)
   local ui, screen = openers.open_screen(state, screen_key, choice, choice_id)
-  -- 灰底是随 canvas 显示的纯装饰 EImage,Eggy 覆盖节点默认吸触摸(先例:
-  -- auto_effect / skin_label 均显式关触摸);基础屏取消按钮住下层 canvas 且是
-  -- followup 唯一退出口,开屏时放行点击穿透。
+  -- 灰底触摸按屏区分(#177):underlay_touch 的屏(遥控骰子)灰底即点背景关闭出口,
+  -- 开触摸接 CLICK;其余屏(玩家选择)灰底是纯装饰,Eggy 覆盖节点默认吸触摸,
+  -- 显式关触摸让点击穿透到下层基础屏取消按钮。
   if screen.underlay then
-    ui:set_touch_enabled(screen.underlay, false)
+    ui:set_touch_enabled(screen.underlay, screen.underlay_touch == true)
   end
   local option_ids, selected = openers.fill_option_nodes(
     ui, screen, openers.resolve_player_or_remote_options(choice, screen_key))

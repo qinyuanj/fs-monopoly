@@ -26,6 +26,23 @@ local function _can_build_optional_completion_intent(state)
   return result.ok == true
 end
 
+-- 基础屏取消出口的唯一意图口径。基础屏取消按钮与遥控骰子灰底(#177 点背景关闭)
+-- 共用:同一 choice_cancel、同一 is_base_cancel_choice 判断,两个出口永不脱节。
+function intents.build_base_cancel_intent(state, source_label)
+  local choice = route_model.choice(state)
+  -- 与渲染显隐同一口径(choice_support.is_base_cancel_choice):按钮亮即有 intent。
+  -- 口径外的点击说明按钮陈旧或模型失步,留 warn 供真机排查(此前是全链路唯一零日志吞点)。
+  if not choice_support.is_base_cancel_choice(choice) then
+    logger.warn((source_label or "基础屏取消按钮") .. "点击被忽略: 当前无可取消的道具后续选择",
+      choice and ("choice_kind=" .. tostring(choice.kind)) or "choice=nil")
+    return nil
+  end
+  return {
+    type = "choice_cancel",
+    choice_id = choice.id,
+  }
+end
+
 function intents.build(state)
   return {
     {
@@ -53,18 +70,7 @@ function intents.build(state)
     {
       name = base_nodes.cancel_button,
       build_intent = function()
-        local choice = route_model.choice(state)
-        -- 与渲染显隐同一口径(choice_support.is_base_cancel_choice):按钮亮即有 intent。
-        -- 口径外的点击说明按钮陈旧或模型失步,留 warn 供真机排查(此前是全链路唯一零日志吞点)。
-        if not choice_support.is_base_cancel_choice(choice) then
-          logger.warn("基础屏取消按钮点击被忽略: 当前无可取消的道具后续选择",
-            choice and ("choice_kind=" .. tostring(choice.kind)) or "choice=nil")
-          return nil
-        end
-        return {
-          type = "choice_cancel",
-          choice_id = choice.id,
-        }
+        return intents.build_base_cancel_intent(state)
       end,
     },
     {
