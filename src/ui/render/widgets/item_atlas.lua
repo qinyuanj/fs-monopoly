@@ -2,6 +2,7 @@ local nodes = require("src.ui.schema.item_atlas")
 local number_utils = require("src.foundation.number")
 local panel_runtime = require("src.ui.render.support.panel_runtime")
 local runtime_assets = require("src.config.runtime_assets")
+local ui_controls = require("src.ui.render.support.ui_controls")
 
 local item_atlas_view = {}
 
@@ -33,12 +34,9 @@ local function _set_enlarged_overlay_visible(ui, visible)
 end
 
 local function _disable_passthrough_touch(ui)
-  if not ui.set_touch_enabled then
-    return
-  end
-  for _, node_name in ipairs(nodes.passthrough_nodes) do
-    ui:set_touch_enabled(node_name, false)
-  end
+  -- 与黑市/皮肤商店同口径走 ui_controls:set_touch_enabled 缺失时静默跳过,
+  -- 宿主不含该方法的面板(测试替身/裁剪宿主)不因此崩。
+  ui_controls.set_controls_state(ui, nodes.passthrough_nodes, { touch_enabled = false })
 end
 
 -- #176 review:开屏路径自身就要把 passthrough 文字(关闭文字/提示文字)的
