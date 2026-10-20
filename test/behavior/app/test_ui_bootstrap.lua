@@ -65,6 +65,8 @@ local function _test_bootstrap_nodes_build_required_click_nodes_includes_schema_
     "required nodes should include the base cancel button (sole followup cancel exit)")
   luassert.truthy(_contains(required, player_choice_nodes.slots[1]), "required nodes should include player choice slots")
   luassert.truthy(_contains(required, remote_choice_nodes.options[1]), "required nodes should include remote choice options")
+  luassert.truthy(_contains(required, "遥控骰子_退出灰底"),
+    "required nodes should include the remote choice underlay (click-background close, #177)")
   luassert.truthy(_contains(required, base_contract.action_log.toggle_targets[1]),
     "required nodes should include action log toggle targets")
   luassert.truthy(_contains(required, "额外_按钮"), "required nodes should include caller extras")
