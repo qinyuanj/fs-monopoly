@@ -1,6 +1,7 @@
 local player_colors = require("src.ui.view.player_colors")
 local base_nodes = require("src.ui.schema.base")
 local row_field = require("src.ui.render.widgets.row_field")
+local logger = require("src.foundation.log")
 
 local panel_player_slots = {}
 
@@ -53,15 +54,6 @@ local function _set_player_avatar(ui, runtime, avatar_name, image_key)
   end
   local avatar_node = ui.query_node and ui.query_node(avatar_name) or runtime.query_node(avatar_name)
   runtime.set_node_texture_native_size(avatar_node, image_key)
-end
-
-local function _for_each_player_label_name(index, callback)
-  local nodes = _player_nodes[index]
-  if nodes then
-    for _, name in ipairs(nodes.labels) do
-      callback(name)
-    end
-  end
 end
 
 local function _has_visible_method(ui)
@@ -117,50 +109,36 @@ function panel_player_slots.refresh_player_crowns(ui, player_rows)
   end
 end
 
-local _lc_runtime
-local _lc_fn
-local _lc_role
-local _lc_color
+local function _write_node_color(runtime, name, field, color)
+  local node = assert(runtime.query_node(name), "missing color node: " .. name)
+  node[field] = color
+end
 
-local function _apply_label_color_callback(name)
-  local ok, label_node = pcall(_lc_runtime.query_node, name)
-  if ok then
-    pcall(_lc_fn, _lc_role, label_node, _lc_color, 0)
+local function _apply_node_color(runtime, name, field, color)
+  local ok, err = pcall(_write_node_color, runtime, name, field, color)
+  if not ok then
+    logger.warn("player color skipped: " .. name .. ": " .. tostring(err))
   end
 end
 
-local function _apply_image_color(role, runtime, index, color, set_image_color)
-  if set_image_color then
-    local image_node = runtime.query_node(_player_nodes[index].color)
-    pcall(set_image_color, role, image_node, color, 0)
-  end
-end
-
-local function _apply_label_color(runtime, role, index, color, set_label_color)
-  if set_label_color then
-    _lc_runtime = runtime
-    _lc_fn = set_label_color
-    _lc_role = role
-    _lc_color = color
-    _for_each_player_label_name(index, _apply_label_color_callback)
-  end
-end
-
-local function _has_any_color_callback(role)
-  return role.set_image_color ~= nil or role.set_label_color ~= nil
-end
-
+-- 调用方须已进入 role 的 client-role 作用域(presenter 的角色扇出负责设置)。
 function panel_player_slots.apply_player_colors(role, runtime, player, index)
   if not role then
     return
   end
-  if not _has_any_color_callback(role) then
+  if role.set_image_color == nil and role.set_label_color == nil then
     return
   end
   local player_id = player and player.id or nil
   local color = player_colors.resolve_owner_color(player_id)
-  _apply_image_color(role, runtime, index, color, role.set_image_color)
-  _apply_label_color(runtime, role, index, color, role.set_label_color)
+  if role.set_image_color ~= nil then
+    _apply_node_color(runtime, _player_nodes[index].color, "image_color", color)
+  end
+  if role.set_label_color ~= nil then
+    for _, name in ipairs(_player_nodes[index].labels) do
+      _apply_node_color(runtime, name, "text_color", color)
+    end
+  end
 end
 
 function panel_player_slots.render_player_slot(ui, runtime, row, index, empty_avatar_key, refresh_cash_delta_label)

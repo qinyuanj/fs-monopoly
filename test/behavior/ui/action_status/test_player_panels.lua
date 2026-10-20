@@ -132,6 +132,65 @@ local function _new_cash_delta_presenter_env(opts)
   }
 end
 
+-- 真节点到宿主 setter 的接缝;恢复 facade 缓存,让后续发布测试仍能观察 require 的副作用。
+local function _with_player_color_nodes(run)
+  local previous_manager = rawget(_G, "UIManager")
+  local previous_utils = package.loaded["src.ui.manager.utils"]
+  local manager = require("src.ui.manager.utils")
+  package.loaded["src.ui.manager.utils"] = previous_utils
+  _G.UIManager = previous_manager
+  local runtime = require("src.ui.render.support.runtime_ui")
+  local previous_allroles = manager.allroles
+  local previous_mapping = manager.name_node_mapping
+  local previous_role = manager.client_role
+  local nodes = {}
+  local node_ids = {}
+  local ok, err = pcall(function()
+    _G.UIManager = manager
+    manager.allroles = {}
+    manager.client_role = nil
+    manager.name_node_mapping = {}
+    local patterns = {
+      { pattern = base_nodes.player_color, class = manager.EImage },
+      { pattern = base_nodes.player_name, class = manager.ELabel },
+      { pattern = base_nodes.player_cash, class = manager.ELabel },
+      { pattern = base_nodes.player_cash_delta, class = manager.ELabel },
+      { pattern = base_nodes.player_land_count, class = manager.ELabel },
+      { pattern = base_nodes.player_total_assets, class = manager.ELabel },
+    }
+    for index = 1, 4 do
+      for _, slot in ipairs(patterns) do
+        local name = string.format(slot.pattern, index)
+        local node_id = { name = name }
+        node_ids[#node_ids + 1] = node_id
+        local node = slot.class:new(node_id, name)
+        nodes[name] = node
+        manager.name_node_mapping[name] = { node }
+      end
+    end
+    run(runtime, nodes, manager)
+  end)
+  for _, node_id in ipairs(node_ids) do
+    manager.nodes_list[node_id] = nil
+  end
+  manager.client_role = previous_role
+  manager.allroles = previous_allroles
+  manager.name_node_mapping = previous_mapping
+  _G.UIManager = previous_manager
+  if not ok then error(err, 0) end
+end
+
+-- 录制型宿主 role:每个 set_* 调用记一条 (method, args),供断言推送参数。
+local function _color_recording_role(role_id)
+  local role = { calls = {}, get_roleid = function() return role_id end }
+  for _, method in ipairs({ "set_image_color", "set_label_color" }) do
+    role[method] = function(...)
+      role.calls[#role.calls + 1] = { method = method, args = table.pack(...) }
+    end
+  end
+  return role
+end
+
 describe("TestPlayerPanels", function()
 
   it("test_panel_controls_base_non_player_visibility_tracks_boolean_input", function()
@@ -392,14 +451,8 @@ describe("TestPlayerPanels", function()
   end)
 
   it("test_panel_presenter_applies_player_colors_to_all_four_slots", function()
+    local runtime_ports = require("src.foundation.ports.runtime_ports")
     local env = _new_cash_delta_presenter_env()
-    local colored = {}
-    local role = {
-      get_roleid = function() return 1 end,
-      set_image_color = function(_, node)
-        colored[node] = true
-      end,
-    }
     env.ui_model.item_slots_by_player = { [1] = {} }
     env.ui_model.board.players = {
       { id = 1 },
@@ -407,19 +460,31 @@ describe("TestPlayerPanels", function()
       { id = 3 },
       { id = 4 },
     }
-    env.runtime.query_node = function(name)
-      return name
-    end
-    env.runtime.for_each_role_or_global = function(fn)
-      fn(role)
-    end
+    require("src.ui.view.player_colors").remap_by_index(env.ui_model.board.players)
 
-    env.refresh()
+    _with_player_color_nodes(function(runtime)
+      local role = _color_recording_role(1)
+      local other_role = _color_recording_role(2)
+      _with_patches({
+        { target = runtime_ports, key = "resolve_roles", value = function() return { role, other_role } end },
+      }, function()
+        env.refresh_with({ runtime = runtime })
+      end)
 
-    _assert_eq(colored["基础_玩家1底板颜色"], true,
-      "player 1 color node should be updated")
-    _assert_eq(colored["基础_玩家4底板颜色"], true,
-      "player 4 color node should be updated")
+      for _, receiver in ipairs({ role, other_role }) do
+        _assert_eq(#receiver.calls, 24, "each receiving role gets four slots with six colors each")
+        local colored = {}
+        for _, call in ipairs(receiver.calls) do
+          _assert_eq(call.args.n, 3, "presenter must use the host three-argument color signature")
+          colored[call.args[1].name] = call.args[2]
+        end
+        _assert_eq(colored["基础_玩家1底板颜色"], 0xe57373,
+          "player 1 color node should receive the first palette color")
+        _assert_eq(colored["基础_玩家4底板颜色"], 0xba68c8,
+          "player 4 color node should receive the fourth palette color")
+      end
+      _assert_eq(runtime.get_client_role(), nil, "presenter must restore the role scope")
+    end)
   end)
 
   it("test_panel_cash_delta_shows_negative_and_auto_hides", function()
@@ -615,40 +680,140 @@ describe("TestPlayerPanels", function()
     _assert_eq(env.state.ui.visible["基础_玩家4皇冠"], false, "player4 crown should hide")
   end)
 
-  it("test_panel_apply_player_colors_updates_image_and_labels", function()
+  -- 真节点到宿主边界:一幅底板和五个标签以三参调用定向更新。
+  it("test_panel_apply_player_colors_sends_raw_node_ids_with_zero_transition_to_only_the_client_role", function()
     local panel_player_slots = require("src.ui.render.widgets.player_slots")
     local player_colors = require("src.ui.view.player_colors")
-    local image_calls = {}
-    local label_calls = {}
-
-    -- 先建立颜色状态(真实链 capture_player_colors → 渲染,owner_colors 由 index 调色板填充)。
     player_colors.remap_by_index({ { id = 1 }, { id = 2 } })
 
-    panel_player_slots.apply_player_colors({
-      set_image_color = function(_, node, color, alpha)
-        image_calls[#image_calls + 1] = { node = node, color = color, alpha = alpha }
-      end,
-      set_label_color = function(_, node, color, alpha)
-        label_calls[#label_calls + 1] = { node = node, color = color, alpha = alpha }
-      end,
-    }, {
-      query_node = function(name)
-        if name == "基础-玩家2消耗金币显示" then
-          error("missing label node")
-        end
-        return name
-      end,
-    }, {
-      id = 2,
-    }, 2)
+    _with_player_color_nodes(function(runtime, nodes, manager)
+      local client_role = _color_recording_role(1)
+      local other_role = _color_recording_role(3)
+      manager.allroles = { client_role, other_role }
+      local target_names = {
+        "基础_玩家2底板颜色",
+        "基础_玩家2名字",
+        "基础_玩家2现金",
+        "基础-玩家2消耗金币显示",
+        "基础_玩家2地块数量",
+        "基础_玩家2总资产",
+      }
 
-    _assert_eq(#image_calls, 1, "player color should tint one image node")
-    _assert_eq(image_calls[1].node, "基础_玩家2底板颜色", "player color should target indexed image node")
-    _assert_eq(image_calls[1].color, 0xffeb3b, "player color should resolve the index palette color")
-    _assert_eq(image_calls[1].alpha, 0, "player color should keep image alpha at zero")
-    _assert_eq(#label_calls, 4, "player color should tint every resolved label node")
-    _assert_eq(label_calls[1].node, "基础_玩家2名字", "player color should tint player name label")
-    _assert_eq(label_calls[#label_calls].alpha, 0, "player color should keep label alpha at zero")
+      runtime.with_client_role(other_role, function()
+        runtime.with_client_role(client_role, function()
+          panel_player_slots.apply_player_colors(client_role, runtime, { id = 2 }, 2)
+        end)
+        _assert_eq(runtime.get_client_role(), other_role, "nested color updates must restore the outer role")
+      end)
+
+      _assert_eq(#client_role.calls, 6, "one image and all five labels should receive their owner color")
+      local calls_by_node = {}
+      for _, call in ipairs(client_role.calls) do
+        _assert_eq(call.args.n, 3, "host color arguments are raw node id, color, transition time; no role self")
+        calls_by_node[call.args[1]] = call
+      end
+      for field, name in ipairs(target_names) do
+        local call = calls_by_node[nodes[name].id]
+        luassert.truthy(call, "host should receive the raw node id for " .. name)
+        _assert_eq(call.method, field == 1 and "set_image_color" or "set_label_color",
+          "image and labels should use their matching host color method")
+        _assert_eq(call.args[2], 0xffeb3b, "slot two uses its index palette color")
+        _assert_eq(call.args[3], 0.0, "colors should update with zero transition time")
+      end
+      _assert_eq(#other_role.calls, 0, "client-role color updates must not broadcast to other roles")
+      _assert_eq(runtime.get_client_role(), nil, "color scope should restore the previous client role")
+    end)
+  end)
+
+  it("test_panel_apply_player_colors_reports_missing_optional_label_and_colors_remaining_nodes", function()
+    local panel_player_slots = require("src.ui.render.widgets.player_slots")
+    local player_colors = require("src.ui.view.player_colors")
+    local logger = require("src.foundation.log")
+    player_colors.remap_by_index({ { id = 1 }, { id = 2 } })
+    local entries = {}
+
+    _with_player_color_nodes(function(runtime, nodes, manager)
+      local role = _color_recording_role(1)
+      manager.name_node_mapping["基础-玩家2消耗金币显示"] = nil
+      _with_patches({
+        { target = logger, key = "ui_sink", value = function(entry) entries[#entries + 1] = entry end },
+      }, function()
+        runtime.with_client_role(role, function()
+          panel_player_slots.apply_player_colors(role, runtime, { id = 2 }, 2)
+        end)
+      end)
+
+      _assert_eq(#role.calls, 5, "missing cash delta label should leave the image and four labels usable")
+      local colored = {}
+      for _, call in ipairs(role.calls) do colored[call.args[1]] = true end
+      _assert_eq(colored[nodes["基础_玩家2总资产"].id], true, "a missing label must not stop later labels")
+      _assert_eq(#entries, 1, "the skipped label should leave one diagnostic")
+      _assert_eq(entries[1].level, "warn", "missing label should be a warning")
+      luassert.truthy(entries[1].text:find("基础-玩家2消耗金币显示", 1, true),
+        "diagnostic should identify the missing label")
+    end)
+  end)
+
+  it("test_panel_apply_player_colors_reports_missing_image_and_colors_labels", function()
+    local panel_player_slots = require("src.ui.render.widgets.player_slots")
+    local logger = require("src.foundation.log")
+    local entries = {}
+    _with_player_color_nodes(function(runtime, nodes, manager)
+      local role = _color_recording_role(1)
+      manager.name_node_mapping["基础_玩家2底板颜色"] = nil
+      _with_patches({
+        { target = logger, key = "ui_sink", value = function(entry) entries[#entries + 1] = entry end },
+      }, function()
+        runtime.with_client_role(role, function()
+          panel_player_slots.apply_player_colors(role, runtime, { id = 2 }, 2)
+        end)
+      end)
+      _assert_eq(#role.calls, 5, "missing image must leave all labels usable")
+      _assert_eq(role.calls[5].args[1], nodes["基础_玩家2总资产"].id, "later labels must update")
+      _assert_eq(#entries, 1, "missing image must leave one diagnostic")
+      _assert_eq(entries[1].level, "warn", "missing image must be a warning")
+      luassert.truthy(entries[1].text:find("基础_玩家2底板颜色", 1, true), "warning must identify the image")
+    end)
+  end)
+
+  it("test_panel_apply_player_colors_reports_host_error_continues_and_recovers", function()
+    local panel_player_slots = require("src.ui.render.widgets.player_slots")
+    local player_colors = require("src.ui.view.player_colors")
+    local logger = require("src.foundation.log")
+    player_colors.remap_by_index({ { id = 1 }, { id = 2 } })
+    local entries = {}
+
+    _with_player_color_nodes(function(runtime, nodes)
+      local role = _color_recording_role(1)
+      local record_label = role.set_label_color
+      role.set_label_color = function(node, ...)
+        if node == nodes["基础_玩家2名字"].id then error("label color host failure") end
+        record_label(node, ...)
+      end
+      _with_patches({
+        { target = logger, key = "ui_sink", value = function(entry) entries[#entries + 1] = entry end },
+      }, function()
+        runtime.with_client_role(role, function()
+          panel_player_slots.apply_player_colors(role, runtime, { id = 2 }, 2)
+        end)
+      end)
+
+      _assert_eq(#role.calls, 5, "one failed label must leave all other nodes usable")
+      _assert_eq(role.calls[5].args[1], nodes["基础_玩家2总资产"].id, "later labels must still update")
+      _assert_eq(#entries, 1, "host failure must leave one diagnostic")
+      _assert_eq(entries[1].level, "warn", "host failure must be a warning")
+      luassert.truthy(entries[1].text:find("基础_玩家2名字", 1, true), "warning must identify the failed node")
+      luassert.truthy(entries[1].text:find("label color host failure", 1, true), "warning must preserve the host error")
+      _assert_eq(runtime.get_client_role(), nil, "a failed update must restore the previous client role")
+
+      role.calls = {}
+      role.set_label_color = record_label
+      runtime.with_client_role(role, function()
+        panel_player_slots.apply_player_colors(role, runtime, { id = 2 }, 2)
+      end)
+      _assert_eq(#role.calls, 6, "the next update must recover all six node colors")
+      _assert_eq(runtime.get_client_role(), nil, "recovery must restore the client role")
+    end)
   end)
 
   it("test_panel_apply_player_colors_skips_when_role_has_no_color_hooks", function()
