@@ -187,5 +187,62 @@ function gameplay_loop_ports.resolve(override_ports)
   return _build_resolved_ports(nil)
 end
 
+-- 比较记录只保留当前版本。根引用、组引用和组内键值分别比较，
+-- 包括额外键与未知组；稳定读取只扫描，不建立临时签名或闭包。
+local function _same_entries(current, recorded)
+  for key, value in pairs(recorded) do
+    if current[key] ~= value then return false end
+  end
+  for key in pairs(current) do
+    if recorded[key] == nil then return false end
+  end
+  return true
+end
+
+local function _matches_record(ports, record)
+  if not record or record.source ~= ports then return false end
+  if not _same_entries(ports, record.root) then return false end
+  for name, values in pairs(record.groups) do
+    if not _same_entries(ports[name], values) then return false end
+  end
+  return true
+end
+
+local function _record_entries(values, source)
+  for key in pairs(values) do values[key] = nil end
+  for key, value in pairs(source) do values[key] = value end
+end
+
+local function _record_ports(ports, record)
+  record = record or { root = {}, groups = {} }
+  _record_entries(record.root, ports)
+  for name in pairs(record.groups) do
+    if type(ports[name]) ~= "table" then record.groups[name] = nil end
+  end
+  for name, group in pairs(ports) do
+    if type(group) == "table" then
+      local values = record.groups[name] or {}
+      _record_entries(values, group)
+      record.groups[name] = values
+    end
+  end
+  record.source = ports
+  return record
+end
+
+-- state 是缓存所有者；resolve 成功后才更新记录并写回最终输入。
+-- 公共 resolve 仍始终返回独立的已声明组，不持有全局记忆。
+function gameplay_loop_ports.resolve_for_state(state)
+  if not state then return gameplay_loop_ports.resolve(nil) end
+  local override = state.gameplay_loop_ports
+  local record = state._gameplay_loop_ports_record
+  if _matches_record(override, record) then return override end
+  local resolved = gameplay_loop_ports.resolve(override)
+  state._gameplay_loop_ports_record = _record_ports(resolved, record)
+  state._resolved_gameplay_loop_ports = resolved
+  state.gameplay_loop_ports = resolved
+  return resolved
+end
+
 return gameplay_loop_ports
 
