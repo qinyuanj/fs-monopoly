@@ -214,18 +214,7 @@ local function _tick_flow(game, state, dt, ports, deps)
 end
 
 local function _resolve_ports(state)
-  if not state then
-    return gameplay_loop_ports.resolve(nil)
-  end
-  local override = state.gameplay_loop_ports
-  if state._resolved_gameplay_loop_ports and state._resolved_gameplay_loop_ports_source == override then
-    return state._resolved_gameplay_loop_ports
-  end
-  local resolved = gameplay_loop_ports.resolve(override)
-  state._resolved_gameplay_loop_ports = resolved
-  state._resolved_gameplay_loop_ports_source = override
-  state.gameplay_loop_ports = resolved
-  return resolved
+  return gameplay_loop_ports.resolve_for_state(state)
 end
 local _dispatch_opts = { on_close_choice = nil }
 local _cached_modal_ports_ref = nil
