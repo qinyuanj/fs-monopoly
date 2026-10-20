@@ -108,6 +108,26 @@ it("test_custom_data_getter_and_setter_round_trip", function()
   luassert.truthy(node.custom_data.kind == "tile", "custom_data should round-trip through the accessor")
 end)
 
+it("test_same_class_nodes_keep_instance_data_and_host_targets_isolated", function()
+  local role_a, role_b = support.make_role(1), support.make_role(2)
+  support.install_roles({ role_a, role_b })
+  local one, two = ENode:new(222, "one"), ENode:new(223, "two")
+  one.custom_data.marker = "one"
+  two.custom_data.marker = "two"
+
+  context.client_role = role_a
+  one.visible = false
+  context.client_role = role_b
+  two.visible = true
+  luassert.same({ false, true, "one", "two" },
+    { one.visible, two.visible, one.custom_data.marker, two.custom_data.marker })
+  local calls_a = support.calls_of(role_a, "set_node_visible")
+  local calls_b = support.calls_of(role_b, "set_node_visible")
+  luassert.same({ 222, false, n = 2 }, calls_a[1].args)
+  luassert.same({ 223, true, n = 2 }, calls_b[1].args)
+  luassert.same({ 1, 1 }, { #calls_a, #calls_b })
+end)
+
 -- -------------------------------------------------- visible / disabled propagation
 
 end)
