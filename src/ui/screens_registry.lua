@@ -26,7 +26,7 @@ end
 
 -- 强制加载所有屏模块并显式注册其返回定义。清单是唯一的 append-only 共享点。
 --
--- 清单顺序 = 注册序 = build_route_specs 的发射序。当前全仓 81 条 route spec 的 node 名
+-- 清单顺序 = 注册序 = build_route_specs 的发射序。当前全仓 82 条 route spec 的 node 名
 -- 互不重复,所以发射序**尚不可观测**;但下游 canvas_event_router 是按 node 名注册点击
 -- 回调的,一旦出现重名,谁先发射谁说了算 —— 顺序会当场变成行为面。
 --

@@ -6,6 +6,8 @@ local remote_screen = require("src.ui.screens.remote_choice")
 local schema = require("src.ui.schema.remote_choice")
 local runtime_state = require("src.ui.state.runtime")
 local logger = require("src.foundation.log")
+local route_base = require("src.ui.input.route_base")
+local base_nodes = require("src.ui.schema.base")
 
 -- 借 runtime ui_model 注入 choice，直接执行 build_intent 闭包体。
 local function _with_ui_model(model, fn)
@@ -62,6 +64,57 @@ it("test_returns_a_choice_select_intent_for_an_option_when_choice_is_present", f
   luassert.truthy(intent.type == "choice_select", "intent type is choice_select")
   luassert.truthy(intent.choice_id == 7, "intent carries the choice id")
   luassert.truthy(intent.option_id == 11, "first option maps to option id 11")
+end)
+
+-- #177 点背景关闭:点遥控骰子灰底 ≡ 点基础屏取消按钮。
+local function _intent_on_click(specs, node_name)
+  for _, spec in ipairs(specs) do
+    if spec.name == node_name then
+      return spec.build_intent(), true
+    end
+  end
+  return nil, false
+end
+
+local function _remote_followup(overrides)
+  local choice = {
+    id = "remote_choice_1",
+    kind = "remote_dice_value",
+    route_key = "remote",
+    allow_cancel = true,
+    options = { { id = 1 }, { id = 2 } },
+    meta = { passive_origin = true, item_id = 2003, player_id = 1, phase = "pre_action" },
+  }
+  for key, value in pairs(overrides or {}) do
+    choice[key] = value
+  end
+  return choice
+end
+
+local function _click_underlay_and_base_cancel(choice)
+  local underlay_intent, base_intent, found
+  _capturing_warn(function()
+    _with_ui_model({ choice = choice }, function(state)
+      underlay_intent, found = _intent_on_click(remote_screen.build_route_specs(state), schema.underlay)
+      base_intent = _intent_on_click(route_base.build(state), base_nodes.cancel_button)
+    end)
+  end)
+  return underlay_intent, base_intent, found
+end
+
+it("test_clicking_the_underlay_cancels_exactly_like_the_base_cancel_button", function()
+  local underlay_intent, base_intent, found = _click_underlay_and_base_cancel(_remote_followup())
+  luassert.truthy(found, "the underlay node must have a route spec")
+  luassert.same({ type = "choice_cancel", choice_id = "remote_choice_1" }, underlay_intent,
+    "clicking the underlay yields choice_cancel for the current choice")
+  luassert.same(base_intent, underlay_intent, "underlay click must equal the base cancel button click")
+end)
+
+it("test_clicking_the_underlay_yields_no_intent_when_cancel_is_disallowed", function()
+  local underlay_intent, base_intent, found = _click_underlay_and_base_cancel(_remote_followup({ allow_cancel = false }))
+  luassert.truthy(found, "the underlay node must have a route spec")
+  luassert.is_nil(underlay_intent, "a disallowed cancel yields no underlay intent")
+  luassert.is_nil(base_intent, "the base cancel button agrees")
 end)
 
 it("test_warns_and_returns_nil_when_no_choice_is_present", function()

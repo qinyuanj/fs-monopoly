@@ -86,6 +86,10 @@ function touch_policy.set_choice_screen_locked(ui, screen)
   end
   touch_policy.set_many_touch_enabled(ui, screen.option_buttons or {}, false)
   _disable_button(ui, screen.under_button)
+  -- 可点灰底(点背景关闭,#177)是退出口,锁定时与按钮一并关闭;穿透灰底本就关着。
+  if screen.underlay_touch == true then
+    _disable_button(ui, screen.underlay)
+  end
   _disable_button(ui, screen.confirm)
   _disable_button(ui, screen.cancel)
 end

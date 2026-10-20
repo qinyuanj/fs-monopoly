@@ -536,6 +536,27 @@ it("test_set_choice_screen_locked_blocks_all_targets", function()
   _assert_eq(touch["取消按钮"], false, "cancel should be locked")
 end)
 
+it("test_input_lock_disables_the_remote_choice_underlay", function()
+  -- #177:遥控骰子灰底是点背景关闭出口,锁定期间必须关触摸,误触不得推进流程。
+  local remote = require("src.ui.screens.remote_choice").descriptor()
+  local touch = { [remote.underlay] = true }
+  local state = {
+    ui = {
+      input_blocked = true,
+      item_slots = {},
+      base_hidden_nodes = {},
+      choice_screens = { remote = remote },
+      set_touch_enabled = function(_, name, enabled)
+        touch[name] = enabled
+      end,
+    },
+  }
+
+  ui_view.apply_input_lock(state)
+
+  _assert_eq(touch[remote.underlay], false, "locked input must disable the remote underlay")
+end)
+
 it("test_set_choice_screen_locked_noops_without_screen", function()
   -- Pins the L75 guard `or not screen`: an `and` mutant proceeds and indexes a nil screen.
   local ui = { set_touch_enabled = function() end }
