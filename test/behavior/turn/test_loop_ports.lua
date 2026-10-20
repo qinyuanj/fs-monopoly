@@ -150,5 +150,128 @@ it("test_resolve_table_without_group_keys_uses_base_ports", function()
     "no-group-key table should use base clock ports")
 end)
 
+it("test_state_reads_revalidate_group_and_root_replacements", function()
+  local state = { gameplay_loop_ports = { debug = {} } }
+  local first = gameplay_loop_ports.resolve_for_state(state)
+  first.debug = { resolve_event_log_enabled = function() return true end }
+  local replaced_group = gameplay_loop_ports.resolve_for_state(state)
+  check.is_not.equal(first, replaced_group)
+  check.is_true(replaced_group.debug.resolve_event_log_enabled())
+  state.gameplay_loop_ports = { debug = {} }
+  local replaced_root = gameplay_loop_ports.resolve_for_state(state)
+  check.is_not.equal(replaced_group, replaced_root)
+  check.is_false(replaced_root.debug.resolve_event_log_enabled())
+  check.equal(replaced_root, gameplay_loop_ports.resolve_for_state(state))
+end)
+
+it("test_deleted_and_non_function_required_ports_fall_back", function()
+  local state = { gameplay_loop_ports = {
+    debug = { resolve_event_log_enabled = function() return true end },
+  } }
+  local first = gameplay_loop_ports.resolve_for_state(state)
+  first.debug.resolve_event_log_enabled = nil
+  local deleted = gameplay_loop_ports.resolve_for_state(state)
+  check.is_false(deleted.debug.resolve_event_log_enabled())
+  deleted.debug.sync_event_log = "not a function"
+  local invalidated = gameplay_loop_ports.resolve_for_state(state)
+  check.is_nil(invalidated.debug.sync_event_log())
+  check.equal(invalidated, gameplay_loop_ports.resolve_for_state(state))
+end)
+
+it("test_extra_keys_and_unknown_groups_survive_and_invalidate_state_reads", function()
+  local unknown = { dispatch = function() return "before" end }
+  local state = { gameplay_loop_ports = { debug = {}, view_command = unknown } }
+  local first = gameplay_loop_ports.resolve_for_state(state)
+  check.equal(unknown, first.view_command)
+  first.debug.extra = false
+  local added = gameplay_loop_ports.resolve_for_state(state)
+  check.is_not.equal(first, added)
+  check.is_false(added.debug.extra)
+  added.debug.extra = nil
+  local deleted = gameplay_loop_ports.resolve_for_state(state)
+  check.is_not.equal(added, deleted)
+  check.is_nil(deleted.debug.extra)
+  unknown.dispatch = function() return "after" end
+  local changed = gameplay_loop_ports.resolve_for_state(state)
+  check.is_not.equal(deleted, changed)
+  check.equal("after", changed.view_command.dispatch())
+  changed.actor_context = { role_id = 42 }
+  local added_group = gameplay_loop_ports.resolve_for_state(state)
+  check.equal(42, added_group.actor_context.role_id)
+  added_group.view_command = nil
+  local removed_group = gameplay_loop_ports.resolve_for_state(state)
+  check.is_nil(removed_group.view_command)
+  check.equal(removed_group, gameplay_loop_ports.resolve_for_state(state))
+end)
+
+it("test_invalid_gate_mutation_throws_until_repaired_without_committing", function()
+  local gate = function() return { input_blocked = true } end
+  local state = { gameplay_loop_ports = { ui_sync = {
+    resolve_ui_gate = gate,
+    is_input_blocked = function() return true end,
+  } } }
+  local first = gameplay_loop_ports.resolve_for_state(state)
+  first.ui_sync.resolve_ui_gate = nil
+  local ok, err = pcall(gameplay_loop_ports.resolve_for_state, state)
+  check.is_false(ok)
+  check.matches("lacks resolve_ui_gate", err, 1, true)
+  check.equal(first, state.gameplay_loop_ports)
+  check.is_false(pcall(gameplay_loop_ports.resolve_for_state, state))
+  first.ui_sync.resolve_ui_gate = gate
+  check.is_true(gameplay_loop_ports.resolve_for_state(state).ui_sync.is_input_blocked())
+  state.gameplay_loop_ports = "invalid root"
+  check.has_error(function() gameplay_loop_ports.resolve_for_state(state) end,
+    "invalid gameplay_loop_ports override: expected table")
+  state.gameplay_loop_ports = { debug = {} }
+  check.is_false(gameplay_loop_ports.resolve_for_state(state).debug.resolve_event_log_enabled())
+end)
+
+it("test_interleaved_states_keep_current_ports_independent", function()
+  local a, b = {}, {}
+  local pa = gameplay_loop_ports.resolve_for_state(a)
+  local pb = gameplay_loop_ports.resolve_for_state(b)
+  check.is_not.equal(pa, pb)
+  pa.debug.resolve_event_log_enabled = function() return true end
+  local changed_a = gameplay_loop_ports.resolve_for_state(a)
+  check.is_true(changed_a.debug.resolve_event_log_enabled())
+  check.equal(pb, gameplay_loop_ports.resolve_for_state(b))
+  check.is_false(pb.debug.resolve_event_log_enabled())
+  check.equal(changed_a, gameplay_loop_ports.resolve_for_state(a))
+  local public = gameplay_loop_ports.resolve(changed_a)
+  check.is_not.equal(public, changed_a)
+  check.is_not.equal(public.debug, changed_a.debug)
+end)
+
+it("test_cold_and_changed_state_reads_have_a_bounded_recompute_budget", function()
+  -- #183 的重算/组复制预算是显式验收契约；debug hook 只观察真实调用，
+  -- 不替换 resolve 或内部协作者，也不预置缓存。
+  local merge = require("src.turn.loop.ports_merge")
+  local resolutions, copies = 0, 0
+  local previous, mask, count = debug.gethook()
+  debug.sethook(function(event)
+    if event ~= "call" then return end
+    local fn = debug.getinfo(2, "f").func
+    if fn == gameplay_loop_ports.resolve then resolutions = resolutions + 1 end
+    if fn == merge.copy_group_ports then copies = copies + 1 end
+  end, "c")
+  local ok, err = pcall(function()
+    local state = {}
+    gameplay_loop_ports.resolve_for_state(state)
+    for _ = 1, 10 do gameplay_loop_ports.resolve_for_state(state) end
+    -- lint-allow: call-count #183 冷启动加稳定读取仅一次 memo 重算
+    check.equal(1, resolutions)
+    -- lint-allow: call-count #183 首次解析复制七组，稳定读取零组复制
+    check.equal(7, copies)
+    state.gameplay_loop_ports.debug.extra = "changed"
+    gameplay_loop_ports.resolve_for_state(state)
+    for _ = 1, 10 do gameplay_loop_ports.resolve_for_state(state) end
+    -- lint-allow: call-count #183 一次实际配置变化仅一次完整重算
+    check.equal(2, resolutions)
+    -- lint-allow: call-count #183 一次变化复制七组，随后稳定读取不再复制
+    check.equal(14, copies)
+  end)
+  debug.sethook(previous, mask, count)
+  check.is_true(ok, err)
+end)
 
 end)

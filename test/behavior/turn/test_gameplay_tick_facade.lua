@@ -122,6 +122,58 @@ it("test_pending_choice_opened_in_the_same_frame_does_not_warn", function()
   check.same(#warned, 0, "a choice opened in the same frame's refresh never warns")
 end)
 
+it("test_both_control_observations_keep_same_frame_ui_current", function()
+  local control = require("src.player.control")
+  local snapshot = require("src.turn.output.player_control_snapshot")
+  local model_sync = require("src.ui.ports.ui_sync")._model
+  local game, state = _new_subject()
+  local player = game.players[1]
+  local old = snapshot.install(game)
+  control.toggle_manual_delegation(player)
+  local before_action, after_action, model
+  state.auto_runner.next_action = function()
+    before_action = game.player_control_snapshots
+    control.toggle_manual_delegation(player)
+    return nil
+  end
+  state.gameplay_loop_ports.ui_sync.refresh_from_dirty = function()
+    after_action = game.player_control_snapshots
+    model = model_sync.build_model(state, game)
+    return false
+  end
+
+  gameplay_loop.tick(game, state, 0)
+
+  check.not_equal(old, before_action, "frame start observes changes before auto actions")
+  check.is_true(before_action[1].is_delegated)
+  check.not_equal(before_action, after_action, "post-action observation sees same-frame changes")
+  check.is_false(after_action[1].is_delegated)
+  check.is_false(model.delegated_by_player[1])
+  check.equal(after_action, game.player_control_snapshots, "UI build reuses the post-action version")
+  check.is_false(old[1].is_delegated)
+  state.auto_runner.next_action = function() return nil end
+  gameplay_loop.tick(game, state, 0)
+  check.equal(after_action, game.player_control_snapshots, "stable tick and UI keep the version")
+end)
+
+it("test_set_game_installs_independent_control_snapshots", function()
+  local control = require("src.player.control")
+  local snapshot = require("src.turn.output.player_control_snapshot")
+  local first_game, state = _new_subject()
+  gameplay_loop.set_game(state, first_game)
+  local first = first_game.player_control_snapshots
+  check.is_false(snapshot.find(first_game, 1).is_delegated)
+  check.equal(first, snapshot.install(first_game))
+
+  local second_game = support.new_game({ players = { "P1", "P2" }, ai = {} })
+  control.toggle_manual_delegation(second_game.players[1])
+  gameplay_loop.set_game(state, second_game)
+  check.not_equal(first, second_game.player_control_snapshots)
+  check.is_true(snapshot.find(second_game, 1).is_delegated)
+  check.equal(first, snapshot.install(first_game))
+  check.is_false(first[1].is_delegated)
+end)
+
 it("test_release_pulse_marks_turn_dirty_and_syncs_status_during_visual_hold", function()
   local game, state = _new_subject()
   local refreshed_dirty

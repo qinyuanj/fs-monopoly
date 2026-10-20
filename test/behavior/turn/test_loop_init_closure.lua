@@ -477,20 +477,48 @@ it("test_returns_nil_and_dispatches_nothing_when_the_runner_yields_no_action", f
   end)
 end)
 
-it("test_reuses_the_cached_resolved_ports_while_the_override_is_unchanged", function()
-  -- kills _resolve_ports' `_resolved_gameplay_loop_ports_source == override`
-  -- `==` -> `~=`: a cache hit must return the same table, not re-resolve.
-  local game, state, ports = _runner_state({ type = "x" })
-  state.ui.input_blocked = false
-  state._resolved_gameplay_loop_ports_source = ports -- prime the cache for this override
-  _with_patches({
-    { target = timing, key = "auto_decision_delay_seconds", value = 0 },
-    { target = turn_dispatch, key = "dispatch_action", value = function() return true end },
-  }, function()
-    gameplay_loop.step_auto_runner(game, state, 0.1, nil)
-  end)
-  _assert_eq(state._resolved_gameplay_loop_ports, ports,
-    "an unchanged override hits the resolved-ports cache")
+it("test_cold_tick_and_auto_runner_reuse_the_written_back_ports", function()
+  local game = support.new_game()
+  local state = fixtures.build_loop_state()
+  state.auto_runner.next_action = function() return nil end
+  gameplay_loop.tick(game, state, 0)
+  local resolved = state.gameplay_loop_ports
+  gameplay_loop.step_auto_runner(game, state, 0, nil)
+  gameplay_loop.tick(game, state, 0)
+  check.equal(resolved, state.gameplay_loop_ports,
+    "cold startup writes the stable configuration used by subsequent public calls")
+end)
+
+it("test_in_place_port_change_is_resolved_before_the_next_tick", function()
+  local game = support.new_game()
+  local state = fixtures.build_loop_state()
+  state.auto_runner.next_action = function() return nil end
+  gameplay_loop.tick(game, state, 0)
+  local resolved = state.gameplay_loop_ports
+  local observed
+  resolved.debug.sync_event_log = function() observed = "changed" end
+  gameplay_loop.tick(game, state, 0)
+  check.equal("changed", observed)
+  check.is_not.equal(resolved, state.gameplay_loop_ports,
+    "actual content changes go through full resolution")
+end)
+
+it("test_interleaved_ticks_use_each_states_current_ports", function()
+  local game_a, game_b = support.new_game(), support.new_game()
+  local a, b = fixtures.build_loop_state(), fixtures.build_loop_state()
+  local observed = {}
+  a.auto_runner.next_action = function() return nil end
+  b.auto_runner.next_action = function() return nil end
+  a.gameplay_loop_ports.debug.sync_event_log = function() observed[#observed + 1] = "a" end
+  b.gameplay_loop_ports.debug.sync_event_log = function() observed[#observed + 1] = "b" end
+  gameplay_loop.tick(game_a, a, 0)
+  gameplay_loop.tick(game_b, b, 0)
+  local stable_b = b.gameplay_loop_ports
+  a.gameplay_loop_ports.debug.sync_event_log = function() observed[#observed + 1] = "a2" end
+  gameplay_loop.tick(game_a, a, 0)
+  gameplay_loop.tick(game_b, b, 0)
+  check.same({ "a", "b", "a2", "b" }, observed)
+  check.equal(stable_b, b.gameplay_loop_ports)
 end)
 
 it("test_set_game_rejects_a_game_without_pending_choice", function()
@@ -588,22 +616,15 @@ it("test_treats_a_game_without_players_as_no_auto_owner", function()
 end)
 
 it("test_treats_a_ui_sync_port_without_get_popup_owner_index_as_no_auto_owner", function()
-  -- kills _is_auto_popup_owner's guard `and` -> `or` mutants plus the guard's
-  -- `return false` -> true: a ui_sync group lacking get_popup_owner_index must
-  -- mean "not an auto popup owner" (runner consulted) — `or` mutants fall
-  -- through and call the missing function, `return true` forces an owner and
-  -- suppresses the runner.
+  -- a ui_sync group lacking get_popup_owner_index goes through public port
+  -- assembly, which fills in the default owner lookup (returns nil): the popup
+  -- owner is unknown, so it is not an auto owner and the runner is consulted.
+  -- _is_auto_popup_owner's missing-method guard (and its `and` -> `or` /
+  -- `return true` mutants) is unreachable via this public path since #183.
   local game, state, ports, called = _runner_state({ type = "x" })
   state.ui.input_blocked = false
   ports.ui_sync.is_popup_active = function() return true end
   ports.ui_sync.get_popup_owner_index = nil -- ui_sync group without the owner lookup
-  -- prime the resolved-ports cache so _resolve_ports returns this exact
-  -- (deliberately incomplete) ports table instead of a merged re-resolve.
-  -- 注意:只设 source 不设 resolved 缓存会命中 _resolve_ports 的 merge 路径,
-  -- resolve 会用 base 默认端口把 get_popup_owner_index 补回来,测试便测不到
-  -- 「缺失」语义;两者必须同设才能绕过 merge。
-  state._resolved_gameplay_loop_ports = ports
-  state._resolved_gameplay_loop_ports_source = ports
   _with_patches({
     { target = timing, key = "auto_decision_delay_seconds", value = 5.0 },
     { target = turn_dispatch, key = "dispatch_action", value = function() return true end },

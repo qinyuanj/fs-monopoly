@@ -96,6 +96,21 @@ do
     luassert.truthy(ro.length == 2, "length still mirrors the backing array")
   end)
 
+  it("test_two_arrays_and_views_keep_elements_lengths_and_local_shadows_isolated", function()
+    local left, right = Array:new(), Array:new()
+    local left_view, right_view = ArrayReadOnly:new(left), ArrayReadOnly:new(right)
+    left:append("left")
+    right:append("right")
+    right:append("tail")
+    left_view[1] = "local"
+
+    luassert.same({ 1, "left", 1, "local", 2, "right" },
+      { left.length, left[1], left_view.length, left_view[1], right_view.length, right_view[1] })
+    luassert.has_error(function() left_view:pop() end, "ArrayReadOnly is read-only")
+    luassert.equal("tail", right:pop())
+    luassert.same({ 1, 1, "right" }, { left_view.length, right_view.length, right_view[1] })
+  end)
+
   it("test_the_class_keeps_the_array_parent_link_while_owning_its_method_surface", function()
     -- 父类链接是声明式 IS-A 契约(类表 parents 链);方法面由视图类自带:
     -- forEach 委托 backing,append/pop 覆写为报错,均不再等于父类实现(#267)。

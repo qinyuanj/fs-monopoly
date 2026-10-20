@@ -45,11 +45,57 @@ function snapshot.build(game)
   return _freeze(by_player)
 end
 
-function snapshot.install(game)
-  local by_player = snapshot.build(game)
-  if game ~= nil then
-    game.player_control_snapshots = by_player
+-- 每个遍历位置保留对象身份、归一 ID 和公开事实,包括无效/重复 ID。
+-- 比较不分配签名表;只有当前 game 持有当前结果,不保留历史版本。
+local function _matches(cache, players)
+  if players == nil then
+    return #cache.records == 0
   end
+  local count = 0
+  for index, player in ipairs(players) do
+    local record = cache.records[index]
+    if record == nil or record.player ~= player
+      or record.id ~= identity.normalize(player and player.id or nil)
+      or record.is_delegated ~= control.is_delegated(player)
+      or record.is_computer_controlled ~= control.is_computer_controlled(player or nil) then
+      return false
+    end
+    count = index
+  end
+  return count == #cache.records
+end
+
+local function _remember(cache, players)
+  local count = 0
+  for index, player in ipairs(players or {}) do
+    local record = cache.records[index] or {}
+    record.player = player
+    record.id = identity.normalize(player and player.id or nil)
+    record.is_delegated = control.is_delegated(player)
+    record.is_computer_controlled = control.is_computer_controlled(player or nil)
+    cache.records[index] = record
+    count = index
+  end
+  for index = #cache.records, count + 1, -1 do
+    cache.records[index] = nil
+  end
+end
+
+function snapshot.install(game)
+  if game == nil then
+    return snapshot.build(nil)
+  end
+  local players = game.players
+  local cache = game._player_control_snapshot_cache
+  if cache ~= nil and game.player_control_snapshots == cache.result and _matches(cache, players) then
+    return cache.result
+  end
+  local by_player = snapshot.build(game)
+  cache = cache or { records = {} }
+  _remember(cache, players)
+  cache.result = by_player
+  game._player_control_snapshot_cache = cache
+  game.player_control_snapshots = by_player
   return by_player
 end
 
