@@ -616,17 +616,15 @@ it("test_treats_a_game_without_players_as_no_auto_owner", function()
 end)
 
 it("test_treats_a_ui_sync_port_without_get_popup_owner_index_as_no_auto_owner", function()
-  -- kills _is_auto_popup_owner's guard `and` -> `or` mutants plus the guard's
-  -- `return false` -> true: a ui_sync group lacking get_popup_owner_index must
-  -- mean "not an auto popup owner" (runner consulted) — `or` mutants fall
-  -- through and call the missing function, `return true` forces an owner and
-  -- suppresses the runner.
+  -- a ui_sync group lacking get_popup_owner_index goes through public port
+  -- assembly, which fills in the default owner lookup (returns nil): the popup
+  -- owner is unknown, so it is not an auto owner and the runner is consulted.
+  -- _is_auto_popup_owner's missing-method guard (and its `and` -> `or` /
+  -- `return true` mutants) is unreachable via this public path since #183.
   local game, state, ports, called = _runner_state({ type = "x" })
   state.ui.input_blocked = false
   ports.ui_sync.is_popup_active = function() return true end
   ports.ui_sync.get_popup_owner_index = nil -- ui_sync group without the owner lookup
-  -- 从公开装配路径删除必填端口，完整解析应补齐默认 owner 查询。
-  -- 默认查询返回 nil，故弹窗 owner 未知，不阻挡 runner。
   _with_patches({
     { target = timing, key = "auto_decision_delay_seconds", value = 5.0 },
     { target = turn_dispatch, key = "dispatch_action", value = function() return true end },

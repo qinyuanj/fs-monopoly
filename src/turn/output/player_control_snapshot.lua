@@ -52,7 +52,7 @@ local function _matches(cache, players)
     return #cache.records == 0
   end
   local count = 0
-  for index, player in ipairs(players or {}) do
+  for index, player in ipairs(players) do
     local record = cache.records[index]
     if record == nil or record.player ~= player
       or record.id ~= identity.normalize(player and player.id or nil)
