@@ -20,7 +20,7 @@ local function _open(root_state, role_id)
   panel.open = true
   panel.role_id = role_id
   panel.page_index = 1
-  transaction_state.load_owned(panel, role_id)
+  transaction_state.sync_owned(panel, role_id)
   local equipped_product = transaction_state.seed_equipped(panel, role_id)
   return transaction_state.accepted(panel, {
     action = "open",
@@ -78,7 +78,7 @@ local function _equip_slot(root_state, role_id, slot_index)
   return _accepted_equip(panel, role_id, skin)
 end
 
-local function _unlock_slot(root_state, role_id, slot_index, source)
+local function _unlock_slot(root_state, role_id, slot_index)
   local panel, rejected = transaction_result.panel_or_rejection(root_state)
   if rejected ~= nil then
     return rejected
@@ -88,7 +88,7 @@ local function _unlock_slot(root_state, role_id, slot_index, source)
   if skin_rejected ~= nil then
     return skin_rejected
   end
-  transaction_state.mark_owned(panel, role_id, skin, source)
+  transaction_state.mark_owned(panel, role_id, skin)
   return transaction_state.accepted(panel, {
     action = "unlock",
     ownership_changed = true,
@@ -114,10 +114,9 @@ local function _unequip(root_state, role_id)
   })
 end
 
-local function _unlock_handler(fallback_source)
-  return function(root_state, role_id, request)
-    return _unlock_slot(root_state, role_id, request_shape.slot_index(request), request_shape.unlock_source(request, fallback_source))
-  end
+-- ADR 0074:归属写档不分来源,unlock_slot / buy / gift 共用同一处理。
+local function _unlock_handler(root_state, role_id, request)
+  return _unlock_slot(root_state, role_id, request_shape.slot_index(request))
 end
 
 local function _equip_handler(root_state, role_id, request)
@@ -162,9 +161,9 @@ local REQUEST_HANDLERS = {
   prev = function(root_state)
     return _page_delta(root_state, -1)
   end,
-  unlock_slot = _unlock_handler("unlock_slot"),
-  buy = _unlock_handler("buy"),
-  gift = _unlock_handler("gift"),
+  unlock_slot = _unlock_handler,
+  buy = _unlock_handler,
+  gift = _unlock_handler,
   equip_slot = _equip_handler,
   equip = _equip_handler,
   activate_slot = _activate_slot,
@@ -180,6 +179,16 @@ function actions.handle_skin_transaction(root_state, role_id, request)
     return _unknown_transaction(root_state)
   end
   return handler(root_state, role_id, request)
+end
+
+-- ADR 0074 第 4 条:进图/开局读档并恢复穿戴,不打开皮肤商店、不补写。
+function actions.restore_role(root_state, role_id)
+  local panel = transaction_state.ensure_panel(root_state)
+  if panel == nil then
+    return nil
+  end
+  transaction_state.load_owned(panel, role_id)
+  return transaction_state.seed_equipped(panel, role_id)
 end
 
 function actions.complete_skin_purchase(root_state, role_id, product_id)

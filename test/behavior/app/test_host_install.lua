@@ -43,6 +43,7 @@ local function _test_skip_context_install_wires_purchase_skins_to_paid_port()
   local paid_purchase_port = require("src.rules.ports.paid_purchase")
   local skin_panel = require("src.ui.screens.skin_panel")
   local skin_equip = require("src.rules.cosmetics")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local player = { id = 9 }
   local state = {
     ui = {},
@@ -76,6 +77,11 @@ local function _test_skip_context_install_wires_purchase_skins_to_paid_port()
   }, function()
     host_install.install({ skip_context_install = true })
     skin_panel.open(state, 9)
+    -- 生产装配注入了皮肤存档适配器:存档未开启时不发起购买(ADR 0074)。
+    local refused = skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
+    _assert_eq(captured, nil, "purchase should not start while archives are disabled")
+    _assert_eq(refused.pending_skin_purchase_by_role["9"], nil, "refused purchase should leave nothing pending")
+    runtime_ports.configure({ archives_enabled = function() return true end })
     skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
   end)
 

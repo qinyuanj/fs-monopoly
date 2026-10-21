@@ -15,6 +15,10 @@ function transaction.complete_skin_purchase(state, role_id, product_id)
   return actions.complete_skin_purchase(state, role_id, product_id)
 end
 
+function transaction.restore_role(state, role_id)
+  return actions.restore_role(state, role_id)
+end
+
 function transaction.is_slot_equipped(state, slot_index)
   return actions.is_slot_equipped(state, slot_index)
 end

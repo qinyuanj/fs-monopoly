@@ -241,4 +241,59 @@ it("test_start_stop_start_replaces_tick_without_duplicate_callback", _test_start
 it("test_start_assigns_turn_action_port_with_dispatch_and_block", _test_start_assigns_turn_action_port_with_dispatch_and_block)
 it("test_start_assigns_presentation_runtime", _test_start_assigns_presentation_runtime)
 it("test_tick_callback_reads_current_game_ref_correctly", _test_tick_callback_reads_current_game_ref_correctly)
+
+-- ── #193 / ADR 0074:开局读皮肤存档恢复穿戴 ─────────────────────
+
+describe("skin restore on start", function()
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
+  local transaction = require("src.app.cosmetics.transaction")
+  local skin_archive = require("src.app.cosmetics.skin_archive")
+  local leaderboard_settlement = require("src.app.host_integrations.leaderboard_settlement")
+
+  before_each(function()
+    transaction.reset_for_tests()
+    transaction.configure_archive(skin_archive)
+  end)
+
+  after_each(function()
+    transaction.reset_for_tests()
+    support.restore_runtime_services()
+  end)
+
+  it("test_start_reequips_saved_skin_for_human_players_only", function()
+    -- 两名玩家存档都记着穿水豚嘟嘟(5006,归属 key 1053;穿戴 key 1051)。
+    local archive = { [1053] = 1, [1051] = 5006 }
+    runtime_ports.configure({
+      archives_enabled = function() return true end,
+      get_archive_int = function(_, key) return archive[key] or 0 end,
+      set_archive_int = function(_, key, value)
+        archive[key] = value
+        return true
+      end,
+    })
+    local equipped_roles = {}
+    transaction.configure_equip(function(role_id, skin)
+      equipped_roles[tostring(role_id)] = skin.product_id
+      return true
+    end)
+    local fake_game = {
+      players = { { id = 1 }, { id = 2, is_ai = true } },
+      turn = { turn_count = 1, phase = "moving", pending_choice = nil },
+    }
+    local state = { ui = {} }
+    _with_patches({
+      { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
+      { target = gameplay_loop, key = "set_game", value = function() end },
+      { target = presentation_ports, key = "build", value = function() return {} end },
+      { target = frame_timer, key = "repeat_every", value = function() return {} end },
+      { target = leaderboard_settlement, key = "watch_game", value = function() return true end },
+    }, function()
+      gameplay_start.start(state, { nil })
+    end, { skip_runtime_context_refresh = true })
+
+    _assert_eq(equipped_roles["1"], 5006, "human player's saved skin should be put back on at start")
+    _assert_eq(equipped_roles["2"], nil, "AI players have no archive and should be skipped")
+    _assert_eq(state.ui.skin_panel.open, false, "restoring should not open the skin shop")
+  end)
+end)
 end)

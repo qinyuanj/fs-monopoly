@@ -108,10 +108,15 @@ local function _make_fake_archive()
   local store = { owned = {}, equipped = {}, mark_calls = {}, save_calls = {} }
   return {
     store = store,
+    -- ADR 0074:存档可写才放行购买;替身恒可写。
+    can_persist = function()
+      return true
+    end,
     mark_owned = function(role, product_id)
       store.mark_calls[#store.mark_calls + 1] = { role = role, product_id = product_id }
       store.owned[tostring(role)] = store.owned[tostring(role)] or {}
       store.owned[tostring(role)][product_id] = true
+      return true
     end,
     load_owned = function(role)
       local out = {}
@@ -133,6 +138,8 @@ end
 describe("TestSkinPanel", function()
 before_each(function()
   skin_panel.reset_for_tests()
+  -- 购买路径要求存档可用(ADR 0074);缺省装一个可写替身,需要无存档的用例自行清空。
+  skin_panel.configure_archive(_make_fake_archive())
 end)
 
 -- open/close
@@ -347,15 +354,15 @@ it("test_purchase_unlock_marks_ownership_and_persists_the_auto_equipped_skin", f
   luassert.truthy(archive.store.equipped["1"] == 5001, "purchase auto-equip should persist equipped product")
 end)
 
-it("test_does_not_persist_gift_unlocked_ownership", function()
+it("test_persists_gift_unlocked_ownership_like_purchase", function()
   skin_panel.configure_catalog_for_tests(_make_rich_catalog())
   local archive = _make_fake_archive()
   skin_panel.configure_archive(archive)
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "gift", 3)
-  luassert.truthy(archive.store.owned["1"] == nil or archive.store.owned["1"][5003] == nil,
-    "gift unlock must not write to the archive")
+  luassert.truthy(archive.store.owned["1"] ~= nil and archive.store.owned["1"][5003] == true,
+    "gift unlock should persist ownership regardless of source (ADR 0074)")
 end)
 
 it("test_unequip_clears_the_persisted_equipped_product", function()
@@ -394,6 +401,7 @@ end)
 
 it("test_no_archive_configured_leaves_persistence_paths_inert", function()
   skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+  skin_panel.configure_archive(nil)
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "purchase", 1)
@@ -1109,6 +1117,8 @@ end)
 
 it("test_unlock_with_nil_skin_slot_out_of_range_is_no_op", function()
   skin_panel.configure_catalog_for_tests(_make_catalog(3))
+  -- 无存档:open 读档会建空桶,这里只观察越界 unlock 本身不建桶。
+  skin_panel.configure_archive(nil)
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "buy", 99)

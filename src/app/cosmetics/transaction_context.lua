@@ -71,6 +71,11 @@ function context.archive_call(method, role_id, product_id)
   return nil
 end
 
+-- ADR 0074「不可用不卖」:无存档适配器、存档未开启或该款未配 archive_key 都算不可用。
+function context.can_persist_skin(product_id)
+  return context.archive_call("can_persist", nil, product_id) == true
+end
+
 function context.call_equip_adapter(role_id, skin)
   if not context.has_equip_adapter() then
     return false

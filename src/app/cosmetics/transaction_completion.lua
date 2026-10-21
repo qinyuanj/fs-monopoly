@@ -42,7 +42,7 @@ function completion.complete_skin_purchase(root_state, role_id, product_id)
     return product_rejected
   end
   purchase.clear_pending(panel, role_id)
-  transaction_state.mark_owned(panel, role_id, skin, "purchase")
+  transaction_state.mark_owned(panel, role_id, skin)
   return _accepted_purchase_complete(panel, role_id, skin)
 end
 
