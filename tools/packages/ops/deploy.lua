@@ -273,13 +273,14 @@ end
 -- Windows 侧家目录从 %USERPROFILE% 动态解析,不在代码里硬编码用户名:
 -- 在 /mnt/c 下起 cmd.exe(UNC 工作目录会让 cmd 回落到 C:\Windows,所以先 cd
 -- 到 /mnt/c),再经 wslpath -u 换算成 WSL 路径。任何一步失败都返回 "",由调用方
--- 按「不可用」处理。
-function M.resolve_windows_home_dir()
-  local profile = _trim(_popen("cd /mnt/c 2>/dev/null && cmd.exe /d /c 'echo %USERPROFILE%' 2>/dev/null"))
+-- 按「不可用」处理。run 是命令执行注入缝(默认 io.popen 读全部输出),供测试替身。
+function M.resolve_windows_home_dir(run)
+  run = run or _popen
+  local profile = _trim(run("cd /mnt/c 2>/dev/null && cmd.exe /d /c 'echo %USERPROFILE%' 2>/dev/null"))
   if _is_blank(profile) or not profile:match("^%a:") then
     return ""
   end
-  local converted = _trim(_popen("wslpath -u " .. _shell_arg(profile) .. " 2>/dev/null"))
+  local converted = _trim(run("wslpath -u " .. _shell_arg(profile) .. " 2>/dev/null"))
   if _is_blank(converted) or converted:sub(1, 1) ~= "/" then
     return ""
   end
@@ -287,7 +288,7 @@ function M.resolve_windows_home_dir()
 end
 
 -- 家目录:部署目标始终是 Windows 侧家目录;WSL 的 $HOME 只作为测试与沙箱的
--- 显式覆写面(DEPLOY_HOME_OVERRIDE),不参与默认目标推导。
+-- 显式覆写面(环境变量 MONOPOLY_DEPLOY_HOME),不参与默认目标推导。
 function M.resolve_home_dir()
   local override = os.getenv("MONOPOLY_DEPLOY_HOME")
   if not _is_blank(override) then

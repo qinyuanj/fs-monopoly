@@ -1,7 +1,7 @@
 -- packages/data_sync/cli.lua —— sync-data 子命令(部署目录 Data 导出回同步)
 --
 -- 统一接口形态(#300 决议):本文件 return 纯接口模块:
---   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误)
+--   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误 / 3 不在 WSL)
 --   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
 --
 -- 实现:进程内调用 packages.data_sync.sync_data(零参数;--help/-h 在壳内消费)。
@@ -18,7 +18,7 @@ function M.usage()
     "  Data/Prefab.lua    字节原样拷贝;",
     "  Data/UINodes.lua   转换为 Data/UIManagerNodes.lua(按 id 聚合排序,无 length 行);",
     "  EggyAPI.lua / EggyEditorAPI.lua  字节原样拷贝到仓库根(宿主 API 存根,第三方边界)。",
-    "零参数、零开关;平台与部署目录解析复用 deploy(仅原生 Windows,ADR 0066)。",
+    "零参数、零开关;平台与部署目录解析复用 deploy(WSL 中运行,缺 cmd.exe/wslpath 退 3,ADR 0073)。",
     "行为真源见 packages/data_sync/sync_data.lua。",
     "",
   }, "\n") .. "\n"

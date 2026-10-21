@@ -108,7 +108,7 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 本仓测试后端定为真实 busted，断言使用真实 luassert：
 
 1. **测试直接使用 DSL**。测试结构使用 `describe` / `it`，不做「自动把 TestX 包成 describe」的兼容层：这类 shim 出错的表现是测试静默通过。
-2. **装载与调用不依赖可执行位**。busted 与 `luassert` / `say` / `lua_cliargs` / `mediator_lua` / `penlight` / `lua-term` / `luasystem` / `luafilesystem` / `dkjson` / `datafile` 从受控 Lua 环境（ADR 0072）装载，以 `lua -e 'require("busted.runner")()'` 形态调用，与 `lua54` 既有「不依赖 shell wrapper 或可执行位」口径同源。Windows 上 tree 布局与 POSIX 同形已取证，不需平台分支。
+2. **装载与调用不依赖可执行位**。busted 与 `luassert` / `say` / `lua_cliargs` / `mediator_lua` / `penlight` / `lua-term` / `luasystem` / `luafilesystem` / `dkjson` / `datafile` 从受控 Lua 环境（ADR 0072）装载，以 `lua -e 'require("busted.runner")()'` 形态调用，与 `lua54` 既有「不依赖 shell wrapper 或可执行位」口径同源。tree 布局在各平台同形，不需平台分支。
 3. **运行器契约同时验证数量与失败传播**。spec 文件集 guard 防止文件被静默漏跑；故意写错的断言样本必须为红，确保断言没有退化成恒真。
 
 理由：测试与 crapper / mutator 的 Lua 默认路径共用 busted + luacov，保持一套执行与断言语义。
@@ -152,8 +152,8 @@ CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的�
 
 开发与工具链的保证面从原生 Windows 改为 **WSL Ubuntu 24.04 单一平台**（#191）；原生 Windows 只是部署目标，不承诺 macOS，也不保留原生 Windows 开发的双轨支持。取代 ADR 0066 与 ADR 0071。
 
-1. **平台判定与三态**。`foundation/platform_boundary.lua` 的 `host_platform()` 返回 `linux` / `posix` / `windows`，`supported_platform()` 是保证面判定的唯一入口；「不可用退 3 / 显式跳过退 0 / 真实失败退 1·2」协议不变。平台不可用仍然不是检测结论。
-2. **foundation 改用 POSIX 原语**。`proc` 以 `sh -lc` + `find -print0` 执行与枚举，`fs` 用 `mkdir -p` / `rm -rf` / `cp -R` 并把存在性与目录判定收成纯 Lua（`io.open` + `rename` 自探测），`env` 取 `PWD` / `TMPDIR`，`shell` 按 POSIX 单引号拼装与 `NAME=value` 前缀导出，`parallel_lanes` 用 `setsid` + 进程组看门狗收容超时。Windows 时代的 `cmd.exe` / `chcp` / `robocopy` / `where.exe` / PowerShell Job Object 全部退场。
+1. **平台判定与三态**。`foundation/platform_boundary.lua` 的 `host_platform()` 返回 `linux` / `posix` / `windows`（`/proc/version` 可读即 `linux`，WSL 开发机与 ubuntu-24.04 CI 同属保证面），`supported_platform()` 是保证面判定的唯一入口，`evaluate` 也经它判定；「不可用退 3 / 显式跳过退 0 / 真实失败退 1·2」协议不变。平台不可用仍然不是检测结论。
+2. **foundation 改用 POSIX 原语**。`proc` 以 `os.execute`（`/bin/sh -c`）+ `find -print0` 执行与枚举，`fs` 用 `mkdir -p` / `rm -rf` / `cp -R` 并把存在性与目录判定收成纯 Lua（`io.open` + `rename` 自探测），`env` 以 `pwd -L` 取当前目录（继承的 `PWD` 可能被子进程 cwd 作废，只兜底）、取 `TMPDIR`，`shell` 按 POSIX 单引号拼装与 `NAME=value` 前缀导出，`parallel_lanes` 用 `setsid` + 进程组看门狗收容超时。Windows 时代的 `cmd.exe` / `chcp` / `robocopy` / `where.exe` / PowerShell Job Object 全部退场。
 3. **解释器统一 `lua5.4`**。入口显式写 `lua5.4 tools/cli.lua`，候选表只认 `lua5.4` / `lua54`，子进程沿用当前解释器身份；不改机器全局 `lua`（兄弟仓依赖 5.1），不引入 LuaJIT。受控 Lua 环境（ADR 0072）口径不变，机器 tree 是 `~/.luarocks`（LuaRocks 5.4）。
 4. **deploy 是唯一的 Windows 互操作面**。`deploy` 在 WSL 中运行：在 `/mnt/c` 下经 `cmd.exe` 取 `%USERPROFILE%`，再用 `wslpath -u` 换算，目标仍是 `<home>/Desktop/dev/eggy/LuaSource_大富翁`，拷贝用 Linux 原生命令。`cmd.exe` 或 `wslpath` 缺失退 3（`status=unavailable`），不是部署失败；`deploy` 仍是零参数。
 5. **uml 走邻接仓的 POSIX 入口**。`lua5.4 tools/cli.lua uml <…>` 保留为唯一入口，由它钉死 `LUA_PATH` / `LUA_CPATH` / `PATH` 并做受控环境预检后，执行邻接检出的 `scripts/uml_posix.py`（`UML_VIEWER_TOOL_ROOT` 可指向兄弟仓开发树）。cmd 批处理、`uml-command.ps1` 派发与仓根 `uml.ps1` 从本仓退场；ADR 0068 / 0070 的「仓根 `./uml` 不作入口」语义不变。

@@ -37,7 +37,7 @@ function M.usage()
     "",
     "flag 映射:",
     "  --serial       所有车道及其测试子进程按序执行(当前默认)",
-    "  --parallel     POSIX 后台并行(set -m 进程组 + 看门狗超时收容整组);",
+    "  --parallel     POSIX 后台并行(setsid 进程组 + 看门狗超时收容整组);",
     "                 空输出按失败计",
     "  (默认)         slim:七层 + foundation 行为 spec 全跑",
     "  --tooling      正交叠加 tooling 并行 lane(改 tools/** 时)",

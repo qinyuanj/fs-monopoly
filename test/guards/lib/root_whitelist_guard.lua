@@ -35,7 +35,7 @@ local _WHITELIST = {
   [".agents"] = true,
   [".claude"] = true,
   ["skills-lock.json"] = true,
-  -- 邻接 uml-viewer 的质量配置(#93):uml-command.ps1 只在项目根读 uml-quality.json,
+  -- 邻接 uml-viewer 的质量配置(#93):上游 uml_posix.py 只在项目根读 uml-quality.json,
   -- 位置由上游契约决定。.uml-viewer/、target/ 等本地产物走 .gitignore,不进白名单。
   ["uml-quality.json"] = true,
   -- 真实 uml crap|mutate 跑出的度量(.metrics/crap.edn、mutate/*.edn)按上游 README

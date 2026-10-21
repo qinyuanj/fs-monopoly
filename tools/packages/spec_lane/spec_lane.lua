@@ -1,4 +1,9 @@
-#!/usr/bin/env lua
+#!/usr/bin/env lua5.4
+-- 直跑入口的解释器预检(#191 故事 3):与 tools/cli.lua 同口径,非 5.4 立即退 1。
+if _VERSION ~= "Lua 5.4" then
+  io.stderr:write("Lua 5.4 interpreter required; run `lua5.4 tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
+  os.exit(1)
+end
 local function _normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
 end

@@ -41,16 +41,20 @@ boundary.SKIPPED_EXIT_CODE = 0
 -- 声明的平台专用能力表。reason 是取证过的机制,不是泛泛的「不支持」。
 local _DECLARED = {}
 
--- 保证面:WSL Ubuntu(ADR 0073)。原生 Windows 只是部署目标,不是开发平台。
+-- 保证面:Linux(WSL Ubuntu 开发机与 ubuntu-24.04 CI,ADR 0073)。原生 Windows 只是部署目标。
 local _SUPPORTED = boundary.LINUX
 
 -- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/");
--- POSIX 侧再按 WSL 标记细分 Linux 与通用 POSIX,判定只用标准库与环境变量。
+-- POSIX 侧以 /proc/version 是否可读区分 Linux 与其他 POSIX(如 macOS)。
+-- 不看 WSL_DISTRO_NAME:ubuntu-24.04 CI 不是 WSL,但与开发机同属保证面(#191 故事 9)。
+-- 只用标准库读文件,不起进程。
 function boundary.host_platform()
   if package.config:sub(1, 1) ~= "/" then
     return boundary.WINDOWS
   end
-  if os.getenv("WSL_DISTRO_NAME") ~= nil and os.getenv("WSL_DISTRO_NAME") ~= "" then
+  local handle = io.open("/proc/version", "r")
+  if handle ~= nil then
+    handle:close()
     return boundary.LINUX
   end
   return boundary.POSIX
@@ -142,8 +146,7 @@ function boundary.evaluate(id, args, platform, declarations)
       .. "(已登记: " .. table.concat(boundary.declared_ids(), ", ") .. ")")
 
   local argv, skip = boundary.strip_skip_flag(args)
-  local host = platform or boundary.host_platform()
-  if host == _SUPPORTED then
+  if boundary.supported_platform(platform) then
     return { args = argv }
   end
 

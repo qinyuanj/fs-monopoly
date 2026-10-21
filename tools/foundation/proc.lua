@@ -4,7 +4,7 @@
 -- 与 fs(读回与清理)。反向不成立:fs 不认识子进程,这条单向依赖是分层的关键。
 --
 -- WSL Ubuntu 单平台(ADR 0073)。字符串按 POSIX sh 解释,数组是字面 argv
--- (经 shell 引号拼装后由 sh -lc 执行,argv 不会被二次解释)。环境变量以
+-- (经 shell 引号拼装后由 os.execute 交 /bin/sh -c 执行,argv 不会被二次解释)。环境变量以
 -- `NAME=value` 前缀导出。不对输出换行或字节编码做隐式转换,非零退出码原样返回。
 local text_lib = require("foundation.text")
 local path_lib = require("foundation.path")

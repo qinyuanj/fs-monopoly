@@ -28,12 +28,6 @@ local function _entropy_token()
   }, "_")
 end
 
--- 平台判定唯一真源是 foundation.platform_boundary;本函数保留为旧调用点的
--- 兼容面,永远返回 false(WSL Ubuntu 不是 macOS)。
-function env.is_macos()
-  return false
-end
-
 -- 当前目录真源是 runtime_path_ops.current_dir(`pwd -L`,PWD 只兜底):
 -- 继承来的 PWD 可能已被子进程的 cwd 改动作废,详见该文件注释。
 function env.current_dir()

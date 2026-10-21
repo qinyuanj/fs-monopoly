@@ -3,7 +3,7 @@ local M = {}
 -- 递归枚举 root 下的 .lua 文件。`find -print0` 保证空格/中文/换行文件名原样读回;
 -- 目录缺失时 find 非零,由调用方报 "no lua files found"。
 local function _build_list_command(root)
-  return "find " .. ("'" .. tostring(root):gsub("/", "/"):gsub("'", "'\\''") .. "'")
+  return "find " .. ("'" .. tostring(root):gsub("'", "'\\''") .. "'")
     .. " -type f -name '*.lua' -print0 2>/dev/null"
 end
 

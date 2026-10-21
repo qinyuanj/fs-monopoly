@@ -156,10 +156,25 @@ it("platform name exits 3 with status=unavailable without WSL interop", function
   check.truthy(result.output:find("cmd.exe", 1, true), result.output)
 end)
 
+-- %USERPROFILE% 与 wslpath 经注入缝替身验证,不依赖本机互操作面(#191 测试决策)。
 it("home directory resolves the Windows profile through wslpath", function()
-  local home = deploy.resolve_home_dir()
-  check.truthy(home:match("^/mnt/%a/") ~= nil, "expected a /mnt/<drive>/... path, got " .. tostring(home))
-  check.truthy(not home:match("^/home/"), "WSL $HOME must not be used as the deploy home")
+  local commands = {}
+  local home = deploy.resolve_windows_home_dir(function(command)
+    commands[#commands + 1] = command
+    if command:find("cmd.exe", 1, true) then return "C:\\Users\\测试 user\r\n" end
+    return "/mnt/c/Users/测试 user\n"
+  end)
+  check.same("/mnt/c/Users/测试 user", home)
+  check.truthy(commands[1]:find("%USERPROFILE%", 1, true), commands[1])
+  check.truthy(commands[2]:find("wslpath -u 'C:\\Users\\测试 user'", 1, true), commands[2])
+end)
+
+it("home directory is empty when the profile cannot be resolved", function()
+  check.same("", deploy.resolve_windows_home_dir(function() return "" end))
+  check.same("", deploy.resolve_windows_home_dir(function(command)
+    if command:find("cmd.exe", 1, true) then return "C:\\Users\\x\n" end
+    return "wslpath: error\n"
+  end))
 end)
 
 it("project root is true for full project shape", function()

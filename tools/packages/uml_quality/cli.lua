@@ -166,19 +166,19 @@ local function _probe_lua_modules(state, root, lua_exe, roots)
 end
 
 local function _check_viewer(state, root, with_config)
-  local entry = _tool_root(root) .. "/" .. _UPSTREAM_ENTRY
+  local tool_root = _tool_root(root)
+  local entry = tool_root .. "/" .. _UPSTREAM_ENTRY
   local present = fs.path_exists(entry)
   _report(state, present, "uml-viewer checkout: " .. entry .. (present and "" or " missing"))
-  if not present or not with_config then return present and _tool_root(root) or nil end
+  if not present or not with_config then return end
   local result = proc.run_command({ "python3", "-I", "-B",
-    root .. "/tools/packages/uml_quality/probe_config.py", root, _tool_root(root) })
+    root .. "/tools/packages/uml_quality/probe_config.py", root, tool_root })
   for line in tostring(result.output or ""):gmatch("[^\r\n]+") do
     _report(state, result.ok == true, "uml-quality.json " .. line)
   end
   if result.ok ~= true and tostring(result.output or "") == "" then
     _report(state, false, "uml-quality.json probe failed (exit " .. tostring(result.code) .. ")")
   end
-  return _tool_root(root)
 end
 
 local function _check_python(state, root, tool)
@@ -245,7 +245,7 @@ local function _preflight(root, op, env)
     end
   end
   _check_python3(state)
-  state.scripts = _check_viewer(state, root, op ~= "ir")
+  _check_viewer(state, root, op ~= "ir")
   for _, tool in ipairs(_TOOLS[op]) do _check_python(state, root, tool) end
   if op == "ir" then
     state.env_list = {}
@@ -284,7 +284,7 @@ local function _ir_policy(root)
   return proposals.merge(arch_policy.project_uml_policy(policy), fs.read_raw(root .. "/" .. proposals.OVERRIDE_PATH), _IR_OUT)
 end
 
-local function _mutation_probe(root, state, args)
+local function _mutation_probe(root, args)
   local args_file = env_lib.make_temp_path("uml_mutation_args", ".json")
   local targets_file = env_lib.make_temp_path("uml_mutation_targets", ".json")
   local manifest = env_lib.make_temp_path("uml_mutation_manifest", ".json")
@@ -361,7 +361,7 @@ function M.main(args, env)
   if op == "view" then return launch(root, state.env_list, argv) end
   local mutation
   if op == "mutate" then
-    mutation = _mutation_probe(root, state, args)
+    mutation = _mutation_probe(root, args)
     if mutation == nil then return 1 end
   end
   local code = launch(root, state.env_list, argv)
