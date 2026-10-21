@@ -12,7 +12,7 @@ local sync_data = require("packages.data_sync.sync_data")
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua sync-data",
+    "用法: lua5.4 tools/cli.lua sync-data",
     "",
     "从部署目录(LuaSource_大富翁/)把编辑器最新导出回同步进仓库:",
     "  Data/Prefab.lua    字节原样拷贝;",

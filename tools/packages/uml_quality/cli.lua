@@ -1,4 +1,4 @@
--- packages/uml_quality/cli.lua —— uml 子命令(#93):邻接 uml-viewer 质量入口的原生 Windows 调用面。
+-- packages/uml_quality/cli.lua —— uml 子命令(#93):邻接 uml-viewer 质量入口的 WSL 调用面。
 --
 -- 统一接口形态(#300 决议):
 --   M.main(args, env) -> 退出码
@@ -6,19 +6,20 @@
 --
 -- 质量算法与派发优先级在邻接 uml-viewer;本包钉环境、预检并独立核验变异结果:
 --   1. 预检:Lua 模块只从受控 Lua 环境(`luarocks config` 解析的机器 tree)解析
---      (不借仓内工具 tree)、PowerShell 7、uml-viewer 检出、uml-quality.json(用
---      uml-viewer 自己的读取器校验)、crapper/mutator 的 Python 3.11+ venv。任一
---      不过退 1,先删陈旧的 .uml-viewer/quality-result.json,不起工具。
---   2. 派发:在钉死 LUA_PATH/LUA_CPATH/PATH 的 cmd 批处理里跑 uml-command.ps1,
---      crap 退出码原样回传;mutate 独立按目标核验,有效结果/no-sites 退 0,未执行退 1。
+--      (不借仓内工具 tree)、Python 3.11+、uml-viewer 检出、uml-quality.json(用
+--      uml-viewer 自己的读取器校验)、crapper/mutator 的 Python venv。任一不过
+--      退 1,先删陈旧的 .uml-viewer/quality-result.json,不起工具。
+--   2. 派发:在钉死 LUA_PATH/LUA_CPATH/PATH 的 sh 脚本里跑邻接仓的 POSIX 入口
+--      (scripts/uml_posix.py),crap 退出码原样回传;mutate 独立按目标核验,
+--      有效结果/no-sites 退 0,未执行退 1。
 -- 预检失败退 1;上游 mutate 的 3(存活突变)只在独立核验通过后归一为 0。
 --
 -- ir / view(#99 / ADR 0070):
 --   ir   从 arch_policy 投影 + docs/architecture.proposals.edn 生成仓根 policy.edn
---        (gitignore),再经 uml-command.ps1 ir 调上游 ir-generator 写 tmp/uml/monopoly.edn。
---   view 在钉死 LUA_PATH/LUA_CPATH 的批处理里调上游启动器,herdr 由上游从 PATH 选
+--        (gitignore),再经 POSIX 入口的 ir 子命令调上游 ir-generator 写 tmp/uml/monopoly.edn。
+--   view 在钉死 LUA_PATH/LUA_CPATH 的环境里调上游启动器,herdr 由上游从 PATH 选
 --        (>= 0.9.3 最高版);环境沿启动链下传到 companion,父进程与全局环境不变。
--- env.preflight / env.launch 可注入替身(测试用);缺省走真实预检与 cmd 批处理。
+-- env.preflight / env.launch 可注入替身(测试用);缺省走真实预检与 sh 启动。
 local M = {}
 
 local runtime = require("packages.uml_quality.runtime")
@@ -33,6 +34,19 @@ local _TOOLS = { check = { "crapper", "mutator" }, crap = { "crapper" }, mutate 
 
 local _IR_OUT = "tmp/uml/monopoly.edn"
 
+-- 上游 POSIX 命令模块。检出默认是邻接的 .uml-viewer/uml-viewer(安装器 clone);
+-- UML_VIEWER_TOOL_ROOT 指到兄弟仓开发树时用那一份(上游自己的开发覆写面)。
+-- 仓根 ./uml 只是安装器拷出的薄壳,只有放在项目根才算得出 TOOL_ROOT,故不作入口。
+local _UPSTREAM_ENTRY = "scripts/uml_posix.py"
+
+local function _tool_root(root)
+  local override = os.getenv("UML_VIEWER_TOOL_ROOT")
+  if override ~= nil and override ~= "" then
+    return path_lib.normalize_path(override):gsub("/+$", "")
+  end
+  return root .. "/.uml-viewer/uml-viewer"
+end
+
 local _PYTHON_PROBE = {
   crapper = "import sys, crapper, crapper.languages.treesitter; "
     .. "print('.'.join(map(str, sys.version_info[:3]))); print(crapper.__file__)",
@@ -42,22 +56,22 @@ local _PYTHON_PROBE = {
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua uml <check|crap|mutate|ir|view> [args...]",
+    "用法: lua5.4 tools/cli.lua uml <check|crap|mutate|ir|view> [args...]",
     "",
-    "check   只做预检:受控 Lua 环境模块来源、PowerShell 7、uml-viewer 检出、",
+    "check   只做预检:受控 Lua 环境模块来源、Python 3.11+、uml-viewer 检出、",
     "        uml-quality.json、crapper/mutator Python 3.11+ venv。0 = 全过 / 1 = 有缺失。",
-    "crap    预检后经 uml-command.ps1 跑 crapper(standardTools,--full-tree)。",
+    "crap    预检后经邻接 POSIX 入口跑 crapper(standardTools,--full-tree)。",
     "        退出码原样回传:0/2 有效结果,其余失败。",
-    "mutate  预检后经 uml-command.ps1 跑 mutator;args 原样转发(目标文件或 --changed)。",
+    "mutate  预检后经邻接 POSIX 入口跑 mutator;args 原样转发(目标文件或 --changed)。",
     "        独立核验每个目标:本轮 .edn 含变异统计 -> 0,输出变异/杀死/存活数;",
     "        成功扫描证明无站点 -> 0,status=no-sites;缺失/旧产物/无统计 -> 1。",
     "        上游 validResult 仅作诊断;扫描、解析或上游执行失败 -> 1。",
     "ir      arch_policy 投影 + " .. proposals.OVERRIDE_PATH .. " 的 :proposals/:omit",
-    "        生成仓根 policy.edn(不入库),再经 uml-command.ps1 ir 写 " .. _IR_OUT .. "。",
+    "        生成仓根 policy.edn(不入库),再经 POSIX 入口的 ir 写 " .. _IR_OUT .. "。",
     "        覆盖文件缺失/为空视为无推演;非法或含多余键退 1,不写 policy.edn。",
     "        退出码原样回传。不接受额外参数。",
     "view    预检(含 PATH 上 herdr >= 0.9.3)后,在钉死 LUA_PATH/LUA_CPATH 的环境里经",
-    "        uml-command.ps1 启动图窗;args 原样转发(如 --restart)。退出码原样回传。",
+    "        POSIX 入口启动图窗;args 原样转发(如 --restart)。退出码原样回传。",
     "",
     "预检失败退 1;check/crap/mutate 另删除陈旧的 .uml-viewer/quality-result.json。",
     "Python venv 搭建见 tools/specs/uml_quality.prompt。",
@@ -74,17 +88,22 @@ local function _report(state, ok, message)
   if not ok then state.ok = false end
 end
 
--- crapper 用 shutil.which("lua") 找解释器;钉 lua.exe 所在目录而不是 lua.cmd 垫片目录。
+-- crapper / mutator 在 Lua 子进程里按 PATH 找 lua5.4;PATH 上第一个命中的
+-- 解释器目录置前,保证它们看到的就是本仓口径的解释器。裸命令名要解析成绝对
+-- 路径(`command -v`),否则无法确认目录里确有该解释器。
 local function _lua_exe(state)
   local ok, lua_bin = pcall(require("foundation.lua54").lua54_bin)
   if not ok then
     _report(state, false, "lua 5.4: " .. tostring(lua_bin))
     return nil
   end
-  local result = proc.run_command({ lua_bin, "-e", "io.write(arg[0])" })
-  local exe = path_lib.normalize_path(tostring(result.output or ""))
-  if result.ok ~= true or not fs.path_exists(exe) then
-    _report(state, false, "lua 5.4: cannot resolve native interpreter behind " .. tostring(lua_bin))
+  local exe = path_lib.normalize_path(lua_bin)
+  if not exe:find("/", 1, true) then
+    local resolved = proc.run_command("command -v " .. require("foundation.shell").shell_quote(lua_bin))
+    exe = path_lib.normalize_path(tostring(resolved.output or ""):gsub("%s+$", ""))
+  end
+  if not fs.path_exists(exe) then
+    _report(state, false, "lua 5.4: cannot resolve the interpreter behind " .. tostring(lua_bin))
     return nil
   end
   _report(state, true, "lua 5.4: " .. exe)
@@ -105,12 +124,31 @@ local function _check_lua_env(state)
   return info.roots
 end
 
-local function _run_batch(root, env_list, argv, output_path)
-  local batch = env_lib.make_temp_path("uml_quality", ".cmd")
-  fs.write_file(batch, runtime.batch_text(root, env_list, argv, output_path))
-  local ok, kind, code = os.execute('cmd.exe /d /v:off /c ""' .. batch:gsub("/", "\\") .. '""')
-  fs.remove_path(batch)
-  return require("foundation.shell").exit_status(ok, kind, code)
+-- 上游命令模块是 Python 实现:解释器与版本都要先过。
+local function _check_python3(state)
+  local result = proc.run_command({ "python3", "-I", "-c", "import sys; print('%d.%d' % sys.version_info[:2])" })
+  local version = tostring(result.output or ""):match("(%d+%.%d+)")
+  local major, minor
+  if version ~= nil then
+    local a, b = version:match("^(%d+)%.(%d+)$")
+    major, minor = tonumber(a), tonumber(b)
+  end
+  local ok = result.ok == true and major ~= nil
+    and (major > 3 or (major == 3 and minor >= 11))
+  _report(state, ok, "python3 >= 3.11: " .. (ok and ("Python " .. version) or (result.output ~= "" and result.output or "not runnable")))
+  return ok
+end
+
+-- sh 启动:写临时脚本、跑它、删掉。脚本内容是 runtime.launch_text 的唯一产物,
+-- 环境前缀与命令边界不靠调用方逐段转义。
+local function _run_script(root, env_list, argv, output_path)
+  local script = env_lib.make_temp_path("uml_quality", ".sh")
+  fs.write_file(script, runtime.launch_text(root, env_list, argv, output_path))
+  local result = proc.run_command({ "sh", script })
+  fs.remove_path(script)
+  io.write(result.output or "")
+  io.flush()
+  return result.ok, result.code
 end
 
 local function _probe_lua_modules(state, root, lua_exe, roots)
@@ -118,7 +156,7 @@ local function _probe_lua_modules(state, root, lua_exe, roots)
   local output_path = env_lib.make_temp_path("uml_quality_probe", ".log")
   local argv = { lua_exe, root .. "/tools/packages/uml_quality/probe_lua_modules.lua" }
   for _, name in ipairs(runtime.REQUIRED_LUA_MODULES) do argv[#argv + 1] = name end
-  _run_batch(root, env_list, argv, output_path)
+  _run_script(root, env_list, argv, output_path)
   local output = fs.read_raw(output_path) or ""
   fs.remove_path(output_path)
   local ok, verdicts = runtime.probe_verdicts(output, roots)
@@ -127,31 +165,24 @@ local function _probe_lua_modules(state, root, lua_exe, roots)
   return env_list
 end
 
-local function _check_pwsh(state)
-  local result = proc.run_command({ "pwsh", "-NoProfile", "-Command", "$PSVersionTable.PSVersion.Major" })
-  local major = tonumber(tostring(result.output or ""):match("(%d+)"))
-  _report(state, result.ok == true and major ~= nil and major >= 7,
-    "PowerShell 7 (pwsh): " .. (result.ok == true and ("major " .. tostring(major)) or "not runnable"))
-end
-
 local function _check_viewer(state, root, with_config)
-  local scripts = root .. "/.uml-viewer/uml-viewer/scripts"
-  local present = fs.path_exists(scripts .. "/uml-command.ps1")
-  _report(state, present, "uml-viewer checkout: " .. scripts .. "/uml-command.ps1" .. (present and "" or " missing"))
-  if not present or not with_config then return present and scripts or nil end
-  local result = proc.run_command({ "pwsh", "-NoProfile", "-File",
-    root .. "/tools/packages/uml_quality/probe_config.ps1", "-Root", root, "-Scripts", scripts })
+  local entry = _tool_root(root) .. "/" .. _UPSTREAM_ENTRY
+  local present = fs.path_exists(entry)
+  _report(state, present, "uml-viewer checkout: " .. entry .. (present and "" or " missing"))
+  if not present or not with_config then return present and _tool_root(root) or nil end
+  local result = proc.run_command({ "python3", "-I", "-B",
+    root .. "/tools/packages/uml_quality/probe_config.py", root, _tool_root(root) })
   for line in tostring(result.output or ""):gmatch("[^\r\n]+") do
     _report(state, result.ok == true, "uml-quality.json " .. line)
   end
   if result.ok ~= true and tostring(result.output or "") == "" then
     _report(state, false, "uml-quality.json probe failed (exit " .. tostring(result.code) .. ")")
   end
-  return scripts
+  return _tool_root(root)
 end
 
 local function _check_python(state, root, tool)
-  local python = root .. "/.uml-viewer/" .. tool .. "/.venv/Scripts/python.exe"
+  local python = root .. "/.uml-viewer/" .. tool .. "/.venv/bin/python"
   if not fs.path_exists(python) then
     _report(state, false, tool .. ": " .. python .. " missing (see tools/specs/uml_quality.prompt)")
     return
@@ -170,14 +201,14 @@ local function _check_python(state, root, tool)
   end
 end
 
--- 上游按 PATH 序扫 herdr.exe,选 >= 0.9.3 的最高版;这里同样只看 PATH,至少一个达标才放行。
--- 不钉版本、不改 PATH 次序,也不下载或升级。
+-- 上游按 PATH 序扫 herdr,选 >= 0.9.3 的最高版;这里同样只看 PATH,至少一个达标
+-- 才放行。不钉版本、不改 PATH 次序,也不下载或升级。
 local function _check_herdr(state, path)
   local seen, rejected, found = {}, {}, false
-  for dir in tostring(path or ""):gmatch("[^;]+") do
-    local exe = path_lib.normalize_path((dir:gsub('"', ""))) .. "/herdr.exe"
-    if not seen[exe:lower()] and fs.path_exists(exe) then
-      seen[exe:lower()] = true
+  for dir in tostring(path or ""):gmatch("[^:]+") do
+    local exe = path_lib.normalize_path((dir:gsub('"', ""))) .. "/herdr"
+    if not seen[exe] and fs.path_exists(exe) then
+      seen[exe] = true
       local result = proc.run_command({ exe, "--version" })
       local verdict = runtime.herdr_verdict(result.ok == true and result.output or nil)
       if verdict.ok then
@@ -195,13 +226,13 @@ local function _check_herdr(state, path)
   end
 end
 
--- uml-command.ps1 ir 先选 examples/*.policy.edn,其次才是仓根 policy.edn;仓根有
+-- 上游 ir 先选 examples/*.policy.edn,其次才是仓根 policy.edn;仓根有
 -- examples/ 就可能静默顶替生成物(根白名单本就不放行它)。
 local function _check_policy_unshadowed(state, root)
   local shadowed = fs.is_dir(root .. "/examples")
   _report(state, not shadowed, "policy.edn " .. (shadowed
-    and "may be shadowed: " .. root .. "/examples exists (uml-command.ps1 ir prefers examples/*.policy.edn)"
-    or "is the policy uml-command.ps1 ir reads"))
+    and "may be shadowed: " .. root .. "/examples exists (upstream ir prefers examples/*.policy.edn)"
+    or "is the policy upstream ir reads"))
 end
 
 local function _preflight(root, op, env)
@@ -213,7 +244,7 @@ local function _preflight(root, op, env)
       state.env_list = _probe_lua_modules(state, root, lua_exe, state.lua_roots)
     end
   end
-  _check_pwsh(state)
+  _check_python3(state)
   state.scripts = _check_viewer(state, root, op ~= "ir")
   for _, tool in ipairs(_TOOLS[op]) do _check_python(state, root, tool) end
   if op == "ir" then
@@ -224,8 +255,16 @@ local function _preflight(root, op, env)
   return state
 end
 
+-- 上游命令模块的调用面:python3 -I -B <checkout>/scripts/uml_posix.py command <root> ...
+-- UML_VIEWER_TOOL_ROOT 显式钉到解析出的检出,不依赖安装器拷贝的 ./uml 位置。
+local function _upstream_argv(root, args)
+  local argv = { "python3", "-I", "-B", _tool_root(root) .. "/" .. _UPSTREAM_ENTRY, "command", root }
+  for _, value in ipairs(args or {}) do argv[#argv + 1] = value end
+  return argv
+end
+
 local function _launch(root, env_list, argv)
-  local _, code = _run_batch(root, env_list, argv, nil)
+  local _, code = _run_script(root, env_list, argv, nil)
   return code
 end
 
@@ -252,9 +291,8 @@ local function _mutation_probe(root, state, args)
   local forward = {}
   for index = 2, #args do forward[#forward + 1] = args[index] end
   fs.write_file(args_file, require("foundation.json_writer").encode(forward))
-  local result = proc.run_command({ "pwsh", "-NoProfile", "-File",
-    root .. "/tools/packages/uml_quality/mutation_targets.ps1", "-Root", root,
-    "-Scripts", state.scripts, "-ArgsFile", args_file, "-OutFile", targets_file })
+  local result = proc.run_command({ "python3", "-I", "-B",
+    root .. "/tools/packages/uml_quality/mutation_targets.py", root, _tool_root(root), args_file, targets_file })
   fs.remove_path(args_file)
   if result.output and result.output ~= "" then io.write(result.output) end
   if not result.ok then
@@ -262,7 +300,7 @@ local function _mutation_probe(root, state, args)
     io.stderr:write("uml: mutation target selection failed\n")
     return nil
   end
-  local argv = { root .. "/.uml-viewer/mutator/.venv/Scripts/python.exe", "-I",
+  local argv = { root .. "/.uml-viewer/mutator/.venv/bin/python", "-I",
     root .. "/tools/packages/uml_quality/mutation_evidence.py", "prepare", root, targets_file, manifest }
   local prepared = proc.run_command(argv, { cwd = root })
   fs.remove_path(targets_file)
@@ -309,10 +347,11 @@ function M.main(args, env)
   if op == "check" then return 0 end
 
   -- view 直接走上游启动器(无子命令名);ir 不接受额外参数,输出路径由本包钉死。
-  local argv = { "pwsh", "-NoProfile", "-File", state.scripts .. "/uml-command.ps1", root }
-  if op ~= "view" then argv[#argv + 1] = op end
-  if op == "ir" then argv[#argv + 1] = _IR_OUT end
-  for index = 2, #args do argv[#argv + 1] = args[index] end
+  local upstream = {}
+  if op ~= "view" then upstream[1] = op end
+  if op == "ir" then upstream[#upstream + 1] = _IR_OUT end
+  for index = 2, #args do upstream[#upstream + 1] = args[index] end
+  local argv = _upstream_argv(root, upstream)
 
   if op == "ir" then
     fs.write_file(root .. "/policy.edn", policy_text)

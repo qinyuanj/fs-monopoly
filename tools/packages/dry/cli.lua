@@ -17,7 +17,7 @@ local dryer = require("packages.dry.dryer")
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua dry [dryer 选项] [路径或过滤词 ...]",
+    "用法: lua5.4 tools/cli.lua dry [dryer 选项] [路径或过滤词 ...]",
     "",
     "结构重复检测(软车道,dryer):抽函数 / 重构前扫候选;选项经 args 直通 dryer",
     "(--threshold / --min-lines / --min-nodes / --edn / --root / -s / --changed ...)。",

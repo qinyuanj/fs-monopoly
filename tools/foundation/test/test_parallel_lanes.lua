@@ -6,7 +6,8 @@ local fs = require("foundation.fs")
 local proc = require("foundation.proc")
 local shell = require("foundation.shell")
 local parallel = require("foundation.parallel_lanes")
-local native_lua = assert(arg[-1], "native Lua interpreter identity required")
+local lua54 = require("foundation.lua54")
+local native_lua = lua54.lua54_bin()
 
 describe("native parallel lanes", function()
 
@@ -27,14 +28,15 @@ end
 it("distinguishes success failure missing command and empty output", function()
   fixture(function(root)
     local writer = script(root, "writer", 'local d=os.time()+2; while os.time()<d do end; print("中文 success")')
-    local success = 'start "" /b lua "' .. writer:gsub("/", "\\") .. '"'
+    -- 字符串形态与数组形态都要覆盖:串行路径两处都经同一 shell 拼装。
+    local success = native_lua .. " " .. shell.shell_quote(writer)
     local failure = script(root, "bad", 'print("out"); io.stderr:write("err\\n"); os.exit(4)')
     local silent = script(root, "empty", "os.exit(0)")
     local ok, results = parallel.run({
       { label = "ok", cmd = success },
-      { label = "bad", cmd = shell.build_command({ "lua", failure }) },
-      { label = "missing", cmd = shell.build_command({ root .. "/missing_91.exe" }) },
-      { label = "empty", cmd = shell.build_command({ "lua", silent }) },
+      { label = "bad", cmd = shell.build_command({ native_lua, failure }) },
+      { label = "missing", cmd = shell.build_command({ root .. "/missing_91" }) },
+      { label = "empty", cmd = shell.build_command({ native_lua, silent }) },
     }, { stream = false, timeout = 20 })
     check.is_false(ok)
     check.same(4, #results)
@@ -48,7 +50,7 @@ it("distinguishes success failure missing command and empty output", function()
     check.same(4, results[2].exit_code)
     check.matches("err", results[2].output, 1, true)
     check.same("launch_failed", results[3].reason)
-    check.same(9009, results[3].exit_code)
+    check.same(127, results[3].exit_code)
     check.is_not.equal("", results[3].output)
     check.same("output_incomplete", results[4].reason)
     check.same(0, results[4].exit_code)
@@ -61,7 +63,7 @@ it("exports opts.env to lane command trees", function()
     local reader = script(root, "env reader",
       'io.write(tostring(os.getenv("MONOPOLY_TEST_ENV_124") or "missing"))')
     local ok, results = parallel.run({
-      { label = "env", cmd = shell.build_command({ "lua", reader }) },
+      { label = "env", cmd = shell.build_command({ native_lua, reader }) },
     }, { stream = false, timeout = 20, env = { MONOPOLY_TEST_ENV_124 = "value with space 100%" } })
     check.is_true(ok)
     check.same("value with space 100%", results[1].output)
@@ -71,8 +73,8 @@ end)
 it("parallel and serial preserve order results and Chinese arguments", function()
   fixture(function(root)
     local file = script(root, "echo args", 'for i=1,#arg do print(arg[i]) end; os.exit(tonumber(arg[1]))')
-    local first = { "lua", file, "0", "", "中文 space", 'quote"and&pipe|', "%PATH%", "bang!caret^", "tail\\" }
-    local second = { "lua", file, "5", "参数 空格" }
+    local first = { native_lua, file, "0", "", "中文 space", 'quote"and&pipe|', "%PATH%", "bang!caret^", "tail\\" }
+    local second = { native_lua, file, "5", "参数 空格" }
     local lanes = {
       { label = "first", cmd = first },
       { label = "second", cmd = second },
@@ -89,9 +91,8 @@ it("parallel and serial preserve order results and Chinese arguments", function(
   end)
 end)
 
--- argv.lua 转发必须保住 arg[-1](解释器身份):test_parallel_lanes 自身等 spec 以
--- assert(arg[-1]) 取 native Lua 身份;缺了它,分片 lane 内该文件加载即 error
--- (busted hook/load error + empty spec file,#107 实测)。与串行路径输出逐字节一致。
+-- argv 表与串行路径逐字节一致:两处都由 shell.build_command 拼装,子进程看到的
+-- arg[0](arg[-1])与串行相同。这条口径是 #107 的回归面,平台无关。
 it("table command lanes preserve interpreter identity arg minus one", function()
   fixture(function(root)
     local file = script(root, "interp", 'print("ARGV_MINUS1=" .. tostring(arg[-1]))')
@@ -105,22 +106,21 @@ it("table command lanes preserve interpreter identity arg minus one", function()
   end)
 end)
 
--- 裸命令名分支:argv 首项是 "lua" 时,lane 内 arg[-1] 也须与串行 cmd.exe 的
--- PATH 解析结果逐字节一致(同一 lane 批内多条 lane 共用同一解析)。
+-- 裸命令名分支:argv 首项是裸名时,lane 内 arg[-1] 也须与串行路径逐字节一致。
 it("bare command name lanes resolve interpreter identity like serial", function()
   fixture(function(root)
     local file = script(root, "bare", 'print("ARGV_MINUS1=" .. tostring(arg[-1]))')
     local ok, results = parallel.run({
-      { label = "a", cmd = { "lua", file } }, { label = "b", cmd = { "lua", file } },
+      { label = "a", cmd = { "lua5.4", file } }, { label = "b", cmd = { "lua5.4", file } },
     }, { stream = false, timeout = 20 })
     check.is_true(ok)
-    local serial = proc.run_command({ "lua", file })
+    local serial = proc.run_command({ "lua5.4", file })
     check.same(serial.output, results[1].output)
     check.same(serial.output, results[2].output)
   end)
 end)
 
-it("Lua argv exceeds cmd limit and lanes overlap", function()
+it("long Lua argv and lanes overlap", function()
   fixture(function(root)
     local file = script(root, "wait", [[
 local started=os.time()
@@ -130,8 +130,8 @@ print('INTERVAL '..started..' '..os.time())
 print(#arg)
 print(arg[1])
 ]])
-    local args = { "lua", file }
-    for i = 1, 1000 do args[#args + 1] = "中文 argument space" end
+    local args = { native_lua, file }
+    for _ = 1, 1000 do args[#args + 1] = "中文 argument space" end
     local ok, results = parallel.run({
       { label = "a", cmd = args }, { label = "b", cmd = args },
     }, { stream = false, timeout = 20 })
@@ -161,20 +161,24 @@ local f=assert(io.open(arg[1],"wb")); f:write("LATE"); f:close()
     check.same("timeout", results[1].reason)
     check.matches("START", results[1].output, 1, true)
     check.is_nil(results[1].artifact_dir, "termination and cleanup must succeed")
-    proc.run_command({ "lua", "-e", "local d=os.time()+9; while os.time()<d do end; print('WAIT')" })
+    proc.run_command({ native_lua, "-e", "local d=os.time()+9; while os.time()<d do end; print('WAIT')" })
     check.is_false(fs.path_exists(marker), "timed-out child must not perform its delayed write")
     check.same("keep", fs.read_raw(root .. "/owned/sentinel.txt"))
     check.same(1, #assert(proc.collect_files(root .. "/owned")))
   end)
 end)
 
-it("builtin Windows owner requires no external compiler", function()
+-- lane 脚本与收容只依赖 sh / setsid / sleep,不引入编译器或宿主专用运行时
+-- (Windows 时代的 PowerShell + Job Object 已随 ADR 0073 退场)。
+it("lane owner needs no external compiler", function()
   fixture(function(root)
     local file = script(root, "builtin", 'print("BUILTIN_ONLY")')
-    local driver = script(root, "driver", 'require("test.bootstrap").install_package_paths(); local ok,r=require("foundation.parallel_lanes").run({{label="builtin",cmd={' .. string.format('%q', native_lua) .. ',' .. string.format('%q', file) .. '}}},{stream=false,timeout=20}); print(r[1].output); os.exit(ok and 0 or 1)')
-    local system = assert(os.getenv("SystemRoot"))
-    local command = 'set "PATH=' .. system .. '\\System32;' .. system .. '\\System32\\WindowsPowerShell\\v1.0" && "' .. native_lua .. '" "' .. driver:gsub("/", "\\") .. '"'
-    local result = proc.run_command(command)
+    local driver = script(root, "driver",
+      'require("test.bootstrap").install_package_paths(); '
+        .. 'local ok,r=require("foundation.parallel_lanes").run({{label="builtin",cmd={'
+        .. string.format('%q', native_lua) .. "," .. string.format('%q', file)
+        .. '}}},{stream=false,timeout=20}); print(r[1].output); os.exit(ok and 0 or 1)')
+    local result = proc.run_command({ native_lua, driver })
     check.is_true(result.ok, result.output)
     check.matches("BUILTIN_ONLY", result.output, 1, true)
   end)
@@ -184,7 +188,9 @@ it("timeout stops detached writer after command parent exits", function()
   fixture(function(root)
     local marker = root .. "/detached_late.txt"
     local file = script(root, "detached", 'print("DETACHED_START"); io.stdout:flush(); local d=os.time()+6; while os.time()<d do end; local f=assert(io.open(arg[1],"wb")); f:write("LATE"); f:close()')
-    local command = 'start "" /b "' .. native_lua .. '" "' .. file:gsub("/", "\\") .. '" "' .. marker:gsub("/", "\\") .. '"'
+    -- 命令自身再派一个后台写手:收容必须按进程组覆盖,而不只是直接子进程。
+    local command = shell.shell_quote(native_lua) .. " " .. shell.shell_quote(file) .. " "
+      .. shell.shell_quote(marker) .. " & wait"
     local ok, results = parallel.run({{label="detached", cmd=command}}, {stream=false, timeout=2})
     check.is_false(ok)
     check.same("timeout", results[1].reason)

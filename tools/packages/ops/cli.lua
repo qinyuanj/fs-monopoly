@@ -5,8 +5,8 @@
 --   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
 --
 -- 实现:子进程转发 tools/packages/ops/deploy.lua,退出码透传。deploy.lua 自包含
--- 决策(只用 Lua 5.4 标准库,不 require foundation.*,须在原生 Windows 上运行,
--- 部署目标是 Windows 侧 Eggy 宿主),本壳同样自包含,不碰 foundation。
+-- 决策(只用 Lua 5.4 标准库,不 require foundation.*),在 WSL 中运行、写入
+-- Windows 侧 Eggy 宿主目录(ADR 0073)。
 -- --help/-h 在壳内消费返回 usage;其余参数原样透传,deploy.lua 自身零参数接口
 -- 报错语义不变(任何参数 → ERROR + exit 1,#384 继承的 deploy.ps1 空 param())。
 local M = {}
@@ -15,17 +15,18 @@ local DEPLOY_ENTRY = "tools/packages/ops/deploy.lua"
 
 local function _shell_quote(value)
   local text = tostring(value or "")
-  assert(not text:find('["\r\n%%!]'), "Unsupported command argument")
-  return '"' .. text .. '"'
+  assert(not text:find("[\r\n%z]"), "Unsupported command argument")
+  return "'" .. text:gsub("'", "'\\''") .. "'"
 end
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua deploy",
+    "用法: lua5.4 tools/cli.lua deploy",
     "",
-    "把 src/ + main.lua + Data/ 按原样部署到本地 Eggy 宿主目录(LuaSource_大富翁)。",
+    "把 src/ + main.lua + Data/ 按原样部署到 Windows 侧 Eggy 宿主目录(LuaSource_大富翁)。",
     "零参数、零开关;任何多余参数 → ERROR + exit 1(deploy.lua 自身 CLI 面不变)。",
-    "目标平台仅原生 Windows(Lua 5.4 + cmd;ADR 0066)。",
+    "在 WSL Ubuntu 中运行(ADR 0073):目标经 cmd.exe 取 %USERPROFILE% 再按 wslpath 换算;",
+    "没有 cmd.exe / wslpath 时退 3(status=unavailable,环境问题不是部署失败)。",
     "行为真源见 tools/packages/ops/deploy.lua。",
     "",
   }, "\n") .. "\n"
@@ -38,7 +39,7 @@ function M.main(args, env)
       return 0
     end
   end
-  local parts = { "lua", DEPLOY_ENTRY }
+  local parts = { require("foundation.lua54").lua54_bin(), DEPLOY_ENTRY }
   for _, value in ipairs(args or {}) do
     parts[#parts + 1] = _shell_quote(value)
   end

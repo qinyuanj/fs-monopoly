@@ -7,9 +7,9 @@ local builders = {}
 -- spec-lane 车道默认后端 = 真实 busted 运行器
 -- (packages.test_runner.lua54.argv_prefix)。--busted-bin / BUSTED_BIN
 -- 逃生舱已删,verify_full 不注入任何覆写。
-local function _spec_lane_cmd(profile, evidence_dir)
+local function _spec_lane_cmd(profile, evidence_dir, lua54_bin)
   local argv = {
-    "lua",
+    lua54_bin or "lua5.4",
     "tools/packages/spec_lane/spec_lane.lua",
     "--profile",
     profile,
@@ -46,20 +46,23 @@ end
 
 -- 层边界门禁住在 guards 车道(arch_policy_guard 执行 policy.json);旧外部
 -- 架构工具的独立 arch 车道随 #94 退场。CRAP / 变异不进 verify,走显式
--- `lua tools/cli.lua uml crap|mutate`。
+-- `lua5.4 tools/cli.lua uml crap|mutate`。
 function builders.default(env, include_tooling, serial, evidence_dir)
   local lanes, skipped = {}, {}
-  lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract", evidence_dir) }
-  lanes[#lanes + 1] = { label = "guards", cmd = _spec_lane_cmd("guards", evidence_dir) }
-  lanes[#lanes + 1] = { label = "behavior", cmd = "lua test/support/behavior_parallel.lua" }
+  lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract", evidence_dir, env.lua54_bin) }
+  lanes[#lanes + 1] = { label = "guards", cmd = _spec_lane_cmd("guards", evidence_dir, env.lua54_bin) }
+  local lua = env.lua54_bin or "lua5.4"
+  lanes[#lanes + 1] = { label = "behavior",
+    cmd = shell_lib.build_command({ lua, "test/support/behavior_parallel.lua" }) }
   _add_lint_or_skip(lanes, skipped, env)
-  lanes[#lanes + 1] = { label = "encoding", cmd = "lua tools/packages/encoding/encoding.lua check" }
+  lanes[#lanes + 1] = { label = "encoding",
+    cmd = shell_lib.build_command({ lua, "tools/packages/encoding/encoding.lua", "check" }) }
   -- property 车道已退场(测试极简化决策/monopoly#190):道具时机 fuzz 探针分片并入
   -- behavior 车道并行吸收,默认 verify 就跑得到,不再需要独立入口。
   if include_tooling then
     lanes[#lanes + 1] = {
       label = "tooling",
-      cmd = "lua test/support/behavior_parallel.lua --profile tooling",
+      cmd = shell_lib.build_command({ lua, "test/support/behavior_parallel.lua", "--profile", "tooling" }),
     }
   end
   if serial then

@@ -66,16 +66,18 @@ return function(busted, _, helper_options)
     if chunk == nil then raise(err, 0) end
     return chunk, path
   end)
-  -- luacov's untested-file walk names files with the native separator
-  -- (src\ui\x.lua) while the C hook records chunk names verbatim; store stats
-  -- under the walk's names so one source never shows up as two LCOV records.
+  -- luacov's untested-file walk names files with the platform separator while the
+  -- C hook records chunk names verbatim; store stats under the walk's names so one
+  -- source never shows up as two LCOV records. The separator is the platform's
+  -- (WSL Ubuntu: "/"), not a hardcoded backslash.
   local stats = package.loaded["luacov.stats"]
   if stats then
     local save, update = stats.save, package.loaded["luacov.runner"].update_stats
+    local separator = package.config:sub(1, 1)
     stats.save = function(statsfile, data)
       local native = {}
       for name, file_data in pairs(data) do
-        local key = name:gsub("/", "\\")
+        local key = name:gsub("\\", "/"):gsub("/", separator)
         if native[key] then update(native[key], file_data) else native[key] = file_data end
       end
       return save(statsfile, native)

@@ -1,4 +1,4 @@
--- Native Windows public primitive regressions; also runnable directly with Lua.
+-- Native WSL Ubuntu public primitive regressions(ADR 0073); also runnable directly with Lua.
 package.path = package.path .. ";./tools/?.lua"
 local runtime = dofile("tools/foundation/runtime_path_ops.lua")
 local env = require("foundation.env")
@@ -6,19 +6,42 @@ local fs = require("foundation.fs")
 local proc = require("foundation.proc")
 local path = require("foundation.path")
 local shell = require("foundation.shell")
+local lua54 = require("foundation.lua54")
 require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 
-describe("native Windows primitives", function()
+describe("native primitives", function()
   local saved_cpath
   before_each(function() saved_cpath = package.cpath end)
   after_each(function() package.cpath = saved_cpath end)
 
-it("real cwd ignores MSYS PWD", function()
+it("real cwd is an absolute Linux path", function()
   local cwd = runtime.current_dir()
-  check.matches("^%a:/", cwd, "cwd must be a native absolute drive path: " .. cwd)
+  check.matches("^/", cwd, "cwd must be an absolute POSIX path: " .. cwd)
   check.equal(cwd, env.current_dir(), "bootstrap and process cwd must agree")
   check.is_true(runtime.path_exists(cwd .. "/tools/cli.lua"), "cwd must load the real project")
+end)
+
+it("stale inherited PWD does not override the real working directory", function()
+  -- mutator 用 Python subprocess(cwd=...) 起 worker,PWD 仍是父进程的值;
+  -- current_dir 必须以真实 cwd 为准,否则嵌套 runner 会把仓根当 worker。
+  local root = env.make_temp_path("stale_pwd", "")
+  local ok, err = xpcall(function()
+    check.truthy(fs.ensure_dir(root))
+    local script = root .. "/probe.lua"
+    check.truthy(fs.write_file(script, [[
+local root = "]] .. env.current_dir() .. [["
+package.path = root .. "/?.lua;" .. root .. "/tools/?.lua;" .. package.path
+io.write(require("foundation.env").current_dir())
+]]))
+    local result = proc.run_command(
+      { lua54.lua54_bin(), script },
+      { cwd = root, env = { PWD = path.resolve_path(root, "..") } })
+    check.truthy(result.ok, result.output)
+    check.equal(path.resolve_path(root, "."), result.output)
+  end, debug.traceback)
+  check.truthy(fs.remove_path(root))
+  check.is_true(ok, err)
 end)
 
 it("native files round trip discover copy and remove", function()
@@ -47,7 +70,7 @@ end)
 
 it("run_command env option exports variables to the child", function()
   local result = proc.run_command(
-    { "lua", "-e", 'io.write(os.getenv("MONOPOLY_TEST_ENV_124") or "missing")' },
+    { lua54.lua54_bin(), "-e", 'io.write(os.getenv("MONOPOLY_TEST_ENV_124") or "missing")' },
     { env = { MONOPOLY_TEST_ENV_124 = "value with space 100%" } })
   check.is_true(result.ok)
   check.same("value with space 100%", result.output)
@@ -65,14 +88,14 @@ io.stderr:write("stderr\n")
 os.exit(7)
 ]]))
     check.truthy(fs.write_file(root .. "/input.txt", "stdin\n"))
-    local result = proc.run_command({ "lua", script, "", "中文 space", 'quote"and&pipe|', "%PATH%", "bang!caret^", "tail\\" }, { cwd = root, stdin_path = root .. "/input.txt" })
+    local result = proc.run_command({ lua54.lua54_bin(), script, "", "中文 space", 'quote"and&pipe|', "%PATH%", "bang!caret^", "tail\\" }, { cwd = root, stdin_path = root .. "/input.txt" })
     check.truthy(not result.ok and result.code == 7, "real exit 7 must be preserved: " .. result.output)
     check.truthy(result.output:gsub("\r\n", "\n") == '\n中文 space\nquote"and&pipe|\n%PATH%\nbang!caret^\ntail\\\nstdin\nstderr\n', result.output)
-    check.is_true(proc.command_exists("lua"))
+    check.is_true(proc.command_exists(lua54.lua54_bin()))
     check.truthy(not proc.command_exists("missing_native_command_72"))
     local missing = proc.run_command({ "missing_native_command_72" })
     check.truthy(not missing.ok and missing.code ~= 0 and missing.output ~= "")
-    local success = proc.run_command({ "lua", "-e", 'io.write("ok")' })
+    local success = proc.run_command({ lua54.lua54_bin(), "-e", 'io.write("ok")' })
     check.is_true(success.ok and success.code == 0 and success.output == "ok", success.output)
   end, debug.traceback)
   check.truthy(fs.remove_path(root))
@@ -85,31 +108,31 @@ it("empty discovery and native CLI startup", function()
   local files, err = proc.collect_lua_files(root)
   check.truthy(fs.remove_path(root))
   check.truthy(files and #files == 0, err)
-  local result = proc.run_command({ "lua", "tools/cli.lua", "spec-lane", "--help" })
+  local result = proc.run_command({ lua54.lua54_bin(), "tools/cli.lua", "spec-lane", "--help" })
   check.truthy(result.ok and result.code == 0, result.output)
   check.truthy(result.output:find("profile", 1, true), result.output)
 end)
 
-it("controlled lua environment exposes native DLL modules", function()
+it("controlled lua environment exposes native shared modules", function()
   local original = package.cpath
-  require("foundation.lua_env").install_paths({ "C:/controlled/tree" })
+  require("foundation.lua_env").install_paths({ "/opt/controlled/tree" })
   local cpath = package.cpath
   package.cpath = original
-  check.truthy(cpath:find("C:/controlled/tree/lib/lua/5.4/?.dll", 1, true))
+  check.truthy(cpath:find("/opt/controlled/tree/lib/lua/5.4/?.so", 1, true))
 end)
 
 it("verify forwards native flags without literal quotes", function()
-  local result = proc.run_command({ "lua", "tools/cli.lua", "verify", "--ticket73-unknown" })
+  local result = proc.run_command({ lua54.lua54_bin(), "tools/cli.lua", "verify", "--ticket73-unknown" })
   check.truthy(result.code == 2, result.output)
   check.truthy(result.output:find("unknown flag: --ticket73-unknown", 1, true), result.output)
 end)
 
-it("Windows path shapes and string command", function()
-  check.equal("C:/中文 space/file.lua", path.resolve_path("C:\\中文 space\\root", "..\\file.lua"))
+it("POSIX path shapes and string command", function()
+  check.equal("/中文 space/file.lua", path.resolve_path("/中文 space/root", "../file.lua"))
   check.equal("//server/share/b", path.simplify_path("//server/share/a/../b"))
   local root = env.make_temp_path("shell_中文 space", "")
   check.truthy(fs.ensure_dir(root))
-  local command = shell.wrap_command_with_cwd(shell.build_command({ "lua", "-e", 'io.write("中文 ok")' }), root)
+  local command = shell.wrap_command_with_cwd(shell.build_command({ lua54.lua54_bin(), "-e", 'io.write("中文 ok")' }), root)
   local result = proc.run_command(command)
   check.truthy(fs.remove_path(root))
   check.truthy(result.ok and result.output == "中文 ok", result.output)

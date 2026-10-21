@@ -248,7 +248,7 @@ local ready = fs_lib.path_exists(dryer.checkout_dir(REAL_ROOT) .. "/pyproject.to
   and fs_lib.path_exists(dryer.python_path(REAL_ROOT))
 
 local function _run(tail)
-  local command = { "lua", "tools/cli.lua", "dry" }
+  local command = { require("foundation.lua54").lua54_bin(), "tools/cli.lua", "dry" }
   for _, value in ipairs(tail) do command[#command + 1] = value end
   return proc_lib.run_command(command)
 end

@@ -54,7 +54,8 @@ local function _with_ascii_tmp(tag, fn)
 end
 
 local function _run_lua(args)
-  local command = { "lua" }
+  -- 工具入口统一 lua5.4(ADR 0073);本机 PATH 上的 `lua` 是 5.1。
+  local command = { require("foundation.lua54").lua54_bin() }
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
   end
@@ -199,7 +200,8 @@ local function _test_foundation_handles_unicode_paths_for_file_ops()
 end
 
 local function _test_command_exists_reports_present_and_missing_commands()
-  check.is_true(proc_lib.command_exists("lua") == true, "lua should exist in the test environment")
+  check.is_true(proc_lib.command_exists(require("foundation.lua54").lua54_bin()) == true,
+    "the Lua 5.4 interpreter should exist in the test environment")
   check.is_true(proc_lib.command_exists("monopoly_command_that_should_not_exist_12345") == false,
     "command_exists should return false for missing commands")
 end
@@ -282,7 +284,30 @@ local function _test_cli_help_text_is_bilingual()
   end
 end
 
--- 原生 Windows 部署契约:文本检查与安全帮助入口;复制由 ops 隔离目录测试覆盖。
+-- 入口解释器预检(#191 用户故事 3):本机 PATH 上的 `lua` 是 5.1,入口必须拦下。
+local function _test_cli_entry_rejects_non_lua54_interpreter()
+  -- 静态契约:版本闸必须在装载子命令之前,且提示指向受支持入口。
+  local cli_source = assert(fs_lib.read_file(path_lib.join_path(project_root, "tools/cli.lua")))
+  local guard_at = cli_source:find('_VERSION ~= "Lua 5.4"', 1, true)
+  local dispatch_at = cli_source:find("pcall(require", 1, true)
+  check.truthy(guard_at ~= nil, "tools/cli.lua must gate on the interpreter version")
+  check.truthy(guard_at < dispatch_at, "version gate must run before subcommand dispatch")
+  _assert_contains(cli_source, "lua5.4 tools/cli.lua", "gate must print the supported entry")
+
+  -- 动态契约:机器上有非 5.4 解释器时真跑一次,确认真被拦下且不退 0。
+  for _, candidate in ipairs({ "lua5.1", "lua5.3", "lua5.2" }) do
+    if proc_lib.command_exists(candidate) then
+      local result = proc_lib.run_command({ candidate, "tools/cli.lua", "verify" }, { cwd = project_root })
+      check.truthy(not result.ok, "entry must reject " .. candidate)
+      check.equal(1, result.code, result.output)
+      _assert_contains(result.output, "Lua 5.4 interpreter required", "rejection must name the requirement")
+      _assert_not_contains(result.output, "[verify]", "preflight must run before lane dispatch")
+      return
+    end
+  end
+end
+
+-- WSL 部署契约:文本检查与安全帮助入口;复制由 ops 隔离目录测试覆盖。
 local function _test_deploy_lua_matches_simplified_cli()
   local script_text = assert(fs_lib.read_file(path_lib.join_path(project_root, "tools/packages/ops/deploy.lua")))
 
@@ -323,15 +348,18 @@ local function _test_deploy_lua_matches_simplified_cli()
     "deploy.lua should centralize the LuaSource directory name construction"
   )
 
-  -- 原生 Windows 落点:~/Desktop/dev/eggy/LuaSource_大富翁。
+  -- Windows 侧落点:~/Desktop/dev/eggy/LuaSource_大富翁(经 %USERPROFILE% + wslpath 换算)。
   _assert_contains(
     script_text,
     '_join_path(_join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())',
-    "deploy.lua should keep the windows default deploy path semantics"
+    "deploy.lua should keep the Windows default deploy path semantics"
   )
+  _assert_contains(script_text, "wslpath", "deploy.lua should convert the Windows profile through wslpath")
+  _assert_contains(script_text, "%USERPROFILE%", "deploy.lua should resolve the Windows profile dynamically")
+  _assert_not_contains(script_text, "C:/Users/", "deploy.lua must not hardcode a Windows user name")
 
-  -- #95:删除互操作入口及其运行依赖。
-  for _, retired in ipairs({ "test_is_wsl_host", "resolve_wsl_windows_home", "convert_to_windows_path", "wslpath", "/dev/null", "mkdir -p" }) do
+  -- ADR 0073:原生 Windows 原语退场。
+  for _, retired in ipairs({ "cmd.exe /d /v:off /c", "chcp", "robocopy", "if exist", "if not exist", "rmdir", "del /f" }) do
     _assert_not_contains(script_text, retired, "deploy should retire " .. retired)
   end
 
@@ -370,8 +398,8 @@ local function _test_deploy_comprehensive()
   -- 帮助在壳内结束,不会进入部署主流程或写入实际目标。
   local result = _run_lua({ "tools/cli.lua", "deploy", "--help" })
   check.is_true(result.ok == true, "deploy help should succeed")
-  _assert_contains(result.output, "原生 Windows", "help should declare the native platform")
-  _assert_not_contains(result.output, "WSL", "help should retire WSL interoperability")
+  _assert_contains(result.output, "WSL", "help should declare the WSL platform")
+  _assert_contains(result.output, "退 3", "help should explain the unavailable exit code")
 end
 
 local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
@@ -399,7 +427,7 @@ local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
       error(err)
     end
 
-    local result = proc_lib.run_command({ "lua", script_path }, {
+    local result = proc_lib.run_command({ require("foundation.lua54").lua54_bin(), script_path }, {
       cwd = project_root,
       stdin_path = stdin_path,
     })
@@ -432,14 +460,14 @@ local function _test_bootstrap_resolves_repo_root_from_non_repo_cwd()
       "io.write(env.repo_root)",
     }, "; ")
 
-    local bootstrap_result = proc_lib.run_command({ "lua", "-e", lua_snippet }, {
+    local bootstrap_result = proc_lib.run_command({ require("foundation.lua54").lua54_bin(), "-e", lua_snippet }, {
       cwd = outside_dir,
     })
     check.is_true(bootstrap_result.ok, "bootstrap helper should resolve repo_root outside the repo cwd")
     _assert_contains(bootstrap_result.output, expected_root,
       "bootstrap helper should report the normalized repo root")
 
-    local help_result = proc_lib.run_command({ "lua", script_path, "--help" }, {
+    local help_result = proc_lib.run_command({ require("foundation.lua54").lua54_bin(), script_path, "--help" }, {
       cwd = outside_dir,
     })
     check.is_true(help_result.ok, "tool entrypoint should resolve bootstrap dependencies outside the repo cwd")
@@ -454,6 +482,7 @@ local contract_tests = {
   { group = "shared", owner = "foundation", name = "path_predicates_return_one_boolean", run = _test_path_predicates_return_one_boolean },
   { group = "shared", owner = "foundation", name = "foundation_handles_unicode_paths_for_file_ops", run = _test_foundation_handles_unicode_paths_for_file_ops },
   { group = "shared", owner = "tooling_policy", name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
+  { group = "shared", owner = "tooling_policy", name = "cli_entry_rejects_non_lua54_interpreter", run = _test_cli_entry_rejects_non_lua54_interpreter },
   { group = "shared", owner = "bootstrap", name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { group = "ops", owner = "deploy", name = "deploy_lua_matches_simplified_cli", run = _test_deploy_lua_matches_simplified_cli },
 }

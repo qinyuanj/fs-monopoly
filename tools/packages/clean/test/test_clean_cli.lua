@@ -3,7 +3,7 @@ if arg then rawset(arg, 0, "tools/packages/clean/test/test_clean_cli.lua") end
 
 require("test.bootstrap").install_package_paths()
 
--- clean / distclean 的原生 Windows 窄反馈(#69 / ADR 0066)。清单与旧 Makefile 同口径:
+-- clean / distclean 的 WSL 窄反馈(#69 / ADR 0073)。清单与旧 Makefile 同口径:
 -- 仓根的 build/ tmp/ 整树删,luacov 的
 -- stats/report 残留(含 luacov.<名>.stats.out 一类)删文件,未命中静默忽略;
 -- 项目工具缓存退役后 clean 与 distclean 同义,都不碰非清单目录。
@@ -93,22 +93,18 @@ it("distclean is the same cleanup as clean", function()
   end)
 end)
 
--- 受支持环境只有 Lua 与 cmd.exe(ADR 0066):开发机 PATH 上碰巧有 Git 的 usr/bin
--- 时 `rm` 也能跑通,这条用例把子进程 PATH 收窄到 Lua 所在目录 + Windows 系统目录,
--- 钉住清理不依赖任何 POSIX 工具。
-local function _native_only_path()
-  local where = proc_lib.run_command("where lua")
+-- 受支持环境是 WSL Ubuntu(ADR 0073):清理只依赖 sh 内建与 coreutils 基本命令。
+-- 这条用例把子进程 PATH 收窄到解释器所在目录与 /usr/bin:/bin,钉住清理不依赖
+-- 任何项目内工具树或额外 PATH 条目。
+local function _system_path()
+  local lua_bin = require("foundation.lua54").lua54_bin()
+  local where = proc_lib.run_command("command -v " .. shell_lib.shell_quote(lua_bin))
   check.is_true(where.ok, where.output)
-  local lua_path = path_lib.normalize_path((where.output:match("^[^\r\n]+")))
-  local system_root = assert(os.getenv("SystemRoot"), "SystemRoot 未设置")
-  return table.concat({
-    path_lib.parent_dir(lua_path):gsub("/", "\\"),
-    system_root .. "\\System32",
-    system_root,
-  }, ";")
+  local resolved = path_lib.normalize_path((where.output:match("^[^\r\n]+")))
+  return table.concat({ path_lib.parent_dir(resolved), "/usr/bin", "/bin" }, ":")
 end
 
-it("clean works with only lua and cmd.exe on PATH", function()
+it("clean works with only the interpreter and system directories on PATH", function()
   _with_fixture(function(root)
     local driver = path_lib.join_path(root, "clean_driver.lua")
     check.is_true(fs_lib.write_file(driver, table.concat({
@@ -117,9 +113,9 @@ it("clean works with only lua and cmd.exe on PATH", function()
       "os.exit(require('packages.clean.cli').main({}, { repo_root = arg[1], action = 'distclean' }))",
       "",
     }, "\n")))
-    local command = 'set "PATH=' .. _native_only_path() .. '" & lua '
-      .. shell_lib.shell_quote(driver:gsub("/", "\\")) .. " "
-      .. shell_lib.shell_quote(root:gsub("/", "\\"))
+    local command = "PATH=" .. shell_lib.shell_quote(_system_path()) .. " "
+      .. shell_lib.shell_quote(require("foundation.lua54").lua54_bin()) .. " "
+      .. shell_lib.shell_quote(driver) .. " " .. shell_lib.shell_quote(root)
     local result = proc_lib.run_command(command, { cwd = env_lib.current_dir() })
 
     check.equal(0, result.code, result.output)

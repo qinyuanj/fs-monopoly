@@ -204,8 +204,8 @@ slim_plan_splits_lint_into_three_directory_lanes()
   check.is_nil(labels["lint"], "unified lint lane should be gone")
   check.truthy(labels["lint-test"]:find("lint/runner.lua", 1, true) ~= nil,
     "lint-test lane must invoke lint runner: " .. labels["lint-test"])
-  -- lint 车道走钉定 5.4 解释器 + 原生 argv 定界(^"),不再是 PATH 上的 luacheck。
-  check.truthy(labels["lint-test"]:find('^"test^"', 1, true) ~= nil,
+  -- lint 车道走钉定 5.4 解释器 + 原生 argv 定界('test'),不再是 PATH 上的 luacheck。
+  check.truthy(labels["lint-test"]:find("'test'", 1, true) ~= nil,
     "lint-test lane must target test dir: " .. labels["lint-test"])
 end
 

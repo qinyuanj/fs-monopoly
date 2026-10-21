@@ -12,13 +12,14 @@ function spec_lane_tools.discover_test_roots()
   local roots = {}
   local seen = {}
   for _, base in ipairs({ "tools", "test/support" }) do
-    local result = proc.run_command('(dir /b /s /ad "' .. base:gsub("/", "\\") .. '\\*" 2>nul & ver >nul)')
+    local shell_lib = require("foundation.shell")
+    local result = proc.run_command("find " .. shell_lib.shell_quote(base)
+      .. " -type d -name test -print 2>/dev/null")
     if result.ok ~= true then
       return nil, "discover test roots failed under " .. base .. ": " .. tostring(result.output)
     end
     for line in (tostring(result.output or "") .. "\n"):gmatch("(.-)\n") do
       local root = line:gsub("\r$", ""):gsub("\\", "/"):gsub("/+$", "")
-      root = root:match("/(" .. base .. "/.*)$") or root
       if root:match("/test$") and not seen[root] then
         roots[#roots + 1] = root
         seen[root] = true

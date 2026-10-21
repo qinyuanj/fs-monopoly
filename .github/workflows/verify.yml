@@ -1,6 +1,6 @@
-# push 前硬地板 slim verify 的原生 Windows CI(#126 / ADR 0066)。
-# 只用 windows-latest:MSVC 源码构建 Lua 5.4、LuaRocks 官方 Windows 二进制,脚本走 pwsh;
-# 不引入 WSL、Git Bash、Node 工具链。job 名 `verify` 即 branch protection 的必过检查名,改名需同步仓库设置。
+# push 前硬地板 slim verify 的 Ubuntu CI(#126 / ADR 0073)。
+# 只用 ubuntu-24.04:apt 装 Lua 5.4 与 LuaRocks,再按 ADR 0072 预装五个钉定 rock。
+# job 名 `verify` 即 branch protection 的必过检查名,改名需同步仓库设置。
 # 退出码 3(平台或工具不可用)同样红灯,但 annotation 与 step summary 标 UNAVAILABLE,先查环境再重跑。
 name: verify
 
@@ -21,16 +21,13 @@ concurrency:
 jobs:
   verify:
     name: verify
-    runs-on: windows-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: pwsh
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Lua 5.4 + LuaRocks
-        run: ./.github/scripts/setup-lua.ps1 -Prefix "$env:RUNNER_TEMP\lua54"
+        run: ./.github/scripts/setup-lua.sh
 
-      - name: lua tools/cli.lua verify
-        run: ./.github/scripts/ci-verify.ps1
+      - name: lua5.4 tools/cli.lua verify
+        run: ./.github/scripts/ci-verify.sh

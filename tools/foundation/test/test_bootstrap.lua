@@ -46,20 +46,18 @@ local function _with_stubs(stubs, fn)
   end
 end
 
--- 原生子进程替身:`where.exe <解释器>` 形如真实机器——首行是用户 shell 的
--- lua.cmd 垫片,真解释器在第二行。
+-- 子进程替身:`command -v <解释器>` 形如真实 Linux 机器——一条绝对路径。
 local function _native_probe(command)
-  if command[1] == "where.exe" then
-    if command[2] == "luarocks.exe" then
-      return { ok = false, output = "" }
+  if type(command) == "string" and command:find("command -v", 1, true) then
+    if command:find("luarocks", 1, true) then
+      return { ok = true, output = "/usr/bin/luarocks\n" }
     end
-    return { ok = true, output = "C:\\tools\\shim\\lua.cmd\r\n"
-      .. os.getenv("LOCALAPPDATA") .. "\\Programs\\Lua\\bin\\lua.exe\r\n" }
+    return { ok = true, output = "/usr/bin/lua5.4\n" }
   end
-  if command[2] == "-v" then return { ok = true, output = "Lua 5.4.6" } end
+  if type(command) == "table" and command[2] == "-v" then return { ok = true, output = "Lua 5.4.6" } end
 end
 
-local _LUAROCKS_PREFIX = os.getenv("LOCALAPPDATA"):gsub("\\", "/") .. "/Programs/Lua"
+local _LUA54_PATH = "/usr/bin/lua5.4"
 
 describe("bootstrap", function()
 
@@ -122,15 +120,15 @@ it("tool discovery env exports resolved interpreter path and luarocks exe", func
       return _native_probe(command) or { ok = false, output = "" }
     end },
     { target = fs_lib, key = "path_exists", value = function(path)
-      return tostring(path):match("luarocks%.exe$") ~= nil
+      return tostring(path) == "/usr/bin/luarocks"
     end },
   }, function()
     local exported = bootstrap.tool_discovery_env()
     check.is_not_nil(exported)
-    -- 裸候选解析到真实 .exe(where.exe 首行的 lua.cmd 垫片被跳过),子进程拿到
-    -- 路径形态覆写后 path_exists 即过,不再逐个 where 探测。
-    check.equal(_LUAROCKS_PREFIX .. "/bin/lua.exe", exported.LUA54_BIN)
-    check.truthy(exported.MONOPOLY_LUAROCKS_EXE:match("luarocks%.exe$") ~= nil)
+    -- 裸候选解析到绝对路径,子进程拿到路径形态覆写后 path_exists 即过,
+    -- 不再逐个 command -v 探测。
+    check.equal(_LUA54_PATH, exported.LUA54_BIN)
+    check.equal("/usr/bin/luarocks", exported.MONOPOLY_LUAROCKS_EXE)
   end)
 end)
 

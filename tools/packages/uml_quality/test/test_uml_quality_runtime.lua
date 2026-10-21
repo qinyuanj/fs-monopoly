@@ -19,7 +19,7 @@ end
 
 describe("uml quality runtime", function()
 
--- 全局 %APPDATA%\luarocks tree 里也有 busted/luacov/lcov reporter;子进程若继承
+-- 用户 ~/.luarocks 之外的 tree 里也可能有 busted/luacov/lcov reporter;子进程若继承
 -- 用户 LUA_PATH,就会从全局 tree 解析出「能跑」的假绿。装载面必须只剩仓根与
 -- 受控 Lua 环境的 tree。
 it("pins child lua module paths to the repo root and controlled trees only", function()
@@ -28,7 +28,7 @@ it("pins child lua module paths to the repo root and controlled trees only", fun
     .. TREE .. "/share/lua/5.4/?.lua;" .. TREE .. "/share/lua/5.4/?/init.lua"
   check.equal(expected_path, env.LUA_PATH_5_4)
   check.equal(expected_path, env.LUA_PATH)
-  local expected_cpath = TREE .. "/lib/lua/5.4/?.dll;" .. TREE .. "/lib/lua/5.4/?.so"
+  local expected_cpath = TREE .. "/lib/lua/5.4/?.so"
   check.equal(expected_cpath, env.LUA_CPATH_5_4)
   check.equal(expected_cpath, env.LUA_CPATH)
   check.equal("", env.LUA_INIT)
@@ -43,8 +43,8 @@ end)
 
 -- crapper/mutator 用 PATH 上的 lua 解析解释器;选定的 Lua 5.4 目录排第一。
 it("puts the selected lua 5.4 directory first on PATH", function()
-  local env = _env_map(runtime.pinned_env(ROOT, ROOTS, "/lua/bin", "/sys;/tools"))
-  check.equal("/lua/bin;/sys;/tools", env.PATH)
+  local env = _env_map(runtime.pinned_env(ROOT, ROOTS, "/lua/bin", "/sys:/tools"))
+  check.equal("/lua/bin:/sys:/tools", env.PATH)
 end)
 
 -- uml view(#99 / ADR 0070):上游从 PATH 选 herdr X.Y.Z >= 0.9.3 的最高版;
@@ -141,12 +141,12 @@ it("fails a probe that reports a require error or nothing at all", function()
   check.is_false((runtime.probe_verdicts("", ROOTS)))
 end)
 
--- 批处理里 % 会被 cmd 展开;环境值必须原样到达子进程。
-it("writes env values into the batch without cmd expansion", function()
-  local text = runtime.batch_text(ROOT, { { "LUA_PATH", "a%b" } }, { "lua.exe", "-v" })
-  check.truthy(text:find('set "LUA_PATH=a%%b"', 1, true))
-  check.truthy(text:find('cd /d "\\repo"', 1, true))
-  check.truthy(text:find("exit /b %errorlevel%", 1, true))
+-- sh 脚本里 % 与 $ 都不展开(单引号);环境值必须原样到达子进程。
+it("writes env values into the launch script without shell expansion", function()
+  local text = runtime.launch_text(ROOT, { { "LUA_PATH", "a%b$HOME" } }, { "lua5.4", "-v" })
+  check.truthy(text:find("LUA_PATH='a%b$HOME'; export LUA_PATH", 1, true), text)
+  check.truthy(text:find("cd '/repo'", 1, true), text)
+  check.truthy(text:find("'lua5.4' '-v'", 1, true), text)
 end)
 
 end)

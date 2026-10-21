@@ -14,10 +14,10 @@
 -- 仓内不再有项目工具缓存:工具模块一律从受控 Lua 环境装载,clean 与 distclean
 -- 只清仓内生成物。
 --
--- 实现:原生 Windows 单平台(ADR 0066),不依赖 rm/sh。目录与文件都经
--- foundation.fs.remove_path 删(整树删 / 删文件,未命中静默成功);luacov 的
--- glob 由 cmd 内建 dir 枚举仓根候选、Lua 模式按旧 glob 口径筛,只看仓根不递归,
--- 与被取代的 Makefile `rm -rf` / `rm -f` 清单同一目标集。
+-- 实现:WSL Ubuntu 单平台(ADR 0073)。目录与文件都经 foundation.fs.remove_path
+-- 删(整树删 / 删文件,未命中静默成功);luacov 的 glob 由 foundation.proc 枚举
+-- 仓根候选、Lua 模式按旧 glob 口径筛,只看仓根不递归,与被取代的 Makefile
+-- `rm -rf` / `rm -f` 清单同一目标集。
 local M = {}
 
 local fs_lib = require("foundation.fs")
@@ -38,7 +38,7 @@ local _CLEAN_FILE_PATTERNS = {
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua clean | distclean",
+    "用法: lua5.4 tools/cli.lua clean | distclean",
     "",
     "clean     清生成物:build/ tmp/、luacov 残留。",
     "distclean 与 clean 同义(项目工具缓存已退役,不再有仓内工具 tree)。",
@@ -47,15 +47,18 @@ function M.usage()
 end
 
 -- 仓根下按 _CLEAN_FILE_PATTERNS 命中的文件名(不含目录)。
+-- 枚举用 `find -maxdepth 1 -name 'luacov.*'`(单层、含隐藏项),再由 Lua 模式复核
+-- (与旧 glob 口径同一目标集)。目录不存在时 find 非零,交给调用方报错。
 local function _glob_targets(repo_root)
-  local pattern = path_lib.join_path(repo_root, "luacov.*"):gsub("/", "\\")
-  local result = proc.run_command("(dir /b /a-d " .. shell_lib.shell_quote(pattern) .. " 2>nul & ver >nul)")
+  local result = proc.run_command("find " .. shell_lib.shell_quote(path_lib.normalize_path(repo_root))
+    .. " -maxdepth 1 -type f -name 'luacov.*' -print 2>/dev/null")
   if not result.ok then
     return nil, "枚举 luacov 残留失败(exit " .. tostring(result.code) .. "): " .. tostring(result.output)
   end
   local names = {}
   for line in (tostring(result.output or "") .. "\n"):gmatch("(.-)\n") do
-    local name = line:gsub("\r$", "")
+    -- find 给的是完整路径,清单按仓根相对名比对。
+    local name = line:gsub("\r$", ""):match("([^/]+)$") or ""
     for _, file_pattern in ipairs(_CLEAN_FILE_PATTERNS) do
       if name:match(file_pattern) then
         names[#names + 1] = name

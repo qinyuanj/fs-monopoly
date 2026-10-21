@@ -83,10 +83,15 @@ local function _quote(arg)
   return '"' .. text .. '"'
 end
 
+-- 本模块会在钉死 LUA_PATH/LUA_CPATH 的子进程里被调用(uml 启动链、busted helper),
+-- 而 `luarocks` 自己也要按它的默认路径装载。清掉四个 Lua 路径变量再起子进程:
+-- 核对的是「机器 tree 里装了什么」,与调用方钉死的装载面无关。
+local _CLEARED_PATHS = "env -u LUA_PATH -u LUA_PATH_5_4 -u LUA_CPATH -u LUA_CPATH_5_4 "
+
 local function _default_run(command)
   local parts = {}
   for _, arg in ipairs(command) do parts[#parts + 1] = _quote(arg) end
-  local handle = io.popen(table.concat(parts, " ") .. " 2>&1")
+  local handle = io.popen(_CLEARED_PATHS .. table.concat(parts, " ") .. " 2>&1")
   if handle == nil then
     return { ok = false, output = "io.popen failed" }
   end

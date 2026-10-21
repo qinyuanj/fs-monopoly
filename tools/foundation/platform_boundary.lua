@@ -1,6 +1,7 @@
--- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0066)。
+-- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0073)。
 --
--- dry 已在 #122/#123 恢复原生 Windows,当前声明表为空。
+-- 当前开发与工具链保证面是 WSL Ubuntu(ADR 0073),声明表为空:没有「本平台
+-- 不支持」的能力需要登记。
 -- 保留不可用/显式跳过的通用演算,工具不可用诊断也复用渲染器。
 --
 -- 三态必须互相可辨(工单验收):不可用 / 显式跳过 / 真实失败。
@@ -11,9 +12,9 @@
 --   * 真实失败:平台在保证面内 → 本模块不下判定(evaluate 返回只有 args 的表),
 --     由真实工具自己的输出与退出码说话(1 业务失败 / 2 用法错误)。
 --
--- 边界是「声明」而不是运行时探测:探测「这台机器上有没有 POSIX shell」会把
--- Git Bash 之类非受支持前提重新变成隐式依赖(ADR 0066 明文否掉),声明则让
--- 「在原生 Windows 上不可用」成为可断言的显式事实。
+-- 边界是「声明」而不是运行时探测:探测「这台机器上有没有某个 shell」会把
+-- 非受支持前提重新变成隐式依赖(ADR 0073 明文否掉),声明则让「在某平台上不可用」
+-- 成为可断言的显式事实。
 --
 -- 纯演算砖:不落盘、不起进程。evaluate 只分类,写终端由 emit 一处收口
 -- (四个调用点各自挑 stdout/stderr 会分叉出四份流选择规则)。
@@ -22,6 +23,7 @@ local boundary = {}
 
 boundary.WINDOWS = "windows"
 boundary.POSIX = "posix"
+boundary.LINUX = "linux"
 
 -- 状态词会出现在诊断文本里(可机读)与测试断言里,不要改字面量。
 boundary.UNAVAILABLE = "unavailable"
@@ -36,16 +38,27 @@ boundary.SKIP_FLAG = "--skip-if-unavailable"
 boundary.UNAVAILABLE_EXIT_CODE = 3
 boundary.SKIPPED_EXIT_CODE = 0
 
--- 声明的 POSIX 专用能力表。reason 是取证过的机制,不是泛泛的「不支持」。
+-- 声明的平台专用能力表。reason 是取证过的机制,不是泛泛的「不支持」。
 local _DECLARED = {}
 
--- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/"),
--- 只用 Lua 标准库判定,不依赖 sh / uname / 环境变量。
+-- 保证面:WSL Ubuntu(ADR 0073)。原生 Windows 只是部署目标,不是开发平台。
+local _SUPPORTED = boundary.LINUX
+
+-- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/");
+-- POSIX 侧再按 WSL 标记细分 Linux 与通用 POSIX,判定只用标准库与环境变量。
 function boundary.host_platform()
-  if package.config:sub(1, 1) == "/" then
-    return boundary.POSIX
+  if package.config:sub(1, 1) ~= "/" then
+    return boundary.WINDOWS
   end
-  return boundary.WINDOWS
+  if os.getenv("WSL_DISTRO_NAME") ~= nil and os.getenv("WSL_DISTRO_NAME") ~= "" then
+    return boundary.LINUX
+  end
+  return boundary.POSIX
+end
+
+-- 保证面判定:当前宿主是否在 ADR 0073 的保证面内。
+function boundary.supported_platform(platform)
+  return (platform or boundary.host_platform()) == _SUPPORTED
 end
 
 -- 已声明能力 id 清单(排序,供未登记 id 的报错文案与文档对账)。
@@ -97,7 +110,7 @@ end
 
 local function _declared_unavailable_lines(entry)
   return {
-    "「" .. entry.title .. "」当前按 POSIX 专用能力声明,原生 Windows 不在保证面内(#96 / ADR 0066)。",
+    "「" .. entry.title .. "」当前按平台专用能力声明,当前宿主不在保证面内(#96 / ADR 0073)。",
     "原因: " .. entry.reason,
     "本次未安装工具、未运行、未报通过;这个退出码不是检测结论。",
     "确认边界后要显式跳过,加 " .. boundary.SKIP_FLAG
@@ -130,7 +143,7 @@ function boundary.evaluate(id, args, platform, declarations)
 
   local argv, skip = boundary.strip_skip_flag(args)
   local host = platform or boundary.host_platform()
-  if host ~= boundary.WINDOWS then
+  if host == _SUPPORTED then
     return { args = argv }
   end
 

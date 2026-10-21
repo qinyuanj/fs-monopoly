@@ -1,6 +1,6 @@
 -- packages/verify/main.lua —— verify 门禁编排器入口(wayfinder #307 包迁,
 -- 原 tools/quality/verify_full.lua)。双重形态:被 require 时返回模块
--- (测试拿 build_output / _resolve_lanes 断言),被 `lua tools/cli.lua verify`
+-- (测试拿 build_output / _resolve_lanes 断言),被 `lua5.4 tools/cli.lua verify`
 -- 经包内 cli.lua 子进程 spawn 时解析 flag 并 os.exit。
 require("test.bootstrap").install_package_paths()
 
