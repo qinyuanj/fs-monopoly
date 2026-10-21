@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Ubuntu CI 工具链(#191 / ADR 0073):apt 装 Lua 5.4 + LuaRocks,再按 ADR 0072
-# 把五个钉定 rock 装进机器 tree。失败分类沿用退 3 口径:apt / luarocks 的网络
+# 把五个钉定 rock 装进用户 tree ~/.luarocks(--local,与开发机同一 tree;runner
+# 用户无权写 /usr/local)。失败分类沿用退 3 口径:apt / luarocks 的网络
 # 或清单不可达退 3(重跑可恢复),其余(编译、版本)退 1。
 set -euo pipefail
 
@@ -41,7 +42,7 @@ rock_pins=(
 )
 for pin in "${rock_pins[@]}"; do
   read -r name ver <<< "$pin"
-  run_step luarocks --lua-version 5.4 install "$name" "$ver"
+  run_step luarocks --lua-version 5.4 install --local "$name" "$ver"
 done
 
 exit 0
