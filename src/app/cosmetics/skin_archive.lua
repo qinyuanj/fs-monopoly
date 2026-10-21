@@ -6,6 +6,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local read_model = require("src.app.cosmetics.transaction_read_model")
 local transaction_context = require("src.app.cosmetics.transaction_context")
 local skins = require("src.config.content.skins")
+local logger = require("src.foundation.log")
 
 local skin_archive = {}
 
@@ -37,6 +38,7 @@ end
 
 function skin_archive.load_owned(role_id)
   if runtime_ports.archives_enabled() ~= true then
+    logger.warn("skin_archive: archives disabled, skip reading skin ownership", "role_id=" .. tostring(role_id))
     return nil
   end
   local owned = {}

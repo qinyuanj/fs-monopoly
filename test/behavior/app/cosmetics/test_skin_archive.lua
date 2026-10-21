@@ -198,6 +198,24 @@ describe("TestSkinArchive", function()
     luassert.truthy(found, "failed ownership write should leave a warn naming the product")
   end)
 
+  it("test_failed_equipped_write_keeps_skin_on_with_warn", function()
+    _install_archives({ seed = { [NAILONG_KEY] = 1 }, write_ok = false })
+    local equipped = _capture_equips()
+    local state = _state()
+    transaction.handle_skin_transaction(state, 1, { type = "open" })
+
+    local warns = _with_warns(function()
+      transaction.handle_skin_transaction(state, 1, { type = "equip_slot", slot_index = 1 })
+    end)
+
+    _assert_eq(equipped[#equipped].product_id, NAILONG, "owned skin should still be put on")
+    local found = false
+    for _, line in ipairs(warns) do
+      found = found or (line:find("equipped", 1, true) ~= nil and line:find(tostring(NAILONG), 1, true) ~= nil)
+    end
+    luassert.truthy(found, "failed equipped write should leave a warn naming the product")
+  end)
+
   it("test_open_reads_archived_ownership", function()
     _install_archives({ seed = { [CAPYBARA_KEY] = 1 } })
     local state = _state()
