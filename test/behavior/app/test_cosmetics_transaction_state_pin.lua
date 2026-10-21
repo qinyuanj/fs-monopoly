@@ -47,6 +47,10 @@ local function _archive(owned, equipped)
   }
   return {
     store = store,
+    -- ADR 0074:存档可写才放行购买;替身恒可写。
+    can_persist = function()
+      return true
+    end,
     load_owned = function(role_id)
       return store.owned[tostring(role_id)]
     end,
@@ -54,6 +58,7 @@ local function _archive(owned, equipped)
       store.owned[tostring(role_id)] = store.owned[tostring(role_id)] or {}
       store.owned[tostring(role_id)][#store.owned[tostring(role_id)] + 1] = product_id
       store.marked[#store.marked + 1] = product_id
+      return true
     end,
     load_equipped = function(role_id)
       return store.equipped[tostring(role_id)]
@@ -68,6 +73,7 @@ describe("TestCosmeticsTransactionStatePin", function()
   before_each(function()
     transaction.reset_for_tests()
     transaction.configure_catalog_for_tests(_catalog())
+    transaction.configure_archive(_archive())
   end)
   after_each(function()
     transaction.reset_for_tests()

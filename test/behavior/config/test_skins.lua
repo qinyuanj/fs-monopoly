@@ -37,5 +37,16 @@ describe("TestSkins", function()
     end
   end)
 
+  it("test_registers_host_archive_keys_per_adr_0074", function()
+    package.loaded["src.config.content.skins"] = nil
+    local skins = require("src.config.content.skins")
+    local expected_key = { [5004] = 1052, [5006] = 1053, [5005] = 1054, [5003] = 1055 }
+
+    luassert.truthy(skins.equipped_archive_key == 1051, "equipped skin archive key should be 1051")
+    for _, skin in ipairs(skins) do
+      luassert.truthy(skin.archive_key == expected_key[skin.product_id],
+        "archive key mismatch: " .. tostring(skin.product_id))
+    end
+  end)
 
 end)

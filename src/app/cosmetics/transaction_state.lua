@@ -1,4 +1,5 @@
 local transaction_context = require("src.app.cosmetics.transaction_context")
+local logger = require("src.foundation.log")
 local read_model = require("src.app.cosmetics.transaction_read_model")
 
 local state = {}
@@ -62,15 +63,38 @@ local function _owned_bucket(panel, key)
   return panel.owned_by_role[key]
 end
 
-function state.mark_owned(panel, role_id, skin, source)
+-- ADR 0074:归属写档不分来源;写档失败不撤销本局归属,只留 warn,
+-- 等下次打开皮肤商店由 load_owned 补写。
+local function _persist_owned(role_id, product_id)
+  if transaction_context.archive_call("mark_owned", role_id, product_id) == true then
+    return
+  end
+  logger.warn(
+    "skin_panel: skin ownership archive write failed",
+    "role_id=" .. tostring(role_id),
+    "product_id=" .. tostring(product_id)
+  )
+end
+
+-- 穿戴写档失败同样只留 warn,不回滚本局穿戴(ADR 0074 第 3 条)。
+local function _persist_equipped(role_id, product_id)
+  if transaction_context.archive_call("save_equipped", role_id, product_id) == true then
+    return
+  end
+  logger.warn(
+    "skin_panel: equipped skin archive write failed",
+    "role_id=" .. tostring(role_id),
+    "product_id=" .. tostring(product_id)
+  )
+end
+
+function state.mark_owned(panel, role_id, skin)
   local key = state.role_key(role_id)
   if key == nil or skin == nil then
     return false
   end
   _owned_bucket(panel, key)[skin.product_id] = true
-  if source == "purchase" then
-    transaction_context.archive_call("mark_owned", role_id, skin.product_id)
-  end
+  _persist_owned(role_id, skin.product_id)
   return true
 end
 
@@ -88,18 +112,46 @@ local function _load_owned_map(bucket, owned)
   end
 end
 
+-- 返回 (本局归属桶, 存档归属表);读不到存档时为 nil,供 sync_owned 判断哪些需要补写。
 function state.load_owned(panel, role_id)
   local key = state.role_key(role_id)
   if key == nil then
-    return
+    return nil
   end
   local owned = transaction_context.archive_call("load_owned", role_id)
   if type(owned) ~= "table" then
-    return
+    return nil
   end
   local bucket = _owned_bucket(panel, key)
   _load_owned_list(bucket, owned)
   _load_owned_map(bucket, owned)
+  return bucket, owned
+end
+
+local function _archived(owned, product_id)
+  if owned[product_id] == true then
+    return true
+  end
+  for _, listed in ipairs(owned) do
+    if listed == product_id then
+      return true
+    end
+  end
+  return false
+end
+
+-- ADR 0074 第 3 条:打开皮肤商店时先读档,再把本局有而存档没有的归属幂等补写;
+-- 存档读不到(未开启/无适配器)时不补写。
+function state.sync_owned(panel, role_id)
+  local bucket, owned = state.load_owned(panel, role_id)
+  if bucket == nil then
+    return
+  end
+  for product_id in pairs(bucket) do
+    if not _archived(owned, product_id) then
+      _persist_owned(role_id, product_id)
+    end
+  end
 end
 
 function state.owns_skin(panel, role_id, skin)
@@ -129,7 +181,7 @@ function state.apply_equip(panel, role_id, skin)
   panel.last_equip_ok_by_role = panel.last_equip_ok_by_role or {}
   panel.last_equip_ok_by_role[key] = applied
   panel.selected_by_role[key] = skin.product_id
-  transaction_context.archive_call("save_equipped", role_id, skin.product_id)
+  _persist_equipped(role_id, skin.product_id)
   return applied
 end
 
@@ -139,7 +191,7 @@ function state.apply_unequip(panel, role_id)
     return false
   end
   panel.selected_by_role[key] = nil
-  transaction_context.archive_call("save_equipped", role_id, nil)
+  _persist_equipped(role_id, nil)
   transaction_context.call_unequip_adapter(role_id)
   return true
 end

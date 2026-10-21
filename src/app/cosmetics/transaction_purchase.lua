@@ -91,6 +91,16 @@ local function _invalid_skin_rejection(panel, skin)
   return nil
 end
 
+-- ADR 0074 第 2 条:归属写不进存档就不收钱。
+local function _archive_rejection(panel, skin)
+  if transaction_context.can_persist_skin(skin.product_id) then
+    return nil
+  end
+  return transaction_state.rejected(panel, "archive_unavailable", {
+    notification = "存档未开启，暂时无法购买皮肤",
+  })
+end
+
 local function _pending_key_or_rejection(panel, role_id)
   local key = transaction_state.role_key(role_id)
   if key == nil then
@@ -106,6 +116,10 @@ local function _invalid_purchase_rejection(panel, role_id, skin)
   local skin_rejected = _invalid_skin_rejection(panel, skin)
   if skin_rejected ~= nil then
     return skin_rejected
+  end
+  local archive_rejected = _archive_rejection(panel, skin)
+  if archive_rejected ~= nil then
+    return archive_rejected
   end
   local _, pending_rejected = _pending_key_or_rejection(panel, role_id)
   if pending_rejected ~= nil then

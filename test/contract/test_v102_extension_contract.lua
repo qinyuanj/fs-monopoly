@@ -146,6 +146,8 @@ describe("TestV102ExtensionContract", function()
   local paid_purchase_port = require("src.rules.ports.paid_purchase")
   local skin_panel = require("src.ui.screens.skin_panel")
   local skin_equip = require("src.rules.cosmetics")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
+  local archive = {}
   local player = { id = 9, name = "玩家9" }
   local state = {
     ui = {},
@@ -180,6 +182,15 @@ describe("TestV102ExtensionContract", function()
     },
   }, function()
     host_install.install({ skip_context_install = true })
+    -- ADR 0074:存档可用才卖皮肤;宿主存档在 runtime_ports 边界替身。
+    runtime_ports.configure({
+      archives_enabled = function() return true end,
+      get_archive_int = function(_, key) return archive[key] or 0 end,
+      set_archive_int = function(_, key, value)
+        archive[key] = value
+        return true
+      end,
+    })
     skin_panel.open(state, 9)
     skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
     luassert.truthy(captured ~= nil, "skin purchase should start paid purchase")
@@ -197,6 +208,8 @@ describe("TestV102ExtensionContract", function()
     "paid skin callback should unlock skin")
   luassert.is.equal(skin.product_id, state.ui.skin_panel.selected_by_role["9"],
     "paid skin callback should equip skin")
+  luassert.is.equal(1, archive[skin.archive_key], "paid skin callback should persist ownership")
+  luassert.is.equal(skin.product_id, archive[1051], "paid skin callback should persist the equipped skin")
   skin_panel.reset_for_tests()
   end)
 

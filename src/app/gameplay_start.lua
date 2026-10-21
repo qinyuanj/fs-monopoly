@@ -6,6 +6,7 @@ local camera_sync = require("src.ui.ports.ui_sync")._camera
 local tick_clock = require("src.turn.loop.tick_clock")
 local frame_timer = require("src.host.frame_timer")
 local leaderboard_settlement = require("src.app.host_integrations.leaderboard_settlement")
+local cosmetics_transaction = require("src.app.cosmetics.transaction")
 
 local M = {}
 
@@ -63,6 +64,15 @@ local function _prime_first_turn(game)
   return true
 end
 
+-- ADR 0074:开局即读皮肤存档并恢复穿戴;AI 无宿主 role、无存档,跳过。
+local function _restore_skins(state, game)
+  for _, player in ipairs(game and game.players or {}) do
+    if not player.is_ai then
+      cosmetics_transaction.restore_role(state, player.id)
+    end
+  end
+end
+
 -- 行为测试公共接缝：test_gameplay_start 验证只有无待决选择的首次 start 才推进回合。
 M.prime_first_turn = _prime_first_turn
 
@@ -84,6 +94,7 @@ function M.start(state, current_game_ref)
   -- 排行榜退出监听挂在每名真人玩家的宿主 role 上,开局即注册,中途离开
   -- 标记 quit_reason,终局 settle 据此跳过其富豪榜资产累计。
   leaderboard_settlement.watch_game(current_game)
+  _restore_skins(state, current_game)
   -- set_game 必须先于首回合起跑：它会 reset wait_callback_runtime,若首回合已挂起
   -- landing_visual 等待(begin_wait + 0.2s 定时器),reset 会抹掉 pending seq,定时器
   -- 回来时对不上就永远不 mark_ready,整局死锁在 wait_landing_visual。
