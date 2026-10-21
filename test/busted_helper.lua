@@ -23,7 +23,8 @@ return function(busted, _, helper_options)
   -- puts the repo root on package.path as an absolute path. Every repo-local Lua
   -- file (outside the controlled Lua environment) is therefore loaded under its
   -- relative forward-slash name (tools/foundation derives sibling paths from it).
-  local function canonical(path)
+  local canonical_cache = {}
+  local function canonical_raw(path)
     local normalized = tostring(path):gsub("\\", "/"):gsub("^%./", "")
     if normalized:sub(1, #root):lower() == root:lower() then normalized = normalized:sub(#root + 1) end
     if normalized:match("^%.%./") then return nil end
@@ -34,6 +35,13 @@ return function(busted, _, helper_options)
     until normalized == collapsed
     if normalized:match("^%.%./") or normalized:match("^%a:") or normalized:match("^/") then return nil end
     return normalized
+  end
+  -- 每次 require / loadfile 都要归一化同一批路径，结果只依赖输入，按路径缓存。
+  local function canonical(path)
+    local key = tostring(path)
+    local hit = canonical_cache[key]
+    if hit == nil then hit = canonical_raw(path) or false; canonical_cache[key] = hit end
+    return hit or nil
   end
   -- Specs swap or drop globals (package, io, assert ...); hold the originals.
   local package_lib, io_open, load_chunk, raise = package, io.open, load, error
