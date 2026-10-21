@@ -62,10 +62,10 @@ describe("TestAchievements", function()
       { id = 37, category = "隐藏", name = "连田阡陌", description = "这条街都是我的！", condition = "获得3个连续的地块。", target_progress = 1 },
       { id = 38, category = "隐藏", name = "哥斯拉？", description = "为什么会有哥斯拉？", condition = "被怪兽拆除1次你的房屋", target_progress = 1 },
       { id = 39, category = "隐藏", name = "风神过境！", description = "全是豆腐渣工程！", condition = "被台风拆除1次你的房屋", target_progress = 1 },
-      { id = 40, category = "传奇", name = "海绵宝宝！", description = "我们不一样", condition = "使用海绵宝宝皮肤1次", target_progress = 1 },
-      { id = 41, category = "传奇", name = "派大星！", description = "我们不一样", condition = "使用派大星皮肤1次", target_progress = 1 },
-      { id = 42, category = "传奇", name = "奶龙？奶龙！", description = "我们不一样", condition = "使用奶龙皮肤1次", target_progress = 1 },
-      { id = 43, category = "传奇", name = "水豚嘟嘟", description = "我们不一样", condition = "使用水豚嘟嘟皮肤1次", target_progress = 1 },
+      { id = 42, category = "传奇", name = "海绵宝宝！", description = "我们不一样", condition = "使用海绵宝宝皮肤1次", target_progress = 1 },
+      { id = 43, category = "传奇", name = "派大星！", description = "我们不一样", condition = "使用派大星皮肤1次", target_progress = 1 },
+      { id = 44, category = "传奇", name = "奶龙？奶龙！", description = "我们不一样", condition = "使用奶龙皮肤1次", target_progress = 1 },
+      { id = 45, category = "传奇", name = "水豚嘟嘟", description = "我们不一样", condition = "使用水豚嘟嘟皮肤1次", target_progress = 1 },
     }
 
     luassert.truthy(#catalog == #expected, "achievement count mismatch")

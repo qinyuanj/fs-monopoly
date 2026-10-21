@@ -17,9 +17,9 @@ return {
   ["获得三个连续地块"] = { ids = { 37 }, default_amount = 1 },
   ["被怪兽拆除房屋"] = { ids = { 38 }, default_amount = 1 },
   ["被台风拆除房屋"] = { ids = { 39 }, default_amount = 1 },
-  ["使用海绵宝宝皮肤"] = { ids = { 40 }, default_amount = 1 },
-  ["使用派大星皮肤"] = { ids = { 41 }, default_amount = 1 },
-  ["使用奶龙皮肤"] = { ids = { 42 }, default_amount = 1 },
-  ["使用水豚嘟嘟皮肤"] = { ids = { 43 }, default_amount = 1 },
+  ["使用海绵宝宝皮肤"] = { ids = { 42 }, default_amount = 1 },
+  ["使用派大星皮肤"] = { ids = { 43 }, default_amount = 1 },
+  ["使用奶龙皮肤"] = { ids = { 44 }, default_amount = 1 },
+  ["使用水豚嘟嘟皮肤"] = { ids = { 45 }, default_amount = 1 },
 }
 
