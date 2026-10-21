@@ -7,18 +7,6 @@
   :right-nodes 94}
  {:score 1.0
   :language "lua"
-  :left {:file "src/app/cosmetics/transaction.lua", :start-line 50, :end-line 53}
-  :right {:file "src/ui/screens/skin_panel.lua", :start-line 65, :end-line 68}
-  :left-nodes 29
-  :right-nodes 29}
- {:score 1.0
-  :language "lua"
-  :left {:file "src/app/cosmetics/transaction.lua", :start-line 60, :end-line 63}
-  :right {:file "src/ui/screens/skin_panel.lua", :start-line 70, :end-line 73}
-  :left-nodes 27
-  :right-nodes 27}
- {:score 1.0
-  :language "lua"
   :left {:file "src/app/cosmetics/transaction_read_model.lua", :start-line 8, :end-line 13}
   :right {:file "src/config/runtime_assets/results.lua", :start-line 5, :end-line 10}
   :left-nodes 39
@@ -79,7 +67,7 @@
   :right-nodes 56}
  {:score 1.0
   :language "lua"
-  :left {:file "src/app/ui_bootstrap_nodes.lua", :start-line 27, :end-line 31}
+  :left {:file "src/app/ui_bootstrap_nodes.lua", :start-line 34, :end-line 38}
   :right {:file "src/ui/input/routes.lua", :start-line 16, :end-line 20}
   :left-nodes 61
   :right-nodes 61}
@@ -325,24 +313,6 @@
   :right-nodes 32}
  {:score 1.0
   :language "lua"
-  :left {:file "src/rules/ports/card_reveal.lua", :start-line 9, :end-line 15}
-  :right {:file "src/rules/ports/paid_purchase.lua", :start-line 4, :end-line 10}
-  :left-nodes 110
-  :right-nodes 110}
- {:score 1.0
-  :language "lua"
-  :left {:file "src/rules/ports/card_reveal.lua", :start-line 17, :end-line 22}
-  :right {:file "src/rules/ports/paid_purchase.lua", :start-line 12, :end-line 17}
-  :left-nodes 28
-  :right-nodes 28}
- {:score 1.0
-  :language "lua"
-  :left {:file "src/rules/ports/card_reveal.lua", :start-line 17, :end-line 22}
-  :right {:file "src/ui/seams/screen_openers.lua", :start-line 25, :end-line 30}
-  :left-nodes 28
-  :right-nodes 28}
- {:score 1.0
-  :language "lua"
   :left {:file "src/rules/ports/paid_purchase.lua", :start-line 12, :end-line 17}
   :right {:file "src/ui/seams/screen_openers.lua", :start-line 25, :end-line 30}
   :left-nodes 28
@@ -355,38 +325,38 @@
   :right-nodes 88}
  {:score 1.0
   :language "lua"
-  :left {:file "src/state/pending_confirmation.lua", :start-line 118, :end-line 121}
-  :right {:file "src/state/pending_confirmation.lua", :start-line 123, :end-line 126}
+  :left {:file "src/state/pending_confirmation.lua", :start-line 120, :end-line 123}
+  :right {:file "src/state/pending_confirmation.lua", :start-line 125, :end-line 128}
   :left-nodes 51
   :right-nodes 51}
  {:score 1.0
   :language "lua"
-  :left {:file "src/state/pending_confirmation.lua", :start-line 118, :end-line 121}
-  :right {:file "src/state/pending_confirmation.lua", :start-line 128, :end-line 131}
+  :left {:file "src/state/pending_confirmation.lua", :start-line 120, :end-line 123}
+  :right {:file "src/state/pending_confirmation.lua", :start-line 130, :end-line 133}
   :left-nodes 51
   :right-nodes 51}
  {:score 1.0
   :language "lua"
-  :left {:file "src/state/pending_confirmation.lua", :start-line 118, :end-line 121}
-  :right {:file "src/state/pending_confirmation.lua", :start-line 133, :end-line 136}
+  :left {:file "src/state/pending_confirmation.lua", :start-line 120, :end-line 123}
+  :right {:file "src/state/pending_confirmation.lua", :start-line 135, :end-line 138}
   :left-nodes 51
   :right-nodes 51}
  {:score 1.0
   :language "lua"
-  :left {:file "src/state/pending_confirmation.lua", :start-line 123, :end-line 126}
-  :right {:file "src/state/pending_confirmation.lua", :start-line 128, :end-line 131}
+  :left {:file "src/state/pending_confirmation.lua", :start-line 125, :end-line 128}
+  :right {:file "src/state/pending_confirmation.lua", :start-line 130, :end-line 133}
   :left-nodes 51
   :right-nodes 51}
  {:score 1.0
   :language "lua"
-  :left {:file "src/state/pending_confirmation.lua", :start-line 123, :end-line 126}
-  :right {:file "src/state/pending_confirmation.lua", :start-line 133, :end-line 136}
+  :left {:file "src/state/pending_confirmation.lua", :start-line 125, :end-line 128}
+  :right {:file "src/state/pending_confirmation.lua", :start-line 135, :end-line 138}
   :left-nodes 51
   :right-nodes 51}
  {:score 1.0
   :language "lua"
-  :left {:file "src/state/pending_confirmation.lua", :start-line 128, :end-line 131}
-  :right {:file "src/state/pending_confirmation.lua", :start-line 133, :end-line 136}
+  :left {:file "src/state/pending_confirmation.lua", :start-line 130, :end-line 133}
+  :right {:file "src/state/pending_confirmation.lua", :start-line 135, :end-line 138}
   :left-nodes 51
   :right-nodes 51}
  {:score 1.0
@@ -407,12 +377,6 @@
   :right {:file "src/turn/loop/ports.lua", :start-line 26, :end-line 32}
   :left-nodes 40
   :right-nodes 40}
- {:score 1.0
-  :language "lua"
-  :left {:file "src/turn/output/intent_dispatcher.lua", :start-line 122, :end-line 127}
-  :right {:file "src/turn/waits/modal_timeout.lua", :start-line 123, :end-line 128}
-  :left-nodes 36
-  :right-nodes 36}
  {:score 1.0
   :language "lua"
   :left {:file "src/turn/policies/action_gate.lua", :start-line 16, :end-line 21}
@@ -476,7 +440,7 @@
  {:score 1.0
   :language "lua"
   :left {:file "src/ui/coord/item_slots_options.lua", :start-line 13, :end-line 17}
-  :right {:file "src/ui/input/role_control_lock.lua", :start-line 88, :end-line 92}
+  :right {:file "src/ui/input/role_control_lock.lua", :start-line 108, :end-line 112}
   :left-nodes 40
   :right-nodes 40}
  {:score 1.0
@@ -554,7 +518,7 @@
  {:score 1.0
   :language "lua"
   :left {:file "src/ui/manager/ebutton.lua", :start-line 25, :end-line 28}
-  :right {:file "src/ui/manager/enode.lua", :start-line 162, :end-line 165}
+  :right {:file "src/ui/manager/enode.lua", :start-line 154, :end-line 157}
   :left-nodes 35
   :right-nodes 35}
  {:score 1.0
@@ -578,7 +542,7 @@
  {:score 1.0
   :language "lua"
   :left {:file "src/ui/manager/ecanvas.lua", :start-line 35, :end-line 41}
-  :right {:file "src/ui/manager/enode.lua", :start-line 95, :end-line 101}
+  :right {:file "src/ui/manager/enode.lua", :start-line 87, :end-line 93}
   :left-nodes 87
   :right-nodes 87}
  {:score 1.0
@@ -655,22 +619,10 @@
   :right-nodes 51}
  {:score 1.0
   :language "lua"
-  :left {:file "src/ui/screens/remote_choice.lua", :start-line 12, :end-line 21}
-  :right {:file "src/ui/screens/secondary_confirm.lua", :start-line 15, :end-line 24}
-  :left-nodes 73
-  :right-nodes 73}
- {:score 1.0
-  :language "lua"
-  :left {:file "src/ui/screens/skin_panel/skin_gallery.lua", :start-line 42, :end-line 46}
-  :right {:file "src/ui/screens/skin_panel/skin_gallery.lua", :start-line 48, :end-line 52}
+  :left {:file "src/ui/screens/skin_panel/skin_gallery.lua", :start-line 33, :end-line 37}
+  :right {:file "src/ui/screens/skin_panel/skin_gallery.lua", :start-line 39, :end-line 43}
   :left-nodes 71
   :right-nodes 71}
- {:score 1.0
-  :language "lua"
-  :left {:file "src/ui/screens_registry.lua", :start-line 72, :end-line 76}
-  :right {:file "src/ui/screens_registry.lua", :start-line 78, :end-line 82}
-  :left-nodes 54
-  :right-nodes 54}
  {:score 1.0
   :language "lua"
   :left {:file "src/ui/view/item_slice.lua", :start-line 17, :end-line 21}
@@ -818,7 +770,7 @@
  {:score 0.90243902439
   :language "lua"
   :left {:file "src/ui/render/support/assets.lua", :start-line 65, :end-line 71}
-  :right {:file "src/ui/render/support/effect_track.lua", :start-line 12, :end-line 18}
+  :right {:file "src/ui/render/support/effect_track.lua", :start-line 9, :end-line 15}
   :left-nodes 62
   :right-nodes 61}
  {:score 0.894736842105
@@ -836,12 +788,6 @@
  {:score 0.885714285714
   :language "lua"
   :left {:file "src/foundation/ports/share_panel.lua", :start-line 11, :end-line 15}
-  :right {:file "src/rules/ports/card_reveal.lua", :start-line 9, :end-line 15}
-  :left-nodes 60
-  :right-nodes 110}
- {:score 0.885714285714
-  :language "lua"
-  :left {:file "src/foundation/ports/share_panel.lua", :start-line 11, :end-line 15}
   :right {:file "src/rules/ports/paid_purchase.lua", :start-line 4, :end-line 10}
   :left-nodes 60
   :right-nodes 110}
@@ -850,12 +796,6 @@
   :left {:file "src/foundation/ports/share_panel.lua", :start-line 11, :end-line 15}
   :right {:file "src/ui/seams/local_actor_resolver.lua", :start-line 10, :end-line 15}
   :left-nodes 60
-  :right-nodes 85}
- {:score 0.885714285714
-  :language "lua"
-  :left {:file "src/rules/ports/card_reveal.lua", :start-line 9, :end-line 15}
-  :right {:file "src/ui/seams/local_actor_resolver.lua", :start-line 10, :end-line 15}
-  :left-nodes 110
   :right-nodes 85}
  {:score 0.885714285714
   :language "lua"
@@ -877,13 +817,13 @@
   :right-nodes 41}
  {:score 0.878787878788
   :language "lua"
-  :left {:file "src/ui/input/role_control_lock.lua", :start-line 88, :end-line 92}
+  :left {:file "src/ui/input/role_control_lock.lua", :start-line 108, :end-line 112}
   :right {:file "src/ui/view/item_slice.lua", :start-line 17, :end-line 21}
   :left-nodes 40
   :right-nodes 41}
  {:score 0.878787878788
   :language "lua"
-  :left {:file "src/ui/input/role_control_lock.lua", :start-line 88, :end-line 92}
+  :left {:file "src/ui/input/role_control_lock.lua", :start-line 108, :end-line 112}
   :right {:file "src/ui/view/panel_slice.lua", :start-line 17, :end-line 21}
   :left-nodes 40
   :right-nodes 41}
@@ -1021,7 +961,7 @@
   :right-nodes 94}
  {:score 0.84
   :language "lua"
-  :left {:file "src/rules/board/direction.lua", :start-line 75, :end-line 80}
+  :left {:file "src/rules/board/direction.lua", :start-line 74, :end-line 79}
   :right {:file "src/turn/output/event_feed_adapter.lua", :start-line 19, :end-line 24}
   :left-nodes 33
   :right-nodes 32}
@@ -1045,14 +985,14 @@
   :right-nodes 80}
  {:score 0.833333333333
   :language "lua"
-  :left {:file "src/ui/render/support/effect_track.lua", :start-line 176, :end-line 179}
+  :left {:file "src/ui/render/support/effect_track.lua", :start-line 119, :end-line 122}
   :right {:file "src/ui/screens_registry.lua", :start-line 21, :end-line 25}
   :left-nodes 33
   :right-nodes 45}
  {:score 0.821428571429
   :language "lua"
-  :left {:file "src/ui/screens/item_atlas.lua", :start-line 19, :end-line 29}
-  :right {:file "src/ui/screens/skin_panel.lua", :start-line 32, :end-line 42}
-  :left-nodes 130
-  :right-nodes 124}
+  :left {:file "src/ui/screens/item_atlas.lua", :start-line 19, :end-line 31}
+  :right {:file "src/ui/screens/skin_panel.lua", :start-line 31, :end-line 43}
+  :left-nodes 143
+  :right-nodes 137}
 ]}

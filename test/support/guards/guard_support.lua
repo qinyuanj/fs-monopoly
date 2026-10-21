@@ -1,7 +1,10 @@
 local M = {}
 
+-- 递归枚举 root 下的 .lua 文件。`find -print0` 保证空格/中文/换行文件名原样读回;
+-- 目录缺失时 find 非零,由调用方报 "no lua files found"。
 local function _build_list_command(root)
-  return 'chcp 65001 >nul & dir /b /s /a-d "' .. root:gsub("/", "\\") .. '\\*.lua" 2>nul'
+  return "find " .. ("'" .. tostring(root):gsub("'", "'\\''") .. "'")
+    .. " -type f -name '*.lua' -print0 2>/dev/null"
 end
 
 local function _is_file_path(path)
@@ -42,9 +45,10 @@ function M.collect_lua_files(root)
   end
 
   local files = {}
-  for line in process:lines() do
-    if line and line ~= "" then
-      files[#files + 1] = line
+  local raw = process:read("*a") or ""
+  for line in (raw .. "\0"):gmatch("(.-)\0") do
+    if line ~= "" then
+      files[#files + 1] = M.normalize_path(line)
     end
   end
 

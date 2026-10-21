@@ -3,11 +3,12 @@
 --
 -- 行为真源:本文件自身(deploy.lua)。历史来源 deploy.ps1(373 行)已随 #384 删除,
 -- 整体由本文件取代(ADR 0030);正文中 deploy.ps1 行号仅作历史坐标保留。
--- 仅支持原生 Windows(ADR 0066 / #95),以 Lua 5.4 标准库和 cmd 原生命令
--- 保留目标解析、目录镜像与逐文件复制语义;不加载额外文件系统依赖。
+-- 运行在 WSL Ubuntu(ADR 0073),以 Lua 5.4 标准库 + POSIX 原语完成目标解析、
+-- 目录镜像与逐文件复制;不加载额外文件系统依赖。部署目标仍是 Windows 侧 Eggy
+-- 宿主目录:经 cmd.exe 取 %USERPROFILE%,再用 wslpath -u 换算成 /mnt/c/... 路径。
 --
 -- CLI 面:零参数、零开关、无 --help(继承被取代的 deploy.ps1 空 param(),#384);任何参数 → ERROR + exit 1。
--- 子命令入口:lua tools/cli.lua deploy 经 tools/packages/ops/cli.lua 壳转发,仅 --help/-h 在壳内
+-- 子命令入口:lua5.4 tools/cli.lua deploy 经 tools/packages/ops/cli.lua 壳转发,仅 --help/-h 在壳内
 -- 消费返回 usage,其余参数原样透传,本语义不变。
 
 local M = {}
@@ -24,7 +25,8 @@ local function _normalize_path(value)
   return tostring(value or ""):gsub("\\", "/")
 end
 
--- 原生运行平台以 Lua 的路径分隔符判定。
+-- 运行平台:WSL 的判据是「Linux 且能起 cmd.exe + wslpath」。缺任一即不可用
+-- (退 3),不把环境问题当成部署失败。
 local function _actual_is_windows()
   return package.config:sub(1, 1) == "\\"
 end
@@ -49,50 +51,67 @@ local function _popen(command)
   return output
 end
 
+-- 真 cwd 以 `pwd -L` 为准;继承的 PWD 可能已被子进程 cwd 改动作废
+-- (Python subprocess(cwd=...) 不更新 PWD),只作兜底。
 local function _current_dir()
-  return _normalize_path(_trim(_popen("chcp 65001 >nul & cd")))
+  local printed = _normalize_path(_trim(_popen("pwd -L 2>/dev/null")))
+  if printed ~= "" then
+    return printed
+  end
+  local value = os.getenv("PWD")
+  if value ~= nil and value ~= "" then
+    return _normalize_path(_trim(value))
+  end
+  return ""
 end
 
--- cmd 路径参数;拒绝引号、变量展开与换行,避免路径被解释成命令。
-local function _cmd_arg(value)
-  local text = tostring(value or ""):gsub("/", "\\")
-  assert(not text:find('["\r\n%%!]'), "Unsupported command path")
-  return '"' .. text .. '"'
+-- POSIX 单引号;拒绝换行与 NUL,避免参数被解释成第二条命令。
+local function _shell_arg(value)
+  local text = tostring(value or "")
+  assert(not text:find("[\r\n%z]"), "Unsupported command path")
+  return "'" .. text:gsub("'", "'\\''") .. "'"
+end
+
+-- 纯 Lua 判定:io.open 对目录同样成功,故目录用 `path/.` 探测。
+local function _openable(path)
+  local handle = io.open(path, "rb")
+  if handle == nil then
+    return false
+  end
+  handle:close()
+  return true
 end
 
 local function _path_exists(path)
   if path == nil or path == "" then
     return false
   end
-  local ok, kind, code = os.execute("if exist " .. _cmd_arg(path) .. " (exit /b 0) else (exit /b 1)")
-  return _exit_status(ok, kind, code)
+  local text = _normalize_path(path)
+  if _openable(text) or _openable(text .. "/.") then
+    return true
+  end
+  return os.rename(text, text) ~= nil
 end
 
 local function _path_is_dir(path)
   if path == nil or path == "" then
     return false
   end
-  local ok, kind, code = os.execute("if exist " .. _cmd_arg(path .. "/") .. " (exit /b 0) else (exit /b 1)")
-  return _exit_status(ok, kind, code)
+  return _openable(_normalize_path(path) .. "/.")
 end
 
 local function _path_is_file(path)
   if path == nil or path == "" then
     return false
   end
-  local ok, kind, code = os.execute(
-    "if exist " .. _cmd_arg(path)
-      .. " (if not exist " .. _cmd_arg(path .. "/")
-      .. " (exit /b 0) else (exit /b 1)) else (exit /b 1)"
-  )
-  return _exit_status(ok, kind, code)
+  return _openable(path) and not _openable(_normalize_path(path) .. "/.")
 end
 
 local function _ensure_dir(path)
   if path == nil or path == "" then
     return true
   end
-  local ok, kind, code = os.execute("if not exist " .. _cmd_arg(path) .. " mkdir " .. _cmd_arg(path))
+  local ok, kind, code = os.execute("mkdir -p " .. _shell_arg(_normalize_path(path)))
   local success = _exit_status(ok, kind, code)
   if not success then
     error("Failed to create directory: " .. tostring(path))
@@ -104,12 +123,7 @@ local function _remove_path(path)
   if not _path_exists(path) then
     return true
   end
-  local ok, kind, code
-  if _path_is_dir(path) then
-    ok, kind, code = os.execute("rmdir /s /q " .. _cmd_arg(path))
-  else
-    ok, kind, code = os.execute("del /f /q " .. _cmd_arg(path))
-  end
+  local ok, kind, code = os.execute("rm -rf " .. _shell_arg(_normalize_path(path)))
   local success = _exit_status(ok, kind, code)
   if not success then
     error("Failed to remove path: " .. tostring(path))
@@ -118,9 +132,21 @@ local function _remove_path(path)
 end
 
 local function _command_available(name)
-  local command = "where " .. tostring(name) .. " >nul 2>&1"
-  local ok, kind, code = os.execute(command)
+  local ok, kind, code = os.execute("command -v " .. _shell_arg(name) .. " >/dev/null 2>&1")
   return _exit_status(ok, kind, code)
+end
+
+-- 一次性探测 WSL 的互操作面:cmd.exe(取 %USERPROFILE%)与 wslpath(路径换算)。
+-- 两者都在才谈得上「在 WSL 里往 Windows 部署」;缺一个就整体不可用。
+function M.detect_interop()
+  local missing = {}
+  if not _command_available("cmd.exe") then
+    missing[#missing + 1] = "cmd.exe"
+  end
+  if not _command_available("wslpath") then
+    missing[#missing + 1] = "wslpath"
+  end
+  return missing
 end
 
 local function _join_path(...)
@@ -244,16 +270,31 @@ function M.normalize_path_text(value)
   return _normalize_path(value)
 end
 
+-- Windows 侧家目录从 %USERPROFILE% 动态解析,不在代码里硬编码用户名:
+-- 在 /mnt/c 下起 cmd.exe(UNC 工作目录会让 cmd 回落到 C:\Windows,所以先 cd
+-- 到 /mnt/c),再经 wslpath -u 换算成 WSL 路径。任何一步失败都返回 "",由调用方
+-- 按「不可用」处理。run 是命令执行注入缝(默认 io.popen 读全部输出),供测试替身。
+function M.resolve_windows_home_dir(run)
+  run = run or _popen
+  local profile = _trim(run("cd /mnt/c 2>/dev/null && cmd.exe /d /c 'echo %USERPROFILE%' 2>/dev/null"))
+  if _is_blank(profile) or not profile:match("^%a:") then
+    return ""
+  end
+  local converted = _trim(run("wslpath -u " .. _shell_arg(profile) .. " 2>/dev/null"))
+  if _is_blank(converted) or converted:sub(1, 1) ~= "/" then
+    return ""
+  end
+  return (M.normalize_path_text(converted))
+end
+
+-- 家目录:部署目标始终是 Windows 侧家目录;WSL 的 $HOME 只作为测试与沙箱的
+-- 显式覆写面(环境变量 MONOPOLY_DEPLOY_HOME),不参与默认目标推导。
 function M.resolve_home_dir()
-  local home = os.getenv("HOME")
-  if not _is_blank(home) then
-    return M.normalize_path_text(home)
+  local override = os.getenv("MONOPOLY_DEPLOY_HOME")
+  if not _is_blank(override) then
+    return (M.normalize_path_text(override))
   end
-  local user_profile = os.getenv("USERPROFILE")
-  if not _is_blank(user_profile) then
-    return M.normalize_path_text(user_profile)
-  end
-  return ""
+  return M.resolve_windows_home_dir()
 end
 
 function M.resolve_normalized_path(path_text)
@@ -278,11 +319,23 @@ function M.test_is_windows_host()
   return _actual_is_windows()
 end
 
+-- 平台名:部署目标恒为 Windows 宿主;运行面必须是能起 cmd.exe + wslpath 的 WSL。
+-- 不可用时退 3(环境问题),不打印 ERROR(那不是部署失败)。
 function M.resolve_platform_name()
-  if M.test_is_windows_host() then
-    return "win"
+  local missing = M.detect_interop()
+  if #missing > 0 then
+    local boundary = dofile(_script_dir() .. "/../../foundation/platform_boundary.lua")
+    local verdict = boundary.unavailable_verdict("deploy", " step=interop", {
+      "部署需要 WSL 互操作面:缺 " .. table.concat(missing, ", ") .. "。",
+      "本次未改动任何部署目录;退出码 " .. boundary.UNAVAILABLE_EXIT_CODE
+        .. " 表示环境不可用,不是部署失败。",
+      "处理: 在 WSL Ubuntu 中运行,并确认 /mnt/c 已挂载(cmd.exe 与 wslpath 可见)。",
+    })
+    io.stderr:write(verdict.message)
+    io.stderr:flush()
+    os.exit(verdict.exit_code)
   end
-  M.exit_with_error("Deploy target is Windows only; run on native Windows.")
+  return "win"
 end
 
 function M.join_lua_source_dir_name()
@@ -293,7 +346,7 @@ end
 function M.resolve_default_target_path(resolved_platform)
   local home_dir = M.resolve_home_dir()
   if _is_blank(home_dir) then
-    M.exit_with_error("Cannot resolve home directory for default deploy target.")
+    M.exit_with_error("Cannot resolve the Windows home directory (%USERPROFILE%) for the default deploy target.")
   end
 
   if resolved_platform == "win" then
@@ -332,39 +385,20 @@ function M.reset_directory(path_text)
   _ensure_dir(path_text)
 end
 
--- dir /a 包含隐藏项;同一 cmd 进程先选 UTF-8,保留中文文件名。
-local function _list_names(path, win_switch)
-  local output = _popen("chcp 65001 >nul & dir /b " .. win_switch .. " " .. _cmd_arg(path) .. " 2>nul")
-  local names = {}
-  for line in (output .. "\n"):gmatch("(.-)\n") do
-    local name = line:gsub("\r$", "")
-    if name ~= "" and name ~= "." and name ~= ".." then
-      names[#names + 1] = name
-    end
-  end
-  return names
-end
-
-local function _list_files(path)
-  return _list_names(path, "/a-d")
-end
-
-local function _list_dirs(path)
-  return _list_names(path, "/ad")
-end
-
--- 枚举源目录全部条目(含隐藏文件);目录缺失按 PowerShell Get-ChildItem 语义抛错,
--- 由主流程 catch 收成 ERROR + exit 1。
+-- 单层条目枚举(含隐藏项):`find -mindepth 1 -maxdepth 1` 一次调用同时拿到
+-- 文件与目录,中文与空格文件名按 NUL 分隔原样读回。
 local function _list_entries(path)
   if not _path_exists(path) then
     error("Path does not exist: " .. tostring(path))
   end
+  local output = _popen("find " .. _shell_arg(_normalize_path(path))
+    .. " -mindepth 1 -maxdepth 1 -print0 2>/dev/null")
   local entries = {}
-  for _, name in ipairs(_list_files(path)) do
-    entries[#entries + 1] = { name = name, is_dir = false }
-  end
-  for _, name in ipairs(_list_dirs(path)) do
-    entries[#entries + 1] = { name = name, is_dir = true }
+  for full in (output .. "\0"):gmatch("(.-)\0") do
+    if full ~= "" then
+      local name = full:match("([^/]+)$") or full
+      entries[#entries + 1] = { name = name, is_dir = _path_is_dir(full) }
+    end
   end
   return entries
 end
@@ -381,6 +415,7 @@ local function _collect_lua_files(path, result)
   return result
 end
 
+-- 二进制逐块复制(不按行读:行读会把 \r 与二进制内容改写掉)。
 local function _copy_file_bytes(source, target)
   local in_file, in_err = io.open(source, "rb")
   if in_file == nil then
@@ -391,7 +426,11 @@ local function _copy_file_bytes(source, target)
     in_file:close()
     error("Cannot open target file: " .. tostring(target) .. " (" .. tostring(out_err or "") .. ")")
   end
-  for chunk in in_file:lines(65536) do
+  while true do
+    local chunk = in_file:read(65536)
+    if chunk == nil then
+      break
+    end
     out_file:write(chunk)
   end
   in_file:close()
@@ -410,39 +449,12 @@ local function _copy_entry_recursive(source, target)
   end
 end
 
--- robocopy /MIR 增量镜像;退出码 0-7 成功,>=8 或不可用时逐文件回退。
-local function _run_robocopy(program, source, target, redirect)
-  local robo_flags = "/MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:1"
-  local ok, kind, code = os.execute(
-    program
-      .. " "
-      .. _cmd_arg(source)
-      .. " "
-      .. _cmd_arg(target)
-      .. " "
-      .. robo_flags
-      .. " "
-      .. redirect
-  )
-  local _, exit_code = _exit_status(ok, kind, code)
-  return exit_code < 8
-end
-
-local function _try_robocopy_mirror(source_dir, target_dir)
-  if _command_available("robocopy") then
-    return _run_robocopy("robocopy", source_dir, target_dir, ">nul 2>&1")
-  end
-  return false
-end
-
+-- 目录镜像:先删目标再整体拷贝。跨文件系统(/mnt/c 与 ext4)时逐文件复制,
+-- 可观察结果与历史镜像语义一致(目标侧陈旧文件消失,源侧隐藏项与空目录保留)。
 function M.copy_directory_tree(source_dir, target_dir)
   if not _path_is_dir(source_dir) then
     error("Source directory does not exist: " .. tostring(source_dir))
   end
-  if _try_robocopy_mirror(source_dir, target_dir) then
-    return
-  end
-
   M.reset_directory(target_dir)
   for _, entry in ipairs(_list_entries(source_dir)) do
     _copy_entry_recursive(_join_path(source_dir, entry.name), _join_path(target_dir, entry.name))
@@ -531,16 +543,6 @@ function M.get_lua_file_count(path_text)
   return #_collect_lua_files(path_text, {})
 end
 
--- Windows 编码设置(历史坐标 deploy.ps1 #38-50,已随 #384 删除):仅 Windows 宿主上尽力 chcp 65001 +
--- UTF-8 控制台编码;任何失败静默吞掉。Lua 没有 Console 编码的直接等价物,
--- 按行为等价视为尽力而为。
-local function _set_windows_encoding()
-  if not M.test_is_windows_host() then
-    return
-  end
-  os.execute("chcp 65001 >nul 2>&1")
-end
-
 local function _error_text(err)
   if type(err) == "string" then
     return err
@@ -565,7 +567,7 @@ local function main()
   M.write_info("======================================")
   M.write_info("Project root: " .. tostring(project_root))
   M.write_info("Target path: " .. tostring(target_path))
-  M.write_info("Platform: " .. tostring(resolved_platform))
+  M.write_info("Target platform: " .. tostring(resolved_platform) .. " (written from WSL via /mnt/c)")
   M.write_info("")
   M.write_info("--------------------------------------")
   M.write_info("Deploy target: " .. tostring(target_path))
@@ -614,8 +616,6 @@ local function run_cli()
   if #extra_args > 0 then
     M.exit_with_error("Unexpected argument: " .. table.concat(extra_args, " "))
   end
-
-  _set_windows_encoding()
 
   local ok, err = pcall(main)
   if not ok then

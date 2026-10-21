@@ -53,7 +53,7 @@ describe("TestRootWhitelistGuard", function()
     luassert.is.same({}, guard.check({ ".busted" }))
   end)
 
-  -- 原生 Windows CI(.github/)与可选 pre-push hook(.githooks/)入库(#126),
+  -- ubuntu-24.04 CI(.github/)与可选 pre-push hook(.githooks/)入库(#126 / #191),
   -- 二者位置由 GitHub / core.hooksPath 约定决定;撤掉放行即破此钉。
   it("test_ci_and_hooks_dirs_whitelisted", function()
     luassert.is.same({}, guard.check({ ".github", ".githooks" }))

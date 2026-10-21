@@ -7,7 +7,7 @@ local M = {}
 
 -- 根部显式白名单。当前工作树的已跟踪与未跟踪文件都检查，已删除路径不参与。
 -- 仅包含项目主动承诺保持在根目录的文件与一级目录。
--- 生成物（build/、tmp/、luacov 残留等）由 `lua tools/cli.lua clean` 清理，
+-- 生成物（build/、tmp/、luacov 残留等）由 `lua5.4 tools/cli.lua clean` 清理，
 -- 因此不在白名单内；guard 通过 git 跟踪 + 未忽略未跟踪项检查，自然排除它们。
 -- agent 在根目录新建任何未跟踪条目都会在此报违规。
 local _WHITELIST = {
@@ -35,7 +35,7 @@ local _WHITELIST = {
   [".agents"] = true,
   [".claude"] = true,
   ["skills-lock.json"] = true,
-  -- 邻接 uml-viewer 的质量配置(#93):uml-command.ps1 只在项目根读 uml-quality.json,
+  -- 邻接 uml-viewer 的质量配置(#93):上游 uml_posix.py 只在项目根读 uml-quality.json,
   -- 位置由上游契约决定。.uml-viewer/、target/ 等本地产物走 .gitignore,不进白名单。
   ["uml-quality.json"] = true,
   -- 真实 uml crap|mutate 跑出的度量(.metrics/crap.edn、mutate/*.edn)按上游 README
@@ -43,7 +43,7 @@ local _WHITELIST = {
   [".metrics"] = true,
   -- crapper / mutator 以最近的 .busted 定模块根并读 busted 配置(#99),只认仓根。
   [".busted"] = true,
-  -- 原生 Windows CI 跑 slim verify(#126),位置由 GitHub Actions 约定决定。
+  -- ubuntu-24.04 CI 跑 slim verify(#126 / #191),位置由 GitHub Actions 约定决定。
   [".github"] = true,
   -- 可选 pre-push hook(#126),经 `git config core.hooksPath .githooks` 启用。
   [".githooks"] = true,

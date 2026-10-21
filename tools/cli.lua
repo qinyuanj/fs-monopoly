@@ -1,8 +1,8 @@
 -- tools/cli.lua —— 工具链唯一对外面（#300）
 --
 -- 用法:
---   lua tools/cli.lua <子命令> [args...]
---   lua tools/cli.lua --help | -h
+--   lua5.4 tools/cli.lua <子命令> [args...]
+--   lua5.4 tools/cli.lua --help | -h
 --
 -- 调度机制:顶层静态路由表 commands(封闭命令集,子命令集合与「不进」清单以
 -- 以本文件的封闭命令表为准；伪入口 / swarm / loc 不进）——查表 →
@@ -21,7 +21,7 @@ local commands = {
   { name = "dry",               pkg = "dry",                summary = "结构重复检测(邻接 .uml-viewer/dryer;写 .metrics/dry.edn)" },
   { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 入口(check/crap/mutate/ir/view;受控 Lua 环境)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
-  { name = "deploy",            pkg = "ops",                summary = "部署到本地 Eggy 目录(原生 Windows;零参数)" },
+  { name = "deploy",            pkg = "ops",                summary = "部署到 Windows 侧 Eggy 目录(WSL 写 /mnt/c;零参数)" },
   { name = "sync-data",         pkg = "data_sync",          summary = "从部署目录回同步导出(Data;EggyAPI/EggyEditorAPI 存根)" },
   { name = "clean",             pkg = "clean",              summary = "清生成物(build/tmp/luacov 等)",              action = "clean" },
   { name = "distclean",         pkg = "clean",              summary = "clean 的别名(仓内已无项目工具缓存)", action = "distclean" },
@@ -41,7 +41,7 @@ end
 
 local function _usage()
   local lines = {
-    "用法: lua tools/cli.lua <子命令> [args...]",
+    "用法: lua5.4 tools/cli.lua <子命令> [args...]",
     "",
     "子命令（封闭命令集）：",
   }
@@ -52,7 +52,7 @@ local function _usage()
   lines[#lines + 1] = "退出码:0 成功 / 1 真实失败 / 2 用法错误 / 3 平台或工具不可用(先查环境再重跑)"
   lines[#lines + 1] = ""
   lines[#lines + 1] = "用法提示:"
-  lines[#lines + 1] = "  lua tools/cli.lua <子命令> --help   子命令帮助(包内 usage 真源)"
+  lines[#lines + 1] = "  lua5.4 tools/cli.lua <子命令> --help   子命令帮助(包内 usage 真源)"
   return table.concat(lines, "\n") .. "\n"
 end
 
@@ -63,6 +63,14 @@ local root = _repo_root()
 -- packages.<name>.cli,物理进不了路由)。?/init.lua 让包内 cli 能 require 目录式
 -- 包(如 uml ir 用的 packages.arch_policy)。
 package.path = package.path .. ";" .. root .. "/tools/?.lua;" .. root .. "/tools/?/init.lua"
+
+-- 入口解释器预检(#191 用户故事 3):本机 PATH 上的 `lua` 是 5.1,兄弟仓依赖它,
+-- 所以入口不靠改全局别名,而是显式要求 `lua5.4`;误用别的解释器时立即退 1,
+-- 而不是让 5.1 语义悄悄跑完一整套测试。
+if _VERSION ~= "Lua 5.4" then
+  io.stderr:write("Lua 5.4 interpreter required; run `lua5.4 tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
+  os.exit(1)
+end
 
 local raw_args = arg or {}
 local name = raw_args[1]
@@ -98,7 +106,7 @@ end
 
 local env = {
   repo_root = root,
-  command = "lua tools/cli.lua " .. name,
+  command = "lua5.4 tools/cli.lua " .. name,
   action = entry.action,
 }
 local code = cli.main(rest, env)

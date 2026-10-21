@@ -3,10 +3,13 @@
 -- 与 path.lua 划清界限——那边是纯路径演算,这边要读环境变量、起子进程、建目录。
 -- 与 proc.lua 划清界限——那边是"跑一条命令拿结果",这边只是"问环境是什么样"。
 --
--- 原生 Windows 单平台(ADR 0066):忽略 MSYS PWD，临时目录取 TEMP/TMP。
+-- WSL Ubuntu 单平台(ADR 0073):临时目录取 TMPDIR,缺省 /tmp。注意别把
+-- 「工具链跑在哪个 OS」与「部署目标是哪个 OS」搞混:Eggy 宿主仍在 Windows 端,
+-- 那条路径活在 tools/packages/ops/deploy.lua 里,与本文件无关。
 local path_lib = require("foundation.path")
 local shell_lib = require("foundation.shell")
 local fs_lib = require("foundation.fs")
+local runtime_path_ops = require("foundation.runtime_path_ops")
 
 local env = {}
 
@@ -25,24 +28,16 @@ local function _entropy_token()
   }, "_")
 end
 
-function env.is_macos()
-  return false
-end
-
+-- 当前目录真源是 runtime_path_ops.current_dir(`pwd -L`,PWD 只兜底):
+-- 继承来的 PWD 可能已被子进程的 cwd 改动作废,详见该文件注释。
 function env.current_dir()
-  local process = io.popen("cmd.exe /d /v:off /c cd")
-  if process == nil then
-    return "."
-  end
-  local path = process:read("*l") or "."
-  process:close()
-  return path_lib.normalize_path(path)
+  return runtime_path_ops.current_dir()
 end
 
 function env.system_tmp_dir()
-  local value = os.getenv("TEMP") or os.getenv("TMP")
+  local value = os.getenv("TMPDIR")
   if value == nil or value == "" then
-    value = env.current_dir()
+    value = "/tmp"
   end
   return path_lib.normalize_path(value)
 end
@@ -59,7 +54,7 @@ end
 
 function env.build_open_command(path)
   local normalized = path_lib.normalize_path(path)
-  return 'start "" ' .. shell_lib.shell_quote(normalized:gsub("/", "\\"))
+  return shell_lib.build_command({ "xdg-open", normalized })
 end
 
 return env

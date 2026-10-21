@@ -3,9 +3,9 @@
 -- run_command 把 stdout/stderr 重定向到临时文件再读回来,所以本模块依赖 env(临时落点)
 -- 与 fs(读回与清理)。反向不成立:fs 不认识子进程,这条单向依赖是分层的关键。
 --
--- 原生 Windows 单平台(ADR 0066)。字符串是 cmd 语法，数组是字面参数；
--- 临时 CRLF/UTF-8 cmd 脚本以关闭延迟展开存参数，再延迟展开启动真实程序。
--- 不对输出换行或字节编码做隐式转换，非零退出码原样返回。
+-- WSL Ubuntu 单平台(ADR 0073)。字符串按 POSIX sh 解释,数组是字面 argv
+-- (经 shell 引号拼装后由 os.execute 交 /bin/sh -c 执行,argv 不会被二次解释)。环境变量以
+-- `NAME=value` 前缀导出。不对输出换行或字节编码做隐式转换,非零退出码原样返回。
 local text_lib = require("foundation.text")
 local path_lib = require("foundation.path")
 local shell_lib = require("foundation.shell")
@@ -20,10 +20,9 @@ function proc.command_exists(name)
     return false
   end
 
-  local command = "where.exe " .. shell_lib.shell_quote(command_name) .. " >nul 2>&1"
+  local command = "command -v " .. shell_lib.shell_quote(command_name) .. " >/dev/null 2>&1"
   local ok, kind, code = os.execute(command)
-  local success = shell_lib.exit_status(ok, kind, code)
-  return success
+  return shell_lib.exit_status(ok, kind, code)
 end
 
 function proc.run_command(command, options)
@@ -40,40 +39,27 @@ function proc.run_command(command, options)
   local cwd_path = options and options.cwd and path_lib.normalize_path(options.cwd) or nil
   local stdin_path = options and options.stdin_path and path_lib.normalize_path(options.stdin_path) or nil
 
-  local setup = ""
+  local command_text = type(command) == "string" and command or shell_lib.build_command(args)
+
   -- options.env(#124):调用方解析一次的工具发现结果(如钉定的 Lua 5.4 路径)
   -- 以环境变量导出给子进程,子进程树自动继承,免去每个子进程重复探测。
+  local env_prefix = ""
   if options and type(options.env) == "table" then
-    local env_lines = shell_lib.build_env_lines(options.env)
-    if env_lines ~= "" then
-      setup = env_lines .. "\r\n"
+    local env_text = shell_lib.build_env_lines(options.env)
+    if env_text ~= "" then
+      env_prefix = env_text .. " "
     end
   end
-  local command_text = command
-  if type(command) == "table" then
-    local variables = {}
-    for index, value in ipairs(args) do
-      local quoted = shell_lib.shell_quote(value):gsub("%%", "%%%%"):gsub('([&|<>%^()" ])', '^%1')
-      setup = setup .. "set eggy_arg_" .. index .. "=" .. quoted .. "\r\n"
-      variables[#variables + 1] = index == 1 and shell_lib.shell_quote(value) or ("!eggy_arg_" .. index .. "!")
-    end
-    setup = setup .. "setlocal enabledelayedexpansion\r\n"
-    command_text = table.concat(variables, " ")
-  end
-  if cwd_path then
-    setup = "cd /d " .. shell_lib.shell_quote(cwd_path:gsub("/", "\\")) .. "\r\nif errorlevel 1 exit /b 1\r\n" .. setup
-  end
-  local wrapped = command_text
-  local redirected = wrapped
+
+  local redirected = env_prefix .. command_text
   if stdin_path ~= nil and stdin_path ~= "" then
     redirected = redirected .. " < " .. shell_lib.shell_quote(stdin_path)
+  else
+    redirected = redirected .. " < /dev/null"
   end
   redirected = redirected .. " > " .. shell_lib.shell_quote(output_path) .. " 2>&1"
-  local batch_path = env_lib.make_temp_path("command", ".cmd")
-  -- chcp.com 会读取继承来的 stdin;worker 的 JSONL job 输入必须留给父进程。
-  fs_lib.write_file(batch_path, "@echo off\r\nchcp 65001 <nul >nul\r\n" .. setup .. redirected .. "\r\nexit /b %errorlevel%\r\n")
-  local ok, kind, code = os.execute('cmd.exe /d /v:off /c ""' .. batch_path:gsub("/", "\\") .. '""')
-  fs_lib.remove_path(batch_path)
+  redirected = shell_lib.wrap_command_with_cwd(redirected, cwd_path)
+  local ok, kind, code = os.execute(redirected)
   local success, exit_code = shell_lib.exit_status(ok, kind, code)
   local output = fs_lib.read_raw(output_path) or ""
   fs_lib.remove_path(output_path)
@@ -84,6 +70,9 @@ function proc.run_command(command, options)
   }
 end
 
+-- 递归枚举 root 下指定扩展名的文件(含隐藏文件与隐藏目录),结果排序。
+-- 返回绝对路径:`find` 的输出形态随传入根而变,调用方(分片、架构扫描、
+-- 时长缓存)都按绝对路径对齐,这里一次收口。
 function proc.collect_files(root, extension)
   local normalized_root = path_lib.normalize_path(root)
   local normalized_extension = tostring(extension or "")
@@ -94,16 +83,18 @@ function proc.collect_files(root, extension)
   if not fs_lib.path_exists(normalized_root) then
     return nil, text_lib.bilingual_with_suffix("目录不存在: ", "Directory does not exist: ", root)
   end
+  normalized_root = path_lib.resolve_path(env_lib.current_dir(), normalized_root)
 
-  local command = "(dir /b /s /a-d " .. shell_lib.shell_quote(normalized_root:gsub("/", "\\") .. "\\*") .. " 2>nul & ver >nul)"
+  -- -print0:文件名可含空格、中文与换行;`find` 输出 NUL 分隔,这里按 NUL 切。
+  -- 单条命令,退出码即 find 的结论(目录缺失时非零,不会把空扫描读成「没有文件」)。
+  local command = "find " .. shell_lib.shell_quote(normalized_root) .. " -type f -print0 2>/dev/null"
   local result = proc.run_command(command)
   if not result.ok then
     return nil, text_lib.bilingual_with_suffix("收集文件失败: ", "Failed to collect files: ", root)
   end
 
   local files = {}
-  for line in (result.output .. "\n"):gmatch("(.-)\n") do
-    line = line:gsub("\r$", "")
+  for line in (result.output .. "\0"):gmatch("(.-)\0") do
     if line ~= "" and (normalized_extension == "" or line:sub(-#normalized_extension) == normalized_extension) then
       files[#files + 1] = path_lib.normalize_path(line)
     end

@@ -9,8 +9,8 @@ description: 真机运行时取证：分析部署目录 log.txt 定位异常，�
 
 ## 现场事实
 
-- **部署目录**：`%USERPROFILE%\Desktop\dev\eggy\LuaSource_大富翁\`，由 `lua tools/cli.lua deploy` 纯拷贝生成，不是 git clone。`log.txt` 在根部。编辑器试玩直接加载目录里的 Lua 源码——**改文件即生效（下次启动试玩）**，这就是插桩通道。
-- **editor-cli**：`C:\FeverApps\party_pc\bin\editor-cli.exe`（原生 Windows 可执行），默认连 `127.0.0.1:19836`。19836 是编辑器 WS+JSON-RPC 口，只供 editor-cli 使用；裸连只会收到 `on_auth_token` 推送然后静默，别浪费时间逆向。`status` 报连接拒绝 = 编辑器没启动或没开 Editor CLI 端口，提示用户开。
+- **部署目录**：`/mnt/c/Users/<user>/Desktop/dev/eggy/LuaSource_大富翁/`（WSL 路径；Windows 侧仍是 `%USERPROFILE%\Desktop\dev\eggy\LuaSource_大富翁\`），由 `lua5.4 tools/cli.lua deploy` 从 WSL 纯拷贝生成，不是 git clone。`log.txt` 在根部。编辑器试玩直接加载目录里的 Lua 源码——**改文件即生效（下次启动试玩）**，这就是插桩通道。
+- **editor-cli**：`/mnt/c/FeverApps/party_pc/bin/editor-cli.exe`（原生 Windows 可执行，从 WSL 经互操作直接调用），默认连 `127.0.0.1:19836`。WSL 用 mirrored 网络模式时可直接连宿主上的 19836，不必转发端口；NAT 模式则需要另行端口转发。19836 是编辑器 WS+JSON-RPC 口，只供 editor-cli 使用；裸连只会收到 `on_auth_token` 推送然后静默，别浪费时间逆向。`status` 报连接拒绝 = 编辑器没启动或没开 Editor CLI 端口，提示用户开。
 - **授权分层**：只读命令（`status` / `logs` / `take_screenshot` / 只打印的 `exec` / 日志分析脚本）直接跑。`clear-logs` 与部署目录改动逐次授权：先说明影响与回滚方式，等用户明确同意；未获同意时保留现场。
 - **试玩交接：用户开关，agent 观察**。准备就绪后提示用户开启或结束试玩，只用只读 `status` 等状态翻转（约 10–20s）；确需代跑 `run_game` / `stop_game` 时，逐次说明并等用户明确同意。中断或用户暂未操作时，如实报告当前状态并等待。
 - **真人操作先协调**：需要点槽位、切回合或开第二个客户端时，先确认用户在场且愿意配合。优先设计自动化路径——试玩态 `game_execute` 能 `require` 任何模块、直调裁定入口、`inventory.give` 造状态、`print` + 截图取证；实在只能靠手点的（如 UI 事件 payload 的真实内容），如实说明这条自动化验不了。
@@ -21,9 +21,11 @@ description: 真机运行时取证：分析部署目录 log.txt 定位异常，�
 
 1. 跑分析脚本：
 
-```powershell
-pwsh -File .agents/skills/device-debug/scripts/analyze_log.ps1 [-TargetPath 部署根] [-LogPath log.txt路径]
+```bash
+.agents/skills/device-debug/scripts/analyze_log.sh [-t 部署根] [-l log.txt路径]
 ```
+
+脚本自身按 `-l` > `-t` > `MONOPOLY_DEPLOY_TARGET` > `cmd.exe` + `wslpath` 解析的 `%USERPROFILE%` 顺序找部署目录，与 `deploy` 同一口径；不在 WSL 里（拿不到 Windows 家目录）退 3。
 
 2. 读输出：TOP_MATCHES 已按严重度排序（stack traceback > error > attempt/nil value > failed/exception/panic > warn）；`[warn]` 只在和用户反馈直接相关时深入。
 3. 追源码只看命中文件和相邻调用点，不预读整目录。
@@ -35,12 +37,12 @@ pwsh -File .agents/skills/device-debug/scripts/analyze_log.ps1 [-TargetPath 部�
 
 ### 命令面
 
-```powershell
-cd C:\FeverApps\party_pc\bin
-.\editor-cli.exe status            # Running / Edit Mode / In Game Runtime / 地图名
-.\editor-cli.exe logs --limit 50   # 日志缓冲（游戏 print 与 EditorAPI.log 都进这里）
-.\editor-cli.exe clear-logs        # 需逐次授权，避免匹配旧日志
-.\editor-cli.exe exec "<lua>"      # 编辑态 EditorAPI；试玩态经 game_execute
+```bash
+cd /mnt/c/FeverApps/party_pc/bin
+./editor-cli.exe status            # Running / Edit Mode / In Game Runtime / 地图名
+./editor-cli.exe logs --limit 50   # 日志缓冲（游戏 print 与 EditorAPI.log 都进这里）
+./editor-cli.exe clear-logs        # 需逐次授权，避免匹配旧日志
+./editor-cli.exe exec "<lua>"      # 编辑态 EditorAPI；试玩态经 game_execute
 ```
 
 `exec` **不回显返回值**。取数据只能写进日志再 `logs` 读回：编辑态 `EditorAPI.log(...)`，试玩态 `print(...)`。报错也进日志（`debug error` 段）；exec 显示 "Executed successfully" 不代表没炸——取不到预期日志先翻错误段。
@@ -51,7 +53,7 @@ cd C:\FeverApps\party_pc\bin
 - EUI 节点：`get_eui_node_ids_by_name(name)` → id 列表；`get_eui_node_parent/children/type/attr`、`set_eui_node_attr`、`set_eui_node_parent`（可 reparent）。
 - **node_id 是字符串**（打印出来像整数）：跨 exec 传递别写 int 字面量（会 `param 1 type mismatch`），每次 `get_eui_node_ids_by_name(...)[1]` 现取。
 - 属性名用这套：`pos` / `size` / `anchor`（表，取 `.x/.y`）/ `visible` / `scale` / `rotation` / `opacity` / `name`；`position` 之类猜错了返回 nil。
-- 截图：`EditorAPI.take_screenshot()` 返回 png 路径（`Documents\res\editor_screenshots\`），直接 Read 看图。
+- 截图：`EditorAPI.take_screenshot()` 返回 png 路径（Windows 侧 `Documents\res\editor_screenshots\`，WSL 下按 `/mnt/c/Users/<user>/Documents/res/editor_screenshots/` 读），直接 Read 看图。
 
 **试玩态（In Game Runtime）**：游戏内代码一律经 `EditorAPI.game_execute('<lua>')`，跑在游戏 Lua 环境——可 `require` 部署目录任何模块，可访问 `UIManager` / `GameAPI` 等全局。
 
@@ -77,4 +79,4 @@ cd C:\FeverApps\party_pc\bin
 
 - editor-cli 官方文档：https://u5-creator.s3.game.163.com/manual/pc_md/editor_cli.html
 - 编辑态 API 参考面：`EggyEditorAPI.lua`（仓库根）
-- 部署：`lua tools/cli.lua deploy --help` 与 `tools/packages/ops/deploy.lua`
+- 部署：`lua5.4 tools/cli.lua deploy --help` 与 `tools/packages/ops/deploy.lua`

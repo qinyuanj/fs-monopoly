@@ -1,8 +1,8 @@
 -- packages/uml_quality/runtime.lua —— uml 质量入口的纯演算面(#93)。
 --
--- 质量算法与派发全在邻接 uml-viewer(scripts/uml-command.ps1)与 crapper/mutator;
--- 本模块只决定「子进程在什么装载环境里跑」以及「解析结果是否来自受控 Lua 环境」。
--- 不起进程、不落盘;起进程与写终端在 cli.lua。
+-- 质量算法与派发全在邻接 uml-viewer(scripts/uml_posix.py,经 scripts/uml 入口)
+-- 与 crapper/mutator;本模块只决定「子进程在什么装载环境里跑」以及「解析结果
+-- 是否来自受控 Lua 环境」。不起进程、不落盘;起进程与写终端在 cli.lua。
 local M = {}
 
 -- 模块来源判定只有一个实现(ADR 0072):foundation.lua_env.is_inside。
@@ -23,7 +23,7 @@ local function _within(path, prefix)
 end
 
 -- 子进程环境,按序写入。LUA_PATH_5_4 优先于 LUA_PATH,两者都钉同一值,避免
--- 继承用户指向全局 %APPDATA%\luarocks tree 的 LUA_PATH;不留 ";;" 默认路径。
+-- 继承用户指向 ~/.luarocks 之外 tree 的 LUA_PATH;不留 ";;" 默认路径。
 -- 装载面 = 仓根 + 受控 Lua 环境的每个 tree(share/lib 5.4)。
 function M.pinned_env(repo_root, roots, lua_dir, inherited_path)
   local path_parts = { _normalize(repo_root) .. "/?.lua", _normalize(repo_root) .. "/?/init.lua" }
@@ -32,13 +32,12 @@ function M.pinned_env(repo_root, roots, lua_dir, inherited_path)
     local base = _normalize(root)
     path_parts[#path_parts + 1] = base .. "/share/lua/5.4/?.lua"
     path_parts[#path_parts + 1] = base .. "/share/lua/5.4/?/init.lua"
-    cpath_parts[#cpath_parts + 1] = base .. "/lib/lua/5.4/?.dll"
     cpath_parts[#cpath_parts + 1] = base .. "/lib/lua/5.4/?.so"
   end
   local lua_path = table.concat(path_parts, ";")
   local lua_cpath = table.concat(cpath_parts, ";")
   local path = _normalize(lua_dir)
-  if inherited_path ~= nil and inherited_path ~= "" then path = path .. ";" .. inherited_path end
+  if inherited_path ~= nil and inherited_path ~= "" then path = path .. ":" .. inherited_path end
   return {
     { "LUA_PATH_5_4", lua_path },
     { "LUA_PATH", lua_path },
@@ -137,19 +136,21 @@ function M.python_verdict(tool, output, repo_root)
   return { ok = true, message = tool .. ": Python " .. version .. " " .. _normalize(file) }
 end
 
--- cmd 批处理文本:cd 到仓根、写入钉死的环境、跑命令、原样回传退出码。
--- set 值里的 % 加倍,cmd 不再做变量展开;命令行沿用 shell.build_command 口径。
-function M.batch_text(repo_root, env_list, argv, output_path)
+-- POSIX 启动文本:cd 到仓根、写入钉死的环境、exec 命令,退出码原样回传。
+-- 值经单引号包裹,shell 不做变量展开;命令 argv 沿用 shell.build_command 口径。
+-- 写成 sh 脚本而不是一行拼接:环境前缀与命令之间的边界在脚本里是换行,不靠
+-- 调用方逐段转义。
+function M.launch_text(repo_root, env_list, argv, output_path)
   local shell = require("foundation.shell")
-  local lines = { "@echo off", "chcp 65001 >nul", "cd /d " .. shell.shell_quote((_normalize(repo_root):gsub("/", "\\"))),"if errorlevel 1 exit /b 1" }
-  for _, entry in ipairs(env_list) do
-    lines[#lines + 1] = 'set "' .. entry[1] .. "=" .. tostring(entry[2]):gsub("%%", "%%%%") .. '"'
+  local lines = { "#!/bin/sh", "cd " .. shell.shell_quote(_normalize(repo_root)) .. " || exit 1" }
+  for _, entry in ipairs(env_list or {}) do
+    lines[#lines + 1] = entry[1] .. "=" .. shell.shell_quote(tostring(entry[2])) .. "; export " .. entry[1]
   end
   local command = shell.build_command(argv)
   if output_path ~= nil then command = command .. " > " .. shell.shell_quote(output_path) .. " 2>&1" end
   lines[#lines + 1] = command
-  lines[#lines + 1] = "exit /b %errorlevel%"
-  return table.concat(lines, "\r\n") .. "\r\n"
+  lines[#lines + 1] = ""
+  return table.concat(lines, "\n")
 end
 
 return M

@@ -14,8 +14,23 @@ local function _module_dir()
 end
 
 -- 本文件会被 .busted 的 helper 在 test.bootstrap 拓宽 package.path 之前 dofile,
--- 所以按相对路径加载 foundation,不 require。
-local lua_env = dofile(_module_dir() .. "/../../foundation/lua_env.lua")
+-- 所以按相对路径加载 foundation,不 require。路径先折叠 `..` 段:同一个文件
+-- 只允许有一个 chunk 名,否则覆盖率会记成两个 LCOV 源。
+local function _normalize(path)
+  local normalized = tostring(path or ""):gsub("\\", "/")
+  local parts = {}
+  for segment in normalized:gmatch("[^/]+") do
+    if segment == ".." then
+      if #parts > 0 then parts[#parts] = nil end
+    elseif segment ~= "." then
+      parts[#parts + 1] = segment
+    end
+  end
+  local prefix = normalized:sub(1, 1) == "/" and "/" or ""
+  return prefix .. table.concat(parts, "/")
+end
+
+local lua_env = dofile(_normalize(_module_dir() .. "/../../foundation/lua_env.lua"))
 
 local prefixes = { "busted", "luassert", "say", "cliargs", "mediator", "pl", "term", "system", "lfs", "dkjson", "datafile" }
 local verified = {}
@@ -47,7 +62,7 @@ end
 
 local function absolute(path)
   local normalized = tostring(path):gsub("\\", "/"):gsub("/+$", "")
-  assert(normalized:match("^%a:/") or normalized:match("^//[^/]+/[^/]+/"), "worker context requires absolute paths")
+  assert(normalized:sub(1, 1) == "/" or normalized:match("^%a:/"), "worker context requires absolute paths")
   for part in normalized:gmatch("[^/]+") do
     assert(part ~= "." and part ~= "..", "worker context forbids path traversal")
   end
@@ -58,9 +73,12 @@ local function within(path, base)
   return path:sub(1, #base + 1):lower() == base:lower() .. "/"
 end
 
+-- 前缀形态:POSIX 根 "/"、Windows 盘符 "C:/"、UNC "//host/share/"。
 local function _real_directory(lfs, path)
   local drive, tail = path:match("^(%a:/)(.*)$")
   if not drive then drive, tail = path:match("^(//[^/]+/[^/]+/)(.*)$") end
+  if not drive then drive, tail = path:match("^(/)(.*)$") end
+  assert(drive ~= nil, "worker context requires an absolute path: " .. tostring(path))
   local current = drive:gsub("/$", "")
   for part in tail:gmatch("[^/]+") do
     current = current .. "/" .. part

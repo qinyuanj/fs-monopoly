@@ -3,20 +3,20 @@
 Purpose: structural duplication detection for Lua source functions. dryer (`qinyuanj/dryer`) replaces the retired dry4lua.
 
 Upstream (adjacent checkout, ignored by git): `.uml-viewer/dryer`, cloned by hand next to the `crapper` / `mutator` checkouts (`.uml-viewer/` is already ignored). The repository is read-only from this project; fixes live upstream.
-Project wrapper: `lua tools/cli.lua dry` (package `tools/packages/dry/`: `cli.lua` entry, `dryer.lua` pure judgement).
+Project wrapper: `lua5.4 tools/cli.lua dry` (package `tools/packages/dry/`: `cli.lua` entry, `dryer.lua` pure judgement).
 
 Setup (manual, same as crapper / mutator; this project never installs or updates it):
-- `git clone https://github.com/qinyuanj/dryer.git .uml-viewer\dryer`
-- Python 3.11+ (`requires-python >=3.11`; deps `tree-sitter>=0.24`, `tree-sitter-language-pack>=0.7`): `python -m venv .uml-viewer\dryer\.venv`, then `.uml-viewer\dryer\.venv\Scripts\python.exe -m pip install -e .uml-viewer\dryer`.
-- Native Windows smoke evidence (2026-10-18, dryer `0b05436`): `.uml-viewer\dryer\.venv\Scripts\python.exe -I -m dryer src` exited 0 in about 29 s and wrote `.metrics/dry.edn` (176 candidate pairs). Recorded on #148.
+- `git clone https://github.com/qinyuanj/dryer.git .uml-viewer/dryer`
+- Python 3.11+ (`requires-python >=3.11`; deps `tree-sitter>=0.24`, `tree-sitter-language-pack>=0.7`): `python3 -m venv .uml-viewer/dryer/.venv`, then `.uml-viewer/dryer/.venv/bin/python -m pip install -e .uml-viewer/dryer`.
+- WSL Ubuntu smoke evidence (2026-10-21, dryer `0941c4b`): `.uml-viewer/dryer/.venv/bin/python -I -m dryer src` writes `.metrics/dry.edn`; the wrapper's own run is the record.
 
 CLI contract:
-- `lua tools/cli.lua dry [dryer options] [path-or-filter ...]`; every argument is forwarded to dryer unchanged (`--threshold N`, `--min-lines N`, `--min-nodes N`, `--root`, `-s/--source-root`, `--changed`, `--edn`, `--text`, ...). `--help` prints the wrapper contract.
+- `lua5.4 tools/cli.lua dry [dryer options] [path-or-filter ...]`; every argument is forwarded to dryer unchanged (`--threshold N`, `--min-lines N`, `--min-nodes N`, `--root`, `-s/--source-root`, `--changed`, `--edn`, `--text`, ...). `--help` prints the wrapper contract.
 - Exit codes follow `tools/cli.lua`: 0 effective result / 1 real failure / 2 usage error / 3 unavailable.
-- The wrapper runs the venv interpreter directly (`.uml-viewer/dryer/.venv/Scripts/python.exe -I -m dryer`, cwd = repo root). It bypasses dryer's `sh` launcher, which does not run on native Windows. Dryer prints a "Native Windows is not supported" warning to stderr; it is a warning only and does not affect the result (known gap below).
+- The wrapper runs the venv interpreter directly (`.uml-viewer/dryer/.venv/bin/python -I -m dryer`, cwd = repo root). It does not depend on dryer's own launcher or its executable bit.
 
 Preflight (check only, nothing is installed):
-- Unavailable (exit 3, stderr `[dry] status=unavailable tool=dryer step=<checkout|venv>`, tool not started): `.uml-viewer/dryer/pyproject.toml` is missing (`checkout`) or the venv `python.exe` is missing (`venv`). It is an environment gap, not a finding; follow Setup and rerun.
+- Unavailable (exit 3, stderr `[dry] status=unavailable tool=dryer step=<checkout|venv>`, tool not started): `.uml-viewer/dryer/pyproject.toml` is missing (`checkout`) or the venv `bin/python` is missing (`venv`). It is an environment gap, not a finding; follow Setup and rerun.
 - Real failure (exit 1, tool not started): the import probe fails, the venv Python is older than 3.11, or `dryer` imports from outside `.uml-viewer/dryer/src` (the same `python_verdict` as the crapper / mutator venvs, so a globally installed dryer cannot produce a false green).
 
 Effective result (the anti-false-green rule):
@@ -27,7 +27,7 @@ Effective result (the anti-false-green rule):
 - Duplicates are advisory: `DUPLICATE score=...` rows (or none) never change the exit code. The soft-lane stance is unchanged.
 
 Outputs and version control:
-- dryer writes `.metrics/dry.edn` (`{:candidates [{:score :language :left :right :left-nodes :right-nodes} ...]}`), replaced on every successful analysis. It is versioned like the other `.metrics/` files: commit only files produced by a real `lua tools/cli.lua dry` run, never hand-written ones.
+- dryer writes `.metrics/dry.edn` (`{:candidates [{:score :language :left :right :left-nodes :right-nodes} ...]}`), replaced on every successful analysis. It is versioned like the other `.metrics/` files: commit only files produced by a real `lua5.4 tools/cli.lua dry` run, never hand-written ones.
 - Tests that scan fixtures pass `--root <temp dir>` so the committed file is never touched.
 
 Scope notes from dryer's discovery (`discover.py`):
@@ -43,11 +43,10 @@ Algorithm requirements (dryer):
 
 Project workflow:
 - Dry hits are discussion starting points, never tickets and never gates.
-- Run before extracting a function (`lua tools/cli.lua dry <file-or-dir>`); sample at the default threshold before lowering it; below ~0.7 noise drowns real signals.
+- Run before extracting a function (`lua5.4 tools/cli.lua dry <file-or-dir>`); sample at the default threshold before lowering it; below ~0.7 noise drowns real signals.
 - Known duplication floor: `host_types` vec3/quat-style data classes are deliberately unmanaged; ignore hits there.
 - Report format: command + target -> hit count + threshold -> top clusters worth extracting / ignoring -> next step.
 
 Known gaps (upstream backlog, not implemented here):
-- uml-viewer has no dry dispatch (`standardTools` / operation name) yet. Until it does, this project calls dryer's venv Python directly instead of `uml-command.ps1`. Wanted upstream: a `dry` operation in uml-viewer.
-- dryer has no native Windows launcher: its `dryer` script is `sh`-only and the Python entry prints a WSL2 warning on `win32`. Wanted upstream: a native Windows launcher and no warning, then the wrapper can use it.
+- uml-viewer has no dry dispatch (`standardTools` / operation name) yet. Until it does, this project calls dryer's venv Python directly instead of the POSIX dispatch entry. Wanted upstream: a `dry` operation in uml-viewer.
 - dryer prints no candidate file count; the wrapper infers "candidates > 0" from the fresh metrics file. Wanted upstream: print the count so the wrapper can report it.

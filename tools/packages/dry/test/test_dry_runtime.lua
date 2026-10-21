@@ -6,29 +6,29 @@ require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 local dryer = require("packages.dry.dryer")
 
-local ROOT = "C:/repo"
+local ROOT = "/repo"
 
 describe("dry dryer runtime", function()
 
 it("addresses the adjacent checkout and its venv python without the sh launcher", function()
-  check.equal("C:/repo/.uml-viewer/dryer", dryer.checkout_dir("C:\\repo\\"))
-  check.equal("C:/repo/.uml-viewer/dryer/.venv/Scripts/python.exe", dryer.python_path(ROOT))
+  check.equal("/repo/.uml-viewer/dryer", dryer.checkout_dir("/repo/"))
+  check.equal("/repo/.uml-viewer/dryer/.venv/bin/python", dryer.python_path(ROOT))
 end)
 
 -- 缺检出 / 缺 venv 是「不可用」(不启动工具),不是「没有重复」。
 it("classifies a missing checkout or venv as unavailable, checkout first", function()
-  check.same({ step = "checkout", detail = "C:/repo/.uml-viewer/dryer 缺失" },
+  check.same({ step = "checkout", detail = "/repo/.uml-viewer/dryer 缺失" },
     dryer.availability(ROOT, { checkout = false, python = false }))
   local venv = dryer.availability(ROOT, { checkout = true, python = false })
   check.equal("venv", venv.step)
-  check.truthy(venv.detail:find("python.exe", 1, true) ~= nil, venv.detail)
+  check.truthy(venv.detail:find("/.venv/bin/python", 1, true) ~= nil, venv.detail)
   check.is_nil(dryer.availability(ROOT, { checkout = true, python = true }))
 end)
 
 it("defaults the metrics root to the repo and honours --root", function()
   check.equal(ROOT, dryer.metrics_root({ "src" }, ROOT))
-  check.equal("D:/tmp/x", dryer.metrics_root({ "--root", "D:\\tmp\\x", "src" }, ROOT))
-  check.equal("C:/repo/sub", dryer.metrics_root({ "--root", "sub" }, ROOT))
+  check.equal("/tmp/x", dryer.metrics_root({ "--root", "/tmp/x", "src" }, ROOT))
+  check.equal("/repo/sub", dryer.metrics_root({ "--root", "sub" }, ROOT))
   check.is_nil(dryer.metrics_root({ "--root" }, ROOT))
   check.is_nil(dryer.metrics_root({ "--root", "--edn" }, ROOT))
 end)

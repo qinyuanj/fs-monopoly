@@ -30,7 +30,6 @@ local function _cpaths()
   local paths = {}
   for _, tree in ipairs(controlled) do
     local base = tree:gsub("\\", "/"):gsub("/+$", "")
-    paths[#paths + 1] = base .. "/lib/lua/5.4/?.dll"
     paths[#paths + 1] = base .. "/lib/lua/5.4/?.so"
   end
   return table.concat(paths, ";")
@@ -66,15 +65,15 @@ local function worker_probe(body, options)
   local script = "package.path=" .. string.format("%q", _paths(worker, options.path))
     .. ";package.cpath=" .. string.format("%q", _cpaths())
     .. ";" .. body
-  local batch = env.make_temp_path("worker_env_probe", ".cmd")
-  local text = runtime.batch_text(options.cwd or worker, {
+  local launch = env.make_temp_path("worker_env_probe", ".sh")
+  local text = runtime.launch_text(options.cwd or worker, {
     { "MUTATOR_WORKER_ROOT", options.worker_root or worker },
     { "MUTATOR_SOURCE_ROOT", options.source_root or root },
     { "LUA54_BIN", lua54.lua54_bin() },
   }, { lua54.lua54_bin(), "-e", script })
-  check.truthy(fs.write_file(batch, text))
-  local result = proc.run_command({ "cmd.exe", "/d", "/c", batch })
-  fs.remove_path(batch)
+  check.truthy(fs.write_file(launch, text))
+  local result = proc.run_command({ "sh", launch })
+  fs.remove_path(launch)
   return result
 end
 local adopt = "local loader=dofile('tools/packages/test_runner/cache_loader.lua');"

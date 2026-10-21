@@ -10,7 +10,7 @@
 --   EggyAPI.lua / EggyEditorAPI.lua → 仓库根同名文件,字节原样拷贝
 --     (宿主侧 API 存根为第三方边界,编辑器更新后随之回同步)。
 --
--- 部署目录 / 仓库根解析复用 packages.ops.deploy(仅原生 Windows,ADR 0066),
+-- 部署目录 / 仓库根解析复用 packages.ops.deploy(WSL 互操作,ADR 0073),
 -- 不重复实现。纯模块,无独立脚本入口:由 packages/data_sync/cli.lua 进程内调用
 -- (package.path 经 tools/cli.lua 装配,可直接 require foundation.* / packages.*)。
 local fs_lib = require("foundation.fs")
@@ -166,14 +166,15 @@ local function _change_flag(changed)
   return changed and "有更新" or "无变化"
 end
 
--- CLI 主流程:零参数;返回退出码(0 成功 / 1 业务失败 / 2 用法错误)。
+-- CLI 主流程:零参数;返回退出码(0 成功 / 1 业务失败 / 2 用法错误);不在 WSL 时
+-- resolve_platform_name 直接退 3。
 function M.main(args)
   if args ~= nil and #args > 0 then
     io.stderr:write("ERROR: Unexpected argument: " .. table.concat(args, " ") .. "\n")
     return 2
   end
 
-  -- 平台不支持(非原生 Windows)时 resolve_* 内部直接 ERROR + exit(1)(deploy 语义)。
+  -- 缺 WSL 互操作面时 resolve_platform_name 内部直接退 3(status=unavailable,deploy 语义)。
   local platform = deploy.resolve_platform_name()
   local deploy_dir = deploy.resolve_default_target_path(platform)
   local repo_root = deploy.resolve_project_root()

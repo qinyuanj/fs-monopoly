@@ -69,7 +69,7 @@ local function _run_verbose_drop_info(spec_path)
   local args = _runner_argv({ "-Xoutput", "drop-info" })
   args[#args + 1] = spec_path
   local run_command = shell_lib.build_command(args)
-  return proc_lib.run_command('set "EGGY_TEST_VERBOSE=1" && ' .. run_command, { cwd = project_root })
+  return proc_lib.run_command("EGGY_TEST_VERBOSE=1 " .. run_command, { cwd = project_root })
 end
 
 describe("TestLogWarnsHandler", function()

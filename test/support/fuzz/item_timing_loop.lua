@@ -347,7 +347,7 @@ end
 
 local function _format_failure(seed, err, records, trace)
   local lines = { "seed=" .. seed .. " err=" .. tostring(err)
-    .. " (复放: FUZZ_ONLY_SEED=" .. seed .. " lua tools/cli.lua spec-lane --profile behavior)" }
+    .. " (复放: FUZZ_ONLY_SEED=" .. seed .. " lua5.4 tools/cli.lua spec-lane --profile behavior)" }
   lines[#lines + 1] = "records(last 25):"
   local rec_from = math.max(1, #records - 25)
   for i = rec_from, #records do

@@ -88,11 +88,8 @@ end)
 it("keeps absolute path and trims trailing slashes", function()
   check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice/"))
   check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice"))
-  -- Windows 盘符绝对路径语义仅在真实 Windows 上成立(POSIX 上 IsPathRooted 只认 "/")。
-  -- lint-allow: vacuous-branch 平台特定分支:Windows 盘符语义仅在真实 Windows 上成立,POSIX 无对应行为可断言
-  if package.config:sub(1, 1) == "\\" then
-    check.equal("C:/Users/foo", deploy.resolve_normalized_path("C:/Users/foo/"))
-  end
+  -- Windows 盘符绝对路径经 wslpath 换算后是 /mnt/c/...;这里只钉「已换算形态」的归一。
+  check.equal("/mnt/c/Users/foo", deploy.resolve_normalized_path("/mnt/c/Users/foo/"))
 end)
 
 it("relative path is joined to cwd", function()
@@ -114,48 +111,70 @@ it("folds dot and dotdot segments", function()
   check.equal("/bob", deploy.resolve_normalized_path("/home/alice/../../bob"))
 end)
 
-it("Windows drive path folds on Windows", function()
-  -- Windows 盘符绝对路径语义仅在真实 Windows 上成立(POSIX 上 IsPathRooted 只认 "/")。
-  -- lint-allow: vacuous-branch 平台特定分支:Windows 盘符语义仅在真实 Windows 上成立,POSIX 无对应行为可断言
-  if package.config:sub(1, 1) == "\\" then
-    check.equal("C:/Users/bar", deploy.resolve_normalized_path("C:/Users/foo/../bar/"))
-  end
+it("drive path folds when handed a raw Windows path", function()
+  -- 部署目标始终经 wslpath 换算成 /mnt/c/...;折叠逻辑对未换算的盘符路径同样成立。
+  check.equal("C:/Users/bar", deploy.resolve_normalized_path("C:/Users/foo/../bar/"))
 end)
 
 it("expands percent environment variables", function()
   local home = os.getenv("HOME")
-  if home == nil or tostring(home):gsub("^%s+", ""):gsub("%s+$", "") == "" then
-    return
-  end
+  check.truthy(home ~= nil and tostring(home):gsub("^%s+", ""):gsub("%s+$", "") ~= "",
+    "HOME must be set in the WSL development environment")
   check.equal(deploy.normalize_path_text(home) .. "/x", deploy.resolve_normalized_path("%HOME%/x"))
 end)
 
-it("Windows host matches OS or separator", function()
-  local expected = os.getenv("OS") == "Windows_NT" or package.config:sub(1, 1) == "\\"
-  check.equal(expected, deploy.test_is_windows_host())
+it("WSL host is not the native Windows platform", function()
+  check.is_false(deploy.test_is_windows_host())
 end)
 
-it("platform name returns win on Windows host", function()
-  _with_stubbed("test_is_windows_host", function()
-    return true
+it("platform name returns win when the WSL interop surface is present", function()
+  _with_stubbed("detect_interop", function()
+    return {}
   end, function()
     check.equal("win", deploy.resolve_platform_name())
   end)
 end)
 
-it("platform name errors on other platforms", function()
-  local captured = nil
-  _with_stubbed("test_is_windows_host", function()
-    return false
-  end, function()
-    _with_stubbed("exit_with_error", function(message)
-      captured = message
-    end, function()
-      deploy.resolve_platform_name()
-    end)
+-- 不可用退 3:环境问题不能被当成部署失败。resolve_platform_name 直接 os.exit,
+-- 所以用例在子进程里跑,只断言退出码与 stderr 状态词。
+it("platform name exits 3 with status=unavailable without WSL interop", function()
+  local root = env_lib.make_temp_path("deploy_interop_spec", "")
+  fs_lib.remove_path(root)
+  check.is_true(fs_lib.ensure_dir(root))
+  local driver = root .. "/driver.lua"
+  check.is_true(fs_lib.write_file(driver, table.concat({
+    "package.path = " .. string.format("%q", env_lib.current_dir() .. "/?.lua;") .. " .. package.path",
+    "local deploy = require('tools.packages.ops.deploy')",
+    "deploy.detect_interop = function() return { 'cmd.exe', 'wslpath' } end",
+    "deploy.resolve_platform_name()",
+    "",
+  }, "\n")))
+  local result = proc_lib.run_command({ require("foundation.lua54").lua54_bin(), driver })
+  fs_lib.remove_path(root)
+  check.same(3, result.code, result.output)
+  check.truthy(result.output:find("status=unavailable", 1, true), result.output)
+  check.truthy(result.output:find("cmd.exe", 1, true), result.output)
+end)
+
+-- %USERPROFILE% 与 wslpath 经注入缝替身验证,不依赖本机互操作面(#191 测试决策)。
+it("home directory resolves the Windows profile through wslpath", function()
+  local commands = {}
+  local home = deploy.resolve_windows_home_dir(function(command)
+    commands[#commands + 1] = command
+    if command:find("cmd.exe", 1, true) then return "C:\\Users\\测试 user\r\n" end
+    return "/mnt/c/Users/测试 user\n"
   end)
-  check.truthy(tostring(captured):find("Windows only", 1, true),
-    "non-win/non-wsl platforms must report the Windows-only deploy target")
+  check.same("/mnt/c/Users/测试 user", home)
+  check.truthy(commands[1]:find("%USERPROFILE%", 1, true), commands[1])
+  check.truthy(commands[2]:find("wslpath -u 'C:\\Users\\测试 user'", 1, true), commands[2])
+end)
+
+it("home directory is empty when the profile cannot be resolved", function()
+  check.same("", deploy.resolve_windows_home_dir(function() return "" end))
+  check.same("", deploy.resolve_windows_home_dir(function(command)
+    if command:find("cmd.exe", 1, true) then return "C:\\Users\\x\n" end
+    return "wslpath: error\n"
+  end))
 end)
 
 it("project root is true for full project shape", function()
@@ -310,7 +329,7 @@ it("remove nested paths removes existing targets", function()
 end)
 
 local function _run_deploy_lua(extra_args)
-  local args = { "lua", "tools/packages/ops/deploy.lua" }
+  local args = { require("foundation.lua54").lua54_bin(), "tools/packages/ops/deploy.lua" }
   for _, value in ipairs(extra_args or {}) do
     args[#args + 1] = value
   end
@@ -322,7 +341,7 @@ end
 -- 经 tools/cli.lua 的子命令入口(壳 tools/packages/ops/cli.lua 转发)。
 -- 只测 --help 与多余参数:两者都在部署动作前结束,不会真拷部署目录。
 local function _run_cli_deploy(extra_args)
-  local args = { "lua", "tools/cli.lua", "deploy" }
+  local args = { require("foundation.lua54").lua54_bin(), "tools/cli.lua", "deploy" }
   for _, value in ipairs(extra_args or {}) do
     args[#args + 1] = value
   end

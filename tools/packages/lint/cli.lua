@@ -18,7 +18,7 @@ local RUN_OPTS = {
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua lint [path ...]",
+    "用法: lua5.4 tools/cli.lua lint [path ...]",
     "",
     "luacheck 静态检查:默认扫 src / test / tools(见 .luacheckrc);路径经 args",
     "直通。详细语义见 packages/lint/runner.lua。",

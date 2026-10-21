@@ -109,12 +109,12 @@ runner_spawn_carries_tool_discovery_env()
   if expected == nil then
     check.is_nil(captured_options)
   else
-    check.truthy(tostring(captured_options.env.LUA54_BIN):find("[/\\]") ~= nil)
-    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks%.exe$") ~= nil)
+    check.truthy(tostring(captured_options.env.LUA54_BIN):find("/", 1, true) ~= nil)
+    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks$") ~= nil)
   end
 end
 
--- #107:分片固定开销(每 lane 一个 PowerShell 收容进程)实测约 3s,contract
+-- #107:分片固定开销(每 lane 一个收容进程)实测约 3s,contract
 -- (22 文件)串行 4.0s / 分片 7.0s——小 profile 低于阈值(30)保持单进程。
 local function
 small_profile_below_threshold_stays_serial()

@@ -62,7 +62,7 @@ it("fails preflight loudly and clears a stale quality result", function()
   check.equal(1, code)
   check.is_false(stale_left)
   check.truthy(output:find("FAIL controlled Lua environment: controlled Lua environment unavailable", 1, true))
-  check.truthy(output:find("uml-command.ps1 missing", 1, true))
+  check.truthy(output:find("uml_posix.py missing", 1, true))
   check.truthy(output:find("crapper: ", 1, true))
   check.truthy(output:find("crap was not started", 1, true))
 end)
@@ -134,8 +134,8 @@ it("ir writes policy.edn from the projection and passes the upstream exit code t
   check.is_true(out_dir)
   check.equal("ir", calls.op)
   check.equal(1, #calls.launch)
-  check.same({ "pwsh", "-NoProfile", "-File", "/up/scripts/uml-command.ps1", calls.launch[1].root,
-    "ir", "tmp/uml/monopoly.edn" }, calls.launch[1].argv)
+  check.same({ "python3", "-I", "-B", calls.launch[1].root .. "/.uml-viewer/uml-viewer/scripts/uml_posix.py",
+    "command", calls.launch[1].root, "ir", "tmp/uml/monopoly.edn" }, calls.launch[1].argv)
 end)
 
 -- 推演只写覆盖文件;每次重生都必须把它带回 policy.edn,不被投影冲掉。
@@ -177,8 +177,8 @@ end)
 -- herdr 由上游从中选(不钉版本、不置前)。钉环境只发生在子进程里,父进程环境不变。
 it("view launches with the preflight's pinned environment and leaves the parent environment unchanged", function()
   local before = { os.getenv("PATH"), os.getenv("LUA_PATH"), os.getenv("LUA_CPATH") }
-  local pinned = require("packages.uml_quality.runtime").pinned_env("C:/repo", { "C:/rocks/tree" },
-    "C:/lua/bin", "C:/sys;C:/herdr/0.9.4")
+  local pinned = require("packages.uml_quality.runtime").pinned_env("/repo", { "/rocks/tree" },
+    "/lua/bin", "/sys:/herdr/0.9.4")
   local calls, hooks = _stubs({ ok = true, scripts = "/up/scripts", env_list = pinned }, 0)
   hooks.repo_root = "."
   local code = _quiet(function() return cli.main({ "view", "--restart" }, hooks) end)
@@ -189,9 +189,9 @@ it("view launches with the preflight's pinned environment and leaves the parent 
   check.equal(pinned, launched.env_list)
   local env = {}
   for _, entry in ipairs(launched.env_list) do env[entry[1]] = entry[2] end
-  check.equal("C:/lua/bin;C:/sys;C:/herdr/0.9.4", env.PATH)
-  check.same({ "pwsh", "-NoProfile", "-File", "/up/scripts/uml-command.ps1", launched.root, "--restart" },
-    launched.argv)
+  check.equal("/lua/bin:/sys:/herdr/0.9.4", env.PATH)
+  check.same({ "python3", "-I", "-B", launched.root .. "/.uml-viewer/uml-viewer/scripts/uml_posix.py",
+    "command", launched.root, "--restart" }, launched.argv)
   check.same(before, { os.getenv("PATH"), os.getenv("LUA_PATH"), os.getenv("LUA_CPATH") })
 end)
 
@@ -211,7 +211,7 @@ it("view fails before launching when no herdr >= 0.9.3 is on PATH or the upstrea
   -- lint-allow: call-count launch 经 opts 注入,预检失败不拉起是对外契约
   check.equal(0, launched)
   check.truthy(output:find("FAIL herdr >= 0.9.3: none on PATH", 1, true))
-  check.truthy(output:find("uml-command.ps1 missing", 1, true))
+  check.truthy(output:find("uml_posix.py missing", 1, true))
   check.truthy(output:find("view was not started", 1, true))
 end)
 

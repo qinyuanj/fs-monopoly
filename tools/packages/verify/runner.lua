@@ -9,7 +9,7 @@ local runner = {}
 runner.PHASE_TIMEOUT = 600
 
 -- 串行跑一步。输出回收、stdout/stderr 合流、退出码归一都由 foundation.proc 负责
--- (原生 Windows 单平台,ADR 0066:不再手拼 `> file 2>&1` 重定向);
+-- (不在这里手拼 `> file 2>&1` 重定向);
 -- 这里只把 ok/code 两路折成 verify 的 success 判据。
 function runner.run_step(label, cmd, opts)
   local started = os.time()

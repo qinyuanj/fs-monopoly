@@ -2,7 +2,7 @@
 --
 -- 结构重复检测由 qinyuanj/dryer 承接:检出放 uml-viewer 邻接目录 .uml-viewer/dryer,
 -- 按文档手动 clone 并建 venv(与 crapper / mutator 同口径,见 tools/specs/dryer.prompt);
--- 本仓只核对、不安装,调用绕过上游 `sh` 启动器,直接用 venv 的 Python。
+-- 本仓只核对、不安装,直接用 venv 的 Python 调 -m dryer(不依赖上游可执行位)。
 -- 本模块不起进程、不落盘;起进程与写终端在 cli.lua。
 local M = {}
 
@@ -21,7 +21,7 @@ function M.checkout_dir(root)
 end
 
 function M.python_path(root)
-  return M.checkout_dir(root) .. "/.venv/Scripts/python.exe"
+  return M.checkout_dir(root) .. "/.venv/bin/python"
 end
 
 -- 探针:版本 + 包导入位置,交 uml_quality.runtime.python_verdict 同口径判定。
