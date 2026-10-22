@@ -70,6 +70,13 @@ local function _close_or_reset_inline_choice(state)
   pending_confirmation.reset_item_phase_confirmed(state)
   if state.ui.choice_active then
     modal_presenter.close_choice_modal(state)
+    -- #202 review:收屏回的是 per-role 面板态,开着图鉴 / 皮肤 / 礼包码屏的角色
+    -- 会留在面板 canvas;而 base_inline 的内联选项住在基础屏,不收回来就会被
+    -- 面板盖住。这是开屏路径(不是收屏),须显式切基础屏;弹窗存活时回屏归
+    -- popup canvas,不去抢。
+    if state.ui.popup_active ~= true then
+      choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
+    end
     return
   end
   modal_state.close_choice(state)

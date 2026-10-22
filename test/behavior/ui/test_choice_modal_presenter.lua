@@ -201,6 +201,31 @@ it("test_popup 在场时关 choice 回 popup 画布,不走普通 modal 画布切
   _assert_eq(modal_canvas_calls, 0, "an active popup must bypass the plain modal canvas switch")
 end)
 
+-- #202 review:弹窗存活时 base_inline 开屏照常收掉旧选择屏,但回屏归 popup canvas;
+-- 开屏路径不得再补一刀基础屏切换去抢弹窗画布。
+it("test_弹窗存活时 base_inline 开屏不抢弹窗画布", function()
+  local popup_calls = 0
+  local modal_canvas_calls = 0
+  local state = {
+    ui = { choice_active = true, market_active = false, popup_active = true, popup_kind = "card" },
+  }
+
+  _with_patches({
+    { target = choice_common, key = "resolve_screen_key", value = function() return "base_inline" end },
+    { target = choice_common, key = "requires_item_slot_pre_confirm", value = function() return false end },
+    { target = choice_common, key = "switch_modal_canvas", value = function() modal_canvas_calls = modal_canvas_calls + 1 end },
+    { target = pending_confirmation, key = "reset_item_phase_confirmed", value = function() end },
+    { target = popup, key = "switch_popup_canvas", value = function() popup_calls = popup_calls + 1 end },
+    { target = modal_state, key = "close_choice", value = function() end },
+    { target = runtime_state, key = "set_ui_dirty", value = function() end },
+  }, function()
+    modal_presenter.open_choice_modal(state, { id = 11 })
+  end)
+
+  _assert_eq(popup_calls, 1, "收屏回屏必须归 popup canvas")
+  _assert_eq(modal_canvas_calls, 0, "弹窗存活时 base_inline 不得抢弹窗画布")
+end)
+
 it("test_open 与 close 都以 true 弄脏 ui", function()
   -- kills open_choice_modal 与 close_choice_modal 里
   -- set_ui_dirty(state, true) 的两个 true->false。
