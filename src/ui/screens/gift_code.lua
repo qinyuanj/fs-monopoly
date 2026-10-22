@@ -42,6 +42,13 @@ end
 
 -- ===== 开关屏 =====
 
+-- 缓存键单一口径(#195 review):输入缓存、开屏清理、确认读取都经同一
+-- 归一化函数——入缓存的玩家和确认的玩家是同一个键(测试按字符串/数值
+-- 两种 id 表示钉住)。未解析出玩家时不落键,不再用 "?" 哨兵桶。
+local function _role_key(role_id)
+  return role_id_utils.normalize(role_id)
+end
+
 local function _clear_input_field()
   node_ops.set_text(nil, gift_code_nodes.input_field, "")
 end
@@ -50,7 +57,10 @@ end
 -- canvas_coordinator 的面板态重解析(#583 分道),不记录会被拽回基础屏。
 function gift_code.open(state, role_id)
   local screen = _ensure(state)
-  screen.input_by_role[role_id_utils.normalize(role_id) or "?"] = nil
+  local key = _role_key(role_id)
+  if key ~= nil then
+    screen.input_by_role[key] = nil
+  end
   screen.open = true
   screen.role_id = role_id
   canvas.switch_by_role_id(state.ui, gift_code_nodes.canvas, role_id)
@@ -85,7 +95,8 @@ end
 
 function gift_code.confirm(state, role_id)
   local screen = _ensure(state)
-  local input_text = screen.input_by_role[role_id_utils.normalize(role_id) or "?"]
+  local key = _role_key(role_id)
+  local input_text = key ~= nil and screen.input_by_role[key] or nil
   _enqueue_result(role_id, gift_code_port.redeem(state, role_id, input_text))
   return screen
 end
@@ -109,12 +120,13 @@ end
 -- 宿主「输入框输入完成」回调:data.role 为输入玩家,data.content 为输入内容。
 function gift_code.remember_input(state, data)
   local role_id = runtime_ui.resolve_role_id(data and data.role or nil)
-  if role_id == nil then
+  local key = _role_key(role_id)
+  if key == nil then
     logger.warn("gift_code input ignored: role unresolved")
     return false
   end
   local content = data.content
-  _ensure(state).input_by_role[role_id] = type(content) == "string" and content or nil
+  _ensure(state).input_by_role[key] = type(content) == "string" and content or nil
   return true
 end
 

@@ -333,6 +333,20 @@ describe("TestGiftCodeScreen", function()
       "after cancel the role should no longer resolve to the gift code canvas")
   end)
 
+  -- 键口径钉(#195 review):输入事件(data.role)与确认点击(intent 行动者)
+  -- 对同一玩家的两种 id 表示(字符串 "1" / 数值 1)必须落同一条缓存键——
+  -- 入缓存的玩家和确认的玩家是同一个键。
+  it("test_cached_input_and_confirm_use_the_same_player_key_across_id_representations", function()
+    local string_id_role = _make_role("1")
+    _click(state, world, ENTRY, 1)
+    luassert.is_function(world.input_handler, "input listener should be registered")
+    world.input_handler("UI_INPUT_TEXT_END_EVENT", nil, { role = string_id_role, content = "EGG2026" })
+    _click(state, world, CONFIRM, 1)
+
+    luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1),
+      "the confirming player must read the cache written for the same player")
+  end)
+
   -- 「宿主调用」节:宿主查询异常必须带 err 留 warn,不静默吞掉(#195 review)。
   it("test_a_host_error_while_querying_the_input_node_is_warned_with_the_error", function()
     UIManager.query_nodes_by_name = function(name)
