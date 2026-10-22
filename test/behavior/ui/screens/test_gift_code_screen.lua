@@ -15,6 +15,7 @@ local view_command_ports = require("src.ui.ports.view_command")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_ui = require("src.ui.render.support.runtime_ui")
 local tip_queue = require("src.foundation.tips")
+local logger = require("src.foundation.log")
 local host_events = require("src.ui.seams.host_events")
 local gift_code_port = require("src.ui.seams.gift_code")
 local gift_code_screen = require("src.ui.screens.gift_code")
@@ -330,6 +331,36 @@ describe("TestGiftCodeScreen", function()
     _click(state, world, CANCEL, 1)
     luassert.is_nil(canvas_coordinator.resolve_role_panel_canvas(state.ui, 1),
       "after cancel the role should no longer resolve to the gift code canvas")
+  end)
+
+  -- 「宿主调用」节:宿主查询异常必须带 err 留 warn,不静默吞掉(#195 review)。
+  it("test_a_host_error_while_querying_the_input_node_is_warned_with_the_error", function()
+    UIManager.query_nodes_by_name = function(name)
+      if name == INPUT then
+        error("host boom: query denied")
+      end
+      return original_query(name)
+    end
+    local warns = {}
+    local original_warn = logger.warn
+    logger.warn = function(...)
+      local parts = { ... }
+      for i, part in ipairs(parts) do
+        parts[i] = tostring(part)
+      end
+      warns[#warns + 1] = table.concat(parts, " ")
+    end
+    local bound = gift_code_screen.bind_input(state)
+    logger.warn = original_warn
+
+    luassert.is_false(bound, "binding should be skipped when the host query fails")
+    luassert.truthy(#warns > 0, "a host query failure must leave a warn, not be swallowed")
+    local found = false
+    for _, line in ipairs(warns) do
+      found = found or line:find("host boom", 1, true) ~= nil
+    end
+    luassert.truthy(found,
+      "the warn should carry the host error for diagnosis, got: " .. table.concat(warns, " | "))
   end)
 
   it("test_decoration_nodes_have_no_click_routes", function()

@@ -118,20 +118,23 @@ function gift_code.remember_input(state, data)
   return true
 end
 
+-- 宿主调用节:查询异常(含节点缺失,query_node 以 error 报出)带 err 留
+-- warn,不静默吞掉。
 local function _query_input_node()
   local ok, node = pcall(runtime_ui.query_node, gift_code_nodes.input_field)
   if not ok then
+    logger.warn("gift_code input node query failed:", tostring(node))
     return nil
   end
   return node
 end
 
 -- 开局接线(app/ui_bootstrap 调用):在输入框上注册宿主输入完成监听。
--- 节点缺失、端口不可用或宿主拒绝注册(句柄为 nil)都留 warn 并返回 false。
+-- 查询失败(已带 err 留 warn)、端口不可用或宿主拒绝注册(句柄为 nil)
+-- 都留 warn 并返回 false。
 function gift_code.bind_input(state)
   local node = _query_input_node()
   if node == nil then
-    logger.warn("gift_code input listener skipped: missing node", gift_code_nodes.input_field)
     return false
   end
   local port_ok, trigger = host_events.register_input_text_end(node.id, function(_, _, data)
