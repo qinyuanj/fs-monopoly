@@ -75,6 +75,15 @@ local function _validate_rewards(entry, skin_by_product)
   end
 end
 
+-- expires_at 可选,配了就必须是数值(墙钟秒);非数值会在兑换时被静默当
+-- 不过期,加载期先拦住(#195 review)。
+local function _validate_expires_at(entry)
+  local expires_at = entry.expires_at
+  if expires_at ~= nil and not number_utils.is_numeric(expires_at) then
+    _fail("invalid gift code expires_at: id=" .. tostring(entry.id))
+  end
+end
+
 -- 返回 { find = function(input_text) -> entry|nil };entry 即码表原条目。
 function gift_code_catalog.build(codes, skin_catalog)
   local skin_by_product = _skins_by_product(skin_catalog or skins)
@@ -84,6 +93,7 @@ function gift_code_catalog.build(codes, skin_catalog)
     _validate_id(entry, seen_ids)
     local normalized = _validate_code(entry, by_code)
     _validate_rewards(entry, skin_by_product)
+    _validate_expires_at(entry)
     by_code[normalized] = entry
   end
   return {

@@ -83,4 +83,23 @@ describe("TestGiftCodes", function()
     _assert_mentions(_build_error({ { id = 1.5, code = "A", rewards = { 5005 } } }), "invalid gift code id: 1.5")
     _assert_mentions(_build_error({ { id = 1, code = "A", rewards = {} } }), "gift code has no rewards: id=1")
   end)
+
+  -- expires_at 可选,配了就必须是数值(墙钟秒);配错类型在加载期暴露,
+  -- 不留给兑换时静默不判过期(#195 review)。
+  it("test_rejects_non_numeric_expires_at", function()
+    _assert_mentions(_build_error({ { id = 1, code = "A", rewards = { 5005 }, expires_at = "2026-12-31" } }),
+      "invalid gift code expires_at: id=1")
+    _assert_mentions(_build_error({ { id = 2, code = "B", rewards = { 5005 }, expires_at = true } }),
+      "invalid gift code expires_at: id=2")
+  end)
+
+  it("test_accepts_absent_and_numeric_expires_at", function()
+    local catalog = gift_code_catalog.build({
+      { id = 1, code = "A", rewards = { 5005 } },
+      { id = 2, code = "B", rewards = { 5006 }, expires_at = 1893456000 },
+    }, SKINS)
+
+    luassert.equal(1, catalog.find("A").id, "a code without expires_at should build")
+    luassert.equal(2, catalog.find("B").id, "a numeric expires_at should build")
+  end)
 end)
