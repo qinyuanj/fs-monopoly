@@ -5,7 +5,9 @@
 --   expires_at 可选,墙钟秒;墙钟超过即过期,墙钟取不到不判过期
 -- 码表随客户端明文分发(ADR 0075 接受此风险)。加载期校验见 gift_code_catalog。
 local gift_codes = {
-  codes = {},
+  codes = {
+    { id = 1, code = "TEST2026", rewards = { 5005 } }, -- 测试码:奶龙,不设过期(#200 真机验收)
+  },
 }
 
 -- 兑换记录的 Str 玩家存档 key,存已兑换码 id 的逗号分隔列表。
