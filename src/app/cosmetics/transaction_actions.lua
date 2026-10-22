@@ -191,6 +191,62 @@ function actions.restore_role(root_state, role_id)
   return transaction_state.seed_equipped(panel, role_id)
 end
 
+-- #198 / ADR 0074 第 1 条:礼包码等非商店来源的发放入口。与购买走同一
+-- mark_owned 写档路径并更新本局缓存;写档失败不撤销本局归属(第 3 条),
+-- 以 persisted=false 回报给调用方。
+function actions.grant_ownership(root_state, role_id, product_id)
+  local panel, rejected = transaction_result.panel_or_rejection(root_state)
+  if rejected ~= nil then
+    return rejected
+  end
+  local skin = transaction_state.skin_by_product(product_id)
+  if skin == nil then
+    return transaction_state.rejected(panel, "missing_product")
+  end
+  local marked, persisted = transaction_state.mark_owned(panel, role_id, skin)
+  if not marked then
+    return transaction_state.rejected(panel, "missing_role")
+  end
+  return transaction_state.accepted(panel, {
+    action = "grant",
+    ownership_changed = true,
+    product_id = product_id,
+    persisted = persisted == true,
+  })
+end
+
+-- 读档并并入本局缓存,返回存档里的归属表 { [product_id] = true };存档读不到
+-- (未开启/无适配器)时返回 nil。
+function actions.refresh_ownership(root_state, role_id)
+  local panel = transaction_state.ensure_panel(root_state)
+  if panel == nil then
+    return nil
+  end
+  local bucket, owned = transaction_state.load_owned(panel, role_id)
+  if bucket == nil then
+    return nil
+  end
+  local archived = {}
+  for product_id, is_owned in pairs(owned) do
+    if is_owned == true then
+      archived[product_id] = true
+    end
+  end
+  return archived
+end
+
+-- 纯查询(#195 review):不建 panel——会话里还没有面板缓存时归属按 false,
+-- 一次查询不得把 ui.skin_panel 造出来。
+function actions.owns_product(root_state, role_id, product_id)
+  local ui = root_state and root_state.ui or nil
+  local panel = ui and ui.skin_panel or nil
+  if type(panel) ~= "table" or type(panel.owned_by_role) ~= "table" then
+    return false
+  end
+  local skin = transaction_state.skin_by_product(product_id)
+  return transaction_state.owns_skin(panel, role_id, skin)
+end
+
 function actions.complete_skin_purchase(root_state, role_id, product_id)
   return completion.complete_skin_purchase(root_state, role_id, product_id)
 end

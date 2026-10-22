@@ -91,6 +91,12 @@ runtime_ports.get_archive_int = _make_port("get_archive_int", 0)
 
 runtime_ports.set_archive_int = _make_port("set_archive_int", false)
 
+-- #198 / ADR 0075:Str 存档(礼包码兑换记录)。读不到返回 nil,与「从未写过」
+-- 的空串区分;未配置端口按读不到处理。
+runtime_ports.get_archive_str = _make_port("get_archive_str", nil)
+
+runtime_ports.set_archive_str = _make_port("set_archive_str", false)
+
 function runtime_ports.reset_for_tests()
   configured = nil
 end

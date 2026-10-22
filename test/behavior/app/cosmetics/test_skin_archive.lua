@@ -264,6 +264,78 @@ describe("TestSkinArchive", function()
     _assert_eq(#equipped, 0, "no host equip should happen")
   end)
 
+  -- #198:礼包码等非商店来源经「授予归属」入口发放,与购买共用写档路径。
+  it("test_grant_ownership_persists_and_is_seen_this_session_and_after_reentry", function()
+    local read = _install_archives()
+    local state = _state()
+
+    local result = transaction.grant_ownership(state, 1, CAPYBARA)
+
+    _assert_eq(result.accepted, true, "grant should be accepted")
+    _assert_eq(result.persisted, true, "grant should report the archive write landed")
+    _assert_eq(read(CAPYBARA_KEY), 1, "grant should write the same ownership key as purchase")
+    _assert_eq(transaction.owns_product(state, 1, CAPYBARA), true, "granted skin should be owned this session")
+    _assert_eq(transaction.owns_product(state, 1, NAILONG), false, "grant should not invent other ownership")
+
+    local reentered = _state()
+    transaction.restore_role(reentered, 1)
+    _assert_eq(transaction.owns_product(reentered, 1, CAPYBARA), true, "granted skin should survive re-entry")
+  end)
+
+  it("test_grant_ownership_failed_write_keeps_session_ownership_with_warn", function()
+    _install_archives({ write_ok = false })
+    local state = _state()
+
+    local result
+    local warns = _with_warns(function()
+      result = transaction.grant_ownership(state, 1, NAILONG)
+    end)
+
+    _assert_eq(result.accepted, true, "grant should still be accepted for the session")
+    _assert_eq(result.persisted, false, "grant should report the archive write did not land")
+    _assert_eq(transaction.owns_product(state, 1, NAILONG), true, "session ownership should not be revoked")
+    local found = false
+    for _, line in ipairs(warns) do
+      found = found or (line:find("archive", 1, true) ~= nil and line:find(tostring(NAILONG), 1, true) ~= nil)
+    end
+    luassert.truthy(found, "failed grant write should leave a warn naming the product")
+  end)
+
+  it("test_grant_ownership_rejects_unknown_product", function()
+    _install_archives()
+    local state = _state()
+
+    local result = transaction.grant_ownership(state, 1, 9999)
+
+    _assert_eq(result.accepted, false, "unknown product should be rejected")
+    _assert_eq(result.reason, "missing_product", "rejection reason should be stable")
+  end)
+
+  -- #195 review:owns_product 是纯查询,查询不能把 ui.skin_panel 建出来(副作用)。
+  it("test_owns_product_is_a_pure_query_without_creating_the_panel", function()
+    _install_archives({ seed = { [NAILONG_KEY] = 1 } })
+    local state = _state()
+
+    _assert_eq(transaction.owns_product(state, 1, NAILONG), false,
+      "before refresh_ownership the session cache is empty")
+    luassert.is_nil(state.ui.skin_panel,
+      "a pure ownership query must not create the skin panel")
+  end)
+
+  it("test_refresh_ownership_reports_archived_skins_or_nil_when_disabled", function()
+    _install_archives({ seed = { [CAPYBARA_KEY] = 1 } })
+    local state = _state()
+
+    local owned = transaction.refresh_ownership(state, 1)
+
+    _assert_eq(owned[CAPYBARA], true, "archived skin should be reported")
+    _assert_eq(owned[NAILONG], nil, "unarchived skin should not be reported")
+    _assert_eq(transaction.owns_product(state, 1, CAPYBARA), true, "refresh should load archive into the session")
+
+    _install_archives({ enabled = false })
+    _assert_eq(transaction.refresh_ownership(_state(), 1), nil, "disabled archives should report nil")
+  end)
+
   it("test_unequip_clears_saved_skin", function()
     local read = _install_archives({ seed = { [NAILONG_KEY] = 1, [EQUIPPED_KEY] = NAILONG } })
     local state = _state()

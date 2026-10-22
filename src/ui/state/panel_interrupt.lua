@@ -156,6 +156,7 @@ function panel_interrupt.interrupt(state)
   end
   _close_open_role_panel(state, ui, "item_atlas")
   _close_open_role_panel(state, ui, "skin_panel")
+  _close_open_role_panel(state, ui, "gift_code")
   _close_visible_event_logs(state, ui)
 end
 

@@ -11,6 +11,7 @@ local popup_presenter = require("src.ui.coord.popup_presenter")
 local event_log_view = require("src.ui.coord.event_log_view")
 local skin_panel = require("src.ui.screens.skin_panel")
 local item_atlas = require("src.ui.screens.item_atlas")
+local gift_code = require("src.ui.screens.gift_code")
 local skin_gallery = require("src.ui.screens.skin_panel.skin_gallery")
 local command_policy = require("src.ui.input.command_policy")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -109,6 +110,11 @@ function view_command_ports.build(dependencies)
       skin_gallery.open_gallery(state, intent.actor_role_id)
       return true
     end,
+    open_gift_code_screen = function(state, intent)
+      gift_code.open(state, intent.actor_role_id)
+      return true
+    end,
+    gift_code_action = _panel_action_handler(gift_code),
     skin_panel_action = _panel_action_handler(skin_panel),
     item_atlas_action = _panel_action_handler(item_atlas),
     skin_gallery_action = _panel_action_handler(skin_gallery),

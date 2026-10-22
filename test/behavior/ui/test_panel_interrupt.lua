@@ -5,6 +5,7 @@ local support = require("test.support.shared_support")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
 local item_atlas = require("src.ui.screens.item_atlas")
 local skin_panel = require("src.ui.screens.skin_panel")
+local gift_code_screen = require("src.ui.screens.gift_code")
 local event_log_view = require("src.ui.coord.event_log_view")
 local tips = require("src.foundation.tips")
 
@@ -128,6 +129,31 @@ it("test_acting_player_s_market_closes_atlas_skin_panel_and_only_the_acting_role
   luassert.truthy(s.ui.skin_panel.open == false, "skin panel should be closed by interrupt")
   luassert.truthy(event_log_view.is_open(s, 1) == false, "role 1 event log should be closed")
   luassert.truthy(event_log_view.is_open(s, 2) == true, "role 2 event log should remain open")
+end)
+
+-- 礼包码屏(#195 review)与图鉴/皮肤面板同口径:本人黑市清场要关掉,
+-- 否则 open 旗标残留,之后弹窗收屏会把人错误拽回已不在的礼包码 canvas。
+it("test_acting_player_s_market_closes_an_open_gift_code_screen", function()
+  local s = _make_state()
+  gift_code_screen.open(s, 1)
+  luassert.truthy(s.ui.gift_code.open == true, "precondition: gift code screen is open")
+  s.ui.market_active = true
+  s.ui.current_action_role_id = 1
+
+  panel_interrupt.interrupt(s)
+
+  luassert.truthy(s.ui.gift_code.open == false, "market interrupt should close the gift code screen")
+end)
+
+it("test_other_player_s_market_keeps_the_gift_code_screen_open", function()
+  local s = _make_state()
+  gift_code_screen.open(s, 1)
+  s.ui.market_active = true
+  s.ui.current_action_role_id = 2
+
+  panel_interrupt.interrupt(s)
+
+  luassert.truthy(s.ui.gift_code.open == true, "other player's market should not close the gift code screen")
 end)
 
 it("test_keeps_panels_open_for_non_market_settlements_and_other_players_market", function()

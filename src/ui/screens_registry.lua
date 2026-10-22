@@ -44,6 +44,7 @@ local function _ensure_loaded()
     "src.ui.screens.remote_choice",
     "src.ui.screens.player_choice",
     "src.ui.screens.secondary_confirm",
+    "src.ui.screens.gift_code",
   }
   for _, module_name in ipairs(screen_modules) do
     registry.register(require(module_name))

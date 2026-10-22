@@ -13,6 +13,7 @@ local bankruptcy_nodes = require("src.ui.schema.bankruptcy")
 local debug_nodes = require("src.ui.schema.debug")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
 local skin_nodes = require("src.ui.schema.skin")
+local gift_code_nodes = require("src.ui.schema.gift_code")
 local role_id_utils = require("src.foundation.identity")
 
 local coordinator = {}
@@ -149,6 +150,7 @@ end
 local _PANEL_CANVAS_BY_KEY = {
   { panel_key = "item_atlas", canvas = item_atlas_nodes.canvas },
   { panel_key = "skin_panel", canvas = skin_nodes.canvas },
+  { panel_key = "gift_code", canvas = gift_code_nodes.canvas },
 }
 
 local function _panel_open_for(ui, panel_key, role_id)

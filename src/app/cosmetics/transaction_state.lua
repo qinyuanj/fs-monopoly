@@ -65,15 +65,17 @@ end
 
 -- ADR 0074:归属写档不分来源;写档失败不撤销本局归属,只留 warn,
 -- 等下次打开皮肤商店由 load_owned 补写。
+-- 返回写档是否落下(#198 授予归属入口据此回报 persisted)。
 local function _persist_owned(role_id, product_id)
   if transaction_context.archive_call("mark_owned", role_id, product_id) == true then
-    return
+    return true
   end
   logger.warn(
     "skin_panel: skin ownership archive write failed",
     "role_id=" .. tostring(role_id),
     "product_id=" .. tostring(product_id)
   )
+  return false
 end
 
 -- 穿戴写档失败同样只留 warn,不回滚本局穿戴(ADR 0074 第 3 条)。
@@ -94,8 +96,7 @@ function state.mark_owned(panel, role_id, skin)
     return false
   end
   _owned_bucket(panel, key)[skin.product_id] = true
-  _persist_owned(role_id, skin.product_id)
-  return true
+  return true, _persist_owned(role_id, skin.product_id)
 end
 
 local function _load_owned_list(bucket, owned)

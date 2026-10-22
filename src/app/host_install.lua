@@ -13,6 +13,8 @@ local runtime_assets = require("src.config.runtime_assets")
 local skin_panel = require("src.ui.screens.skin_panel")
 local skin_equip = require("src.rules.cosmetics")
 local skin_archive = require("src.app.cosmetics.skin_archive")
+local gift_code_port = require("src.ui.seams.gift_code")
+local gift_code_redeem = require("src.app.gift_code.redeem")
 local achievement_runtime = require("src.app.host_integrations.achievement_runtime")
 local host_runtime = require("src.host.init")
 local sign_in_rewards = require("src.app.host_integrations.sign_in_rewards")
@@ -109,6 +111,13 @@ local function _load_required_modules(opts)
   end)
   -- ADR 0074:皮肤归属与穿戴以宿主玩家存档为真源,经 runtime_ports 读写。
   skin_panel.configure_archive(skin_archive)
+  -- #199:礼包码屏经 seams/gift_code 调 app 层兑换门面;闭包调用时读模块字段,
+  -- 测试补丁仍可打在门面字段上。
+  gift_code_port.configure({
+    redeem = function(...)
+      return gift_code_redeem.redeem(...)
+    end,
+  })
   sign_in_rewards.install(opts)
   leaderboard_settlement.install(opts)
   require "src.rules.endgame"

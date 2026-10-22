@@ -317,6 +317,8 @@ describe("TestRuntimePorts", function()
     luassert.truthy(runtime_ports.archives_enabled() == false, "archives_enabled should default to false")
     luassert.truthy(runtime_ports.get_archive_int() == 0, "get_archive_int should default to 0")
     luassert.truthy(runtime_ports.set_archive_int() == false, "set_archive_int should default to false")
+    luassert.truthy(runtime_ports.get_archive_str() == nil, "get_archive_str should default to nil (unreadable)")
+    luassert.truthy(runtime_ports.set_archive_str() == false, "set_archive_str should default to false")
   end)
 
 
