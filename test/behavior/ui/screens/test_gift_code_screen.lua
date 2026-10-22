@@ -21,6 +21,7 @@ local gift_code_port = require("src.ui.seams.gift_code")
 local gift_code_screen = require("src.ui.screens.gift_code")
 local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
+local modal_presenter = require("src.ui.coord.modal")
 local redeem = require("src.app.gift_code.redeem")
 local transaction = require("src.app.cosmetics.transaction")
 local skin_archive = require("src.app.cosmetics.skin_archive")
@@ -346,6 +347,22 @@ describe("TestGiftCodeScreen", function()
     luassert.is_true(state.ui.gift_code.open, "market open must not close the gift code screen")
     _assert_eq(_count(world.roles["1"].events, HIDE_SCREEN), 0,
       "an open gift code screen must not be hidden when the market opens")
+  end)
+
+  -- #202:选择屏 / 黑市收屏统一到 per-role 面板回屏:开着礼包码屏的角色收到
+  -- 「显示礼包码屏」,没开面板的角色收到「显示基础屏」。
+  it("test_choice_close_returns_each_role_to_its_own_canvas", function()
+    _click(state, world, ENTRY, 1)
+    local shows_before = _count(world.roles["1"].events, SHOW_SCREEN)
+
+    modal_presenter.close_choice_modal(state)
+
+    luassert.is_true(_count(world.roles["1"].events, SHOW_SCREEN) > shows_before,
+      "the role with the gift code screen open should be shown the gift code screen again")
+    _assert_eq(_count(world.roles["2"].events, SHOW_SCREEN), 0,
+      "a role without the gift code screen open should not be switched to it")
+    luassert.is_true(_count(world.roles["2"].events, "显示基础屏") >= 1,
+      "a role without any open panel should be returned to the base canvas")
   end)
 
   -- 键口径钉(#195 review):输入事件(data.role)与确认点击(intent 行动者)
