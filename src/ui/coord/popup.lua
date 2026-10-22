@@ -110,14 +110,30 @@ local function _switch_excluded_role(state, role, ctx, switch_ctx)
   return true
 end
 
+-- #202:下一屏解析成基础屏时,操作者本人回自己开着的面板 canvas(#583 口径),
+-- 没开面板才真回基础屏。骰子 / 选择屏 / 黑市保持原逻辑,操作者面板不抢这些屏;
+-- 只按操作者身份生效,破产弹窗这类「target 对全员生效」的分支也不会把旁观者
+-- 带去操作者的面板 canvas。
+local function _resolve_operator_return_canvas(state, ctx, role, switch_ctx, resolved)
+  if resolved ~= canvas.CANVAS_BASE then
+    return resolved
+  end
+  local role_id = _resolve_role_id(ctx, role)
+  if not role_id_utils.equals(role_id, switch_ctx.operator_role_id) then
+    return resolved
+  end
+  return canvas.resolve_role_panel_canvas(state.ui, role_id) or resolved
+end
+
 -- 该角色最终要切的 canvas:旁观者回屏优先(回图鉴屏先清陈旧放大卡),
 -- 否则沿用已解析的弹窗 canvas。
 local function _resolve_switch_canvas(state, ctx, role, switch_ctx, resolved)
-  local bystander = _resolve_bystander_canvas(state, ctx, role, switch_ctx)
-  if bystander == item_atlas_nodes.canvas then
+  local target = _resolve_bystander_canvas(state, ctx, role, switch_ctx)
+    or _resolve_operator_return_canvas(state, ctx, role, switch_ctx, resolved)
+  if target == item_atlas_nodes.canvas then
     _clear_stale_atlas_enlarged(state)
   end
-  return bystander or resolved
+  return target
 end
 
 local function _resolve_and_switch_for_role(state, role, switch_ctx)

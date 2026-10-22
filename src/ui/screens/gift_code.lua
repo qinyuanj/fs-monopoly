@@ -71,7 +71,8 @@ function gift_code.open(state, role_id)
   return screen
 end
 
--- 只收屏,不动草稿:结算/黑市打断走这里,重开时要能回填。
+-- 只收屏,不动草稿:取消路径最后一步收屏,重开时要能回填。#202 起黑市开屏
+-- 不再经此收屏(礼包码屏不注册 panel_interrupt closer)。
 function gift_code.close(state, role_id)
   local screen = _ensure(state)
   screen.open = false
@@ -177,12 +178,5 @@ function gift_code.bind_input(state)
   end
   return true
 end
-
-local panel_interrupt = require("src.ui.state.panel_interrupt")
--- screen registry 只有进程级注册、没有卸载生命周期；模块热重载时由固定键
--- 覆盖旧 closer，避免保留旧模块闭包，也无需伪造 screen 实例注销点。
-panel_interrupt.register_panel_closer("gift_code", function(state, role_id)
-  gift_code.close(state, role_id)
-end)
 
 return gift_code
