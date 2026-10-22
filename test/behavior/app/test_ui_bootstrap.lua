@@ -604,6 +604,28 @@ local function _test_missing_child_label_falls_back_to_node_id_for_unnamed_entri
 end
 
 
+-- #199:GAME_INIT 在礼包码输入框上注册宿主「输入完成」监听(按节点 id)。
+local function _test_game_init_registers_gift_code_input_listener()
+  local registered = {}
+  _with_install_patches({
+    { target = package.loaded, key = "Data.UIManagerNodes", value = { validate = function() return {} end } },
+    { target = _G, key = "UIManager", value = {
+      Builder = { new = function() return {} end },
+      query_nodes_by_name = function(name)
+        return { { id = "node:" .. name } }
+      end,
+    } },
+    { target = require("src.ui.seams.host_events"), key = "register_input_text_end", value = function(node_id)
+      registered[#registered + 1] = node_id
+      return true, "trigger"
+    end },
+  }, function()
+    _install_with_runtime({ ui = {} })
+  end)
+  luassert.same({ "node:礼包码_输入框" }, registered, "GAME_INIT should listen on the gift code input field")
+end
+
+
 it("test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras", _test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras)
 it("test_bootstrap_nodes_ignores_non_table_extra_nodes", _test_bootstrap_nodes_ignores_non_table_extra_nodes)
 it("test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes", _test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes)
@@ -619,6 +641,7 @@ it("test_install_accepts_nil_opts_when_current_game_ref_is_present", _test_insta
 it("test_spawns_startup_synthetic_actors", _test_spawns_startup_synthetic_actors)
 it("test_role_globals_install_receives_the_resolved_roles", _test_role_globals_install_receives_the_resolved_roles)
 it("test_game_init_wires_like_collect_subscribe_setup", _test_game_init_wires_like_collect_subscribe_setup)
+it("test_game_init_registers_gift_code_input_listener", _test_game_init_registers_gift_code_input_listener)
 it("test_empty_name_entry_label_keeps_plain_node_id", _test_empty_name_entry_label_keeps_plain_node_id)
 it("test_configured_and_repeated_children_are_not_reported_missing", _test_configured_and_repeated_children_are_not_reported_missing)
 it("test_children_read_failure_message_carries_label_and_error", _test_children_read_failure_message_carries_label_and_error)

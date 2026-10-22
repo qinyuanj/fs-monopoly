@@ -48,6 +48,22 @@ local COMMANDS = {
     actor_source = "local",
     port_handler = "open_share_panel",
   },
+  -- 礼包码屏(#199):入口与屏内动作都按点击者分道,与回合无关。
+  open_gift_code_screen = {
+    reason = "open_gift_code_screen",
+    dispatch_before_game = true,
+    panel_id = "gift_code",
+    requires_event_actor = true,
+    actor_source = "local",
+    port_handler = "open_gift_code_screen",
+  },
+  gift_code_action = {
+    reason = "gift_code_action",
+    dispatch_before_game = true,
+    requires_event_actor = true,
+    actor_source = "local",
+    port_handler = "gift_code_action",
+  },
   skin_panel_action = {
     reason = "skin_panel_action",
     dispatch_before_game = true,

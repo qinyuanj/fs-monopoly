@@ -71,6 +71,17 @@ function host_runtime.register_trigger_event(event_desc, handler)
   return true, register(event_desc, handler)
 end
 
+-- #199:输入框「输入完成」触发器(注册参数为 EInputField 节点 id,回调 data 带
+-- role / content)。事件名取运行时 EVENT 表的值(注解裸名可能与运行时值不同,
+-- 参照 #585);EVENT 缺该字段时视为端口不可用返回 false。
+function host_runtime.register_input_text_end(node_id, handler)
+  local event_name = EVENT and EVENT.UI_INPUT_TEXT_END_EVENT or nil
+  if event_name == nil or node_id == nil then
+    return false
+  end
+  return host_runtime.register_trigger_event({ event_name, node_id }, handler)
+end
+
 function host_runtime.query_units(names)
   local query = lua_api_fn("query_units")
   if not query then

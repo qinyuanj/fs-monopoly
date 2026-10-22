@@ -168,12 +168,64 @@ local function _test_trigger_event_returns_true_and_forwards_desc_on_happy_path(
 end
 
 
+-- #199:输入框「输入完成」触发器按运行时 EVENT 值注册,注册参数为节点 id。
+local function _with_event_table(event_table, fn)
+  local saved = rawget(_G, "EVENT")
+  _G.EVENT = event_table
+  local ok, res = pcall(fn)
+  _G.EVENT = saved
+  if not ok then error(res, 0) end
+  return res
+end
+
+local function _test_input_text_end_registers_runtime_event_on_node()
+  local seen = nil
+  local ctx = {
+    env = {
+      LuaAPI = {
+        global_register_trigger_event = function(desc, handler)
+          seen = { desc = desc, handler = handler }
+          return "input-trigger"
+        end,
+      },
+    },
+  }
+  local handler = function() end
+  local results = _with_event_table({ UI_INPUT_TEXT_END_EVENT = "ET_UI_INPUT_TEXT_END" }, function()
+    return _with_current(ctx, function()
+      return { host_runtime.register_input_text_end("1519736575|2075094127", handler) }
+    end)
+  end)
+  luassert.same({ true, "input-trigger" }, results, "registration should report success with the trigger handle")
+  luassert.same({ "ET_UI_INPUT_TEXT_END", "1519736575|2075094127" }, seen and seen.desc,
+    "registration should use the runtime event value and the node id")
+  luassert.truthy(seen and seen.handler == handler, "handler should be forwarded unchanged")
+end
+
+local function _test_input_text_end_unavailable_without_runtime_event()
+  local calls = 0
+  local ctx = {
+    env = { LuaAPI = { global_register_trigger_event = function() calls = calls + 1 end } },
+  }
+  local result = _with_event_table({}, function()
+    return _with_current(ctx, function()
+      return host_runtime.register_input_text_end("node", function() end)
+    end)
+  end)
+  luassert.truthy(result == false, "missing runtime event should report unavailable; got " .. tostring(result))
+  -- lint-allow: call-count 宿主注册入口是出站边界,事件缺失时不得触达宿主
+  luassert.truthy(calls == 0, "missing runtime event must not reach LuaAPI")
+end
+
+
 it("test_rejects_a_non_string_event_name_even_when_handler_is_a_valid_function_L20_or", _test_rejects_a_non_string_event_name_even_when_handler_is_a_valid_function_L20_or)
 it("test_returns_false_when_luaapi_lacks_a_callable_global_register_custom_event_L25_and", _test_returns_false_when_luaapi_lacks_a_callable_global_register_custom_event_L25_and)
 it("test_returns_false_not_true_when_no_runtime_context_luaapi_is_available_l26_false", _test_returns_false_not_true_when_no_runtime_context_luaapi_is_available_l26_false)
 it("test_returns_true_only_on_the_genuine_happy_path_positive_control_for_L26", _test_returns_true_only_on_the_genuine_happy_path_positive_control_for_L26)
 it("test_schedule_forwards_with_zero_default_delay", _test_schedule_forwards_with_zero_default_delay)
 it("test_trigger_event_rejects_a_non_table_event_desc", _test_trigger_event_rejects_a_non_table_event_desc)
+it("test_input_text_end_registers_runtime_event_on_node", _test_input_text_end_registers_runtime_event_on_node)
+it("test_input_text_end_unavailable_without_runtime_event", _test_input_text_end_unavailable_without_runtime_event)
 it("test_trigger_event_returns_false_when_luaapi_lacks_callable_hook", _test_trigger_event_returns_false_when_luaapi_lacks_callable_hook)
 it("test_trigger_event_returns_false_when_no_runtime_context", _test_trigger_event_returns_false_when_no_runtime_context)
 it("test_trigger_event_returns_true_and_forwards_desc_on_happy_path", _test_trigger_event_returns_true_and_forwards_desc_on_happy_path)

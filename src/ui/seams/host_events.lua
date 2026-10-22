@@ -5,5 +5,7 @@ local host_slot = require("src.ui.seams.host_slot")
 return host_slot.new({
   { name = "register_custom_event", default = false },
   { name = "unregister_custom_event", default = false },
+  -- #199:输入框「输入完成」触发器,透传宿主 (true, trigger);未装配时 false。
+  { name = "register_input_text_end", default = false },
 })
 

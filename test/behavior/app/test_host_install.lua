@@ -641,6 +641,34 @@ local function _test_install_configures_achievement_progress_with_built_port()
 end
 
 
+-- #199:礼包码屏经 seams/gift_code 调兑换门面;门面在 app 层,由本组合根注入。
+local function _test_install_wires_gift_code_port_to_redeem_facade()
+  local gift_code_port = require("src.ui.seams.gift_code")
+  local redeem = require("src.app.gift_code.redeem")
+  gift_code_port.reset_for_tests()
+  local seen = nil
+  with_patches({
+    {
+      target = redeem,
+      key = "redeem",
+      value = function(state, role_id, input_text)
+        seen = { state = state, role_id = role_id, input_text = input_text }
+        return { status = "invalid_code", granted = {}, message = "兑换码无效" }
+      end,
+    },
+  }, function()
+    require("src.app.host_install").install({ skip_context_install = true })
+    local state = { ui = {} }
+    local result = gift_code_port.redeem(state, 4, "EGG2026")
+    _assert_eq(result and result.message, "兑换码无效", "port should return the facade result")
+    _assert_eq(seen and seen.state, state, "facade should receive the ui root state")
+    _assert_eq(seen and seen.role_id, 4, "facade should receive the redeeming role")
+    _assert_eq(seen and seen.input_text, "EGG2026", "facade should receive the input text")
+  end)
+  gift_code_port.reset_for_tests()
+end
+
+
 it("test_host_ports_lists_five_capability_slots_in_fixed_order", _test_host_ports_lists_five_capability_slots_in_fixed_order)
 it("test_skip_context_install_wires_purchase_skins_to_paid_port", _test_skip_context_install_wires_purchase_skins_to_paid_port)
 it("test_install_subscribes_reward_day_events_and_grants_the_resolved_player", _test_install_subscribes_reward_day_events_and_grants_the_resolved_player)
@@ -654,4 +682,5 @@ it("test_reward_day_without_consume_dirty_is_a_safe_noop", _test_reward_day_with
 it("test_after_grant_guard_returns_false_and_never_crashes", _test_after_grant_guard_returns_false_and_never_crashes)
 it("test_after_grant_returns_false_when_ui_sync_missing", _test_after_grant_returns_false_when_ui_sync_missing)
 it("test_install_configures_achievement_progress_with_built_port", _test_install_configures_achievement_progress_with_built_port)
+it("test_install_wires_gift_code_port_to_redeem_facade", _test_install_wires_gift_code_port_to_redeem_facade)
 end)

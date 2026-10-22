@@ -122,7 +122,7 @@ describe("TestUiHostPorts", function()
   it("test_declared_ports_expose_their_exact_name_lists_in_order", function()
   -- pin 每个端口声明名单的逐名形态（#293：声明位点被变异成陌生函数名时，
   -- 聚合面/消费点不逐一断言会漏杀——外部依赖这些名字）。
-  luassert.is.same({ "register_custom_event", "unregister_custom_event" },
+  luassert.is.same({ "register_custom_event", "unregister_custom_event", "register_input_text_end" },
     host_events.declared_names())
   luassert.is.same({ "resolve_roles", "resolve_role_with" },
     host_roles.declared_names())
@@ -136,6 +136,7 @@ describe("TestUiHostPorts", function()
   -- host_events：未装配一律 false；host_roles：名册 → 共享空表、单角色 → nil。
   luassert.is_false(host_events.register_custom_event("evt", function() end))
   luassert.is_false(host_events.unregister_custom_event("trigger"))
+  luassert.is_false(host_events.register_input_text_end("node", function() end))
   luassert.is.same({}, host_roles.resolve_roles())
   luassert.is_nil(host_roles.resolve_role_with(1))
   end)
