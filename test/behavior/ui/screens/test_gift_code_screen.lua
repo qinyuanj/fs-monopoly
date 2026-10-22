@@ -20,8 +20,10 @@ local host_events = require("src.ui.seams.host_events")
 local gift_code_port = require("src.ui.seams.gift_code")
 local gift_code_screen = require("src.ui.screens.gift_code")
 local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
+local gift_code_nodes = require("src.ui.schema.gift_code")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
 local modal_presenter = require("src.ui.coord.modal")
+local runtime_state = require("src.ui.state.runtime")
 local redeem = require("src.app.gift_code.redeem")
 local transaction = require("src.app.cosmetics.transaction")
 local skin_archive = require("src.app.cosmetics.skin_archive")
@@ -64,6 +66,17 @@ local function _count(list, value)
     end
   end
   return n
+end
+
+-- 事件流中最后一次出现的下标;0 表示没有出现过。
+local function _last_index(list, value)
+  local found = 0
+  for i, item in ipairs(list) do
+    if item == value then
+      found = i
+    end
+  end
+  return found
 end
 
 -- 宿主世界替身:两名玩家、内存存档(Int + Str)、按 role 记录输入框写入与提示。
@@ -412,6 +425,28 @@ describe("TestGiftCodeScreen", function()
       "a role without the gift code screen open should not be switched to it")
     luassert.is_true(_count(world.roles["2"].events, "显示基础屏") >= 1,
       "a role without any open panel should be returned to the base canvas")
+  end)
+
+  -- #202 review:base_inline 的内联选项住在基础屏。走到这条开屏路径时若已有选择屏
+  -- 要收,收屏的 per-role 面板回屏会把开着礼包码屏的操作者留在面板 canvas,随后
+  -- 开出的内联选项被面板盖住——开屏路径必须显式把角色切回基础屏。
+  -- 判据用事件顺序:最后一次「显示基础屏」必须晚于最后一次「显示礼包码屏」。
+  it("test_base_inline_open_returns_the_operator_to_the_base_canvas", function()
+    _click(state, world, ENTRY, 1)
+    state.ui.choice_active = true
+    state.ui.active_choice_screen_key = "target_pick"
+    runtime_state.set_ui_model(state, {
+      current_player_id = 1,
+      item_slots_by_player_id = { [1] = {} },
+    })
+    local events = world.roles["1"].events
+
+    modal_presenter.open_choice_modal(state, { id = 7, route_key = "base_inline" })
+
+    luassert.is_true(_last_index(events, SHOW_SCREEN) < _last_index(events, "显示基础屏"),
+      "opening a base_inline choice must leave the operator on the base canvas")
+    _assert_eq(canvas_coordinator.resolve_role_panel_canvas(state.ui, 1), gift_code_nodes.canvas,
+      "sanity: the gift code panel itself stays open, only the canvas must move")
   end)
 
   -- 键口径钉(#195 review):输入事件(data.role)与确认点击(intent 行动者)
