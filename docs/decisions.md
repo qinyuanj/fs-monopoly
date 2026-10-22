@@ -146,9 +146,11 @@ CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的�
 4. **uml 子进程**。`uml` 预检把每个受控 tree 的 `share/lua/5.4` 与 `lib/lua/5.4` 写进子进程的 `LUA_PATH(_5_4)` / `LUA_CPATH(_5_4)`（另加仓根），模块探针按同一组根判定来源；`./uml` 安装器拷贝仍不是入口，因为它不钉装载面、也不做预检。
 5. **清理边界**。`distclean` 与 `clean` 同义。spec_lane 的实测时长缓存存于仓内 `tmp/`（gitignored，由 `clean` 清理）。
 
-代价与边界：每台开发机/CI 必须自行提供满足口径的机器 tree（CI 的供给在 `.github/scripts/setup-lua.sh`：apt 装 Lua 5.4 + LuaRocks 后预装五个钉定 rock）。缺失或版本越界是真实失败（退 1）；退 3 只保留给平台/工具显式不可用。模块来源、版本、worker 绑定与 uml 探针在每次运行时核对。
+代价与边界：每台开发机必须自行提供满足口径的机器 tree（CI 已于 2026-10-22 撤销，`.github/scripts/setup-lua.sh` 随之删除，历史供给口径仅存于本句）。缺失或版本越界是真实失败（退 1）；退 3 只保留给平台/工具显式不可用。模块来源、版本、worker 绑定与 uml 探针在每次运行时核对。
 
 ## ADR 0073 — 开发与工具链保证面迁到 WSL Ubuntu
+
+> **第 6 条中的 CI 部分已撤销（2026-10-22，维护者决定）。** 本仓不再跑 CI，`.github/` 已删除；`.githooks/pre-push` 保留为可选本地拦截。其余条款不变。
 
 开发与工具链的保证面从原生 Windows 改为 **WSL Ubuntu 24.04 单一平台**（#191）；原生 Windows 只是部署目标，不承诺 macOS，也不保留原生 Windows 开发的双轨支持。取代 ADR 0066 与 ADR 0071。
 

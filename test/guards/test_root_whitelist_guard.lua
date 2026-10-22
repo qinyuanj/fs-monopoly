@@ -53,10 +53,11 @@ describe("TestRootWhitelistGuard", function()
     luassert.is.same({}, guard.check({ ".busted" }))
   end)
 
-  -- ubuntu-24.04 CI(.github/)与可选 pre-push hook(.githooks/)入库(#126 / #191),
-  -- 二者位置由 GitHub / core.hooksPath 约定决定;撤掉放行即破此钉。
-  it("test_ci_and_hooks_dirs_whitelisted", function()
-    luassert.is.same({}, guard.check({ ".github", ".githooks" }))
+  -- 可选 pre-push hook(.githooks/)入库(#126),位置由 core.hooksPath 约定决定;
+  -- CI 已删(.github/ 不再是合法根级条目),撤掉放行即破此钉。
+  it("test_hooks_dir_whitelisted_and_ci_dir_rejected", function()
+    luassert.is.same({}, guard.check({ ".githooks" }))
+    luassert.is.same({ ".github" }, guard.check({ ".github" }))
   end)
 
   -- 常规根级条目不受影响。

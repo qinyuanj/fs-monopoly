@@ -32,7 +32,7 @@
 
 push 前唯一硬地板是 slim：`lua5.4 tools/cli.lua verify`。
 
-CI（#126 / #191）：`.github/workflows/verify.yml` 在 `ubuntu-24.04` runner 上跑同一 slim `verify`（不含 `--tooling`），job 名 `verify` 供维护者在 branch protection 里配置为 PR 必过检查；退 3 在 annotation 与 step summary 标 `UNAVAILABLE`，重跑即可。可选本地拦截：`git config core.hooksPath .githooks` 启用 `.githooks/pre-push`（同跑 `verify`，`git push --no-verify` 单次跳过）。
+本仓不跑 CI（2026-10-22 维护者决定，`.github/` 已删除）。可选本地拦截：`git config core.hooksPath .githooks` 启用 `.githooks/pre-push`（同跑 `verify`，`git push --no-verify` 单次跳过）。
 
 按改动风险另选（都是显式步骤，不是硬地板）：`lua5.4 tools/cli.lua uml crap`、`lua5.4 tools/cli.lua uml mutate`；完整 flag 以 `lua5.4 tools/cli.lua verify --help` 与 `lua5.4 tools/cli.lua uml --help` 为准。
 
