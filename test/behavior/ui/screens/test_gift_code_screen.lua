@@ -31,8 +31,10 @@ local SHOW_SCREEN = "显示礼包码屏"
 local HIDE_SCREEN = "隐藏礼包码屏"
 
 local NAILONG = 5005 -- 奶龙
+local CAPYBARA = 5006 -- 水豚嘟嘟
 local CODES = {
   { id = 3, code = "EGG2026", rewards = { NAILONG } },
+  { id = 4, code = "CAPY2026", rewards = { CAPYBARA } },
 }
 
 local function _assert_eq(actual, expected, message)
@@ -258,6 +260,59 @@ describe("TestGiftCodeScreen", function()
 
     luassert.same({ "兑换码无效" }, _tips_for(world, 2), "player 2 should redeem their own input")
     luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "player 1 should redeem their own input")
+  end)
+
+  -- 去重粒度是「同一玩家同一条提示」,不是「同一玩家同一状态」:连续兑换
+  -- 两个不同码,第二条成功提示文本不同,必须排队展示而不是被吞(#195 review)。
+  it("test_a_second_distinct_redeem_tip_is_not_swallowed_by_dedupe", function()
+    local releases = {}
+    tip_queue.configure_runtime({
+      presenter = function(text, _, tip)
+        world.tips[#world.tips + 1] = { text = text, role_id = tip.role_id }
+      end,
+      scheduler = function(_, release)
+        releases[#releases + 1] = release
+        return true
+      end,
+      test_mode = false,
+    })
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    _click(state, world, CONFIRM, 1)
+    luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "first grant tip should be presented")
+
+    _type(world, 1, "CAPY2026")
+    _click(state, world, CONFIRM, 1)
+    luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1),
+      "a distinct second tip must wait behind the active one, not be dropped")
+
+    luassert.is_function(releases[1], "the active tip should hold a scheduled release")
+    releases[1]()
+    luassert.same({ "兑换成功，获得：奶龙", "兑换成功，获得：水豚嘟嘟" }, _tips_for(world, 1),
+      "after the first tip releases, the second grant tip must be presented")
+  end)
+
+  -- 对照钉:同一条提示(同玩家同文本)重复触发仍去重,不刷屏。
+  it("test_repeating_the_identical_tip_is_still_deduped", function()
+    local releases = {}
+    tip_queue.configure_runtime({
+      presenter = function(text, _, tip)
+        world.tips[#world.tips + 1] = { text = text, role_id = tip.role_id }
+      end,
+      scheduler = function(_, release)
+        releases[#releases + 1] = release
+        return true
+      end,
+      test_mode = false,
+    })
+    _click(state, world, ENTRY, 1)
+    _click(state, world, CONFIRM, 1)
+    _click(state, world, CONFIRM, 1)
+    luassert.same({ "兑换码无效" }, _tips_for(world, 1), "identical repeat should be deduped")
+
+    luassert.is_function(releases[1], "the active tip should hold a scheduled release")
+    releases[1]()
+    luassert.same({ "兑换码无效" }, _tips_for(world, 1), "no second copy should surface after release")
   end)
 
   it("test_decoration_nodes_have_no_click_routes", function()

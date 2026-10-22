@@ -66,10 +66,12 @@ local function _enqueue_result(role_id, result)
   if type(result) ~= "table" or result.message == nil then
     return
   end
+  -- 去重粒度按玩家 + 提示文本:连续兑换两个码得到的不同提示都要展示,
+  -- 同一条提示重复触发才吞(#195 review:只按 status 会吞掉第二条成功提示)。
   tip_queue.enqueue({
     text = result.message,
     duration = TIP_DURATION,
-    dedupe_key = "gift_code:" .. tostring(role_id) .. ":" .. tostring(result.status),
+    dedupe_key = "gift_code:" .. tostring(role_id) .. ":" .. result.message,
     blocks_inter_turn = false,
     role_id = role_id,
     source = "ui.gift_code",
