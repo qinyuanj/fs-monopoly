@@ -12,4 +12,15 @@ local gift_codes = {
 -- 占位号码:真实号码以宿主编辑器配置为准,由 #200 人工登记后替换。
 gift_codes.redeem_record_archive_key = 1056
 
+-- 兑换结果提示文本(按兑换门面的状态取用);granted 的 %s 为本次发放的皮肤名,顿号分隔。
+gift_codes.messages = {
+  granted = "兑换成功，获得：%s",
+  all_owned = "奖励皮肤已全部拥有",
+  invalid_code = "兑换码无效",
+  expired = "兑换码已过期",
+  already_redeemed = "已兑换过该兑换码",
+  archive_unavailable = "存档未开启，暂时无法兑换",
+  write_failed = "兑换失败，请稍后重试",
+}
+
 return gift_codes
