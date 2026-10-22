@@ -365,6 +365,8 @@ Decoration = {}
 
 ---@alias EProgressbar ENode UI进度条节点
 
+---@alias ESlider ENode UI滑动条节点
+
 ---@alias ETextHAlignment integer 文本水平对齐
 
 ---@alias ETextVAlignment integer 文本垂直对齐
@@ -421,6 +423,8 @@ JointAssistant = {}
 ---@alias SfxID integer 特效ID
 
 ---@alias SfxKey integer 特效编号
+
+---@alias ShadowQuality integer 阴影质量
 
 ---@alias SheetID integer 表格
 
@@ -667,6 +671,19 @@ Enums.DirectionType = {
 Enums.DropType = {
 	DIE = 0,  ---击败
 	RESET_POS = 1,  ---复位
+}
+
+---@enum Enums.ESliderDirection 滑动条方向
+Enums.ESliderDirection = {
+	Vertical = 1,  ---纵向
+	Horizontal = 2,  ---横向
+}
+
+---@enum Enums.ESliderEventType 滑动条事件
+Enums.ESliderEventType = {
+	ValueChanged = 1,  ---滑动事件
+	Pressed = 2,  ---按下事件
+	Released = 3,  ---抬手事件
 }
 
 ---@enum Enums.EquipmentSlotType 物品槽位类型
@@ -1019,6 +1036,9 @@ Enums.ValueType = {
 	ENode = 'ENode',  ---UI节点
 	ENodeTouchEventType = 'ENodeTouchEventType',  ---界面交互事件类型
 	EProgressbar = 'EProgressbar',  ---UI进度条节点
+	ESlider = 'ESlider',  ---UI滑动条节点
+	ESliderDirection = 'ESliderDirection',  ---滑动条方向
+	ESliderEventType = 'ESliderEventType',  ---滑动条事件
 	ETextHAlignment = 'ETextHAlignment',  ---文本水平对齐
 	ETextVAlignment = 'ETextVAlignment',  ---文本垂直对齐
 	EmojiKey = 'EmojiKey',  ---气泡表情编号
@@ -1110,6 +1130,9 @@ Enums.ValueType = {
 	ListENode = 'ListENode',  ---UI节点列表
 	ListENodeTouchEventType = 'ListENodeTouchEventType',  ---界面交互事件类型列表
 	ListEProgressbar = 'ListEProgressbar',  ---UI进度条节点列表
+	ListESlider = 'ListESlider',  ---UI滑动条节点列表
+	ListESliderDirection = 'ListESliderDirection',  ---滑动条方向列表
+	ListESliderEventType = 'ListESliderEventType',  ---滑动条事件列表
 	ListETextHAlignment = 'ListETextHAlignment',  ---文本水平对齐列表
 	ListETextVAlignment = 'ListETextVAlignment',  ---文本垂直对齐列表
 	ListEmojiKey = 'ListEmojiKey',  ---气泡表情编号列表
@@ -1162,6 +1185,7 @@ Enums.ValueType = {
 	ListRoleID = 'ListRoleID',  ---玩家ID列表
 	ListSfxID = 'ListSfxID',  ---特效ID列表
 	ListSfxKey = 'ListSfxKey',  ---特效编号列表
+	ListShadowQuality = 'ListShadowQuality',  ---阴影质量列表
 	ListSheetID = 'ListSheetID',  ---表格列表
 	ListSkeleton = 'ListSkeleton',  ---骨骼列表
 	ListSkinId = 'ListSkinId',  ---皮肤 ID列表
@@ -1215,6 +1239,7 @@ Enums.ValueType = {
 	RoleID = 'RoleID',  ---玩家ID
 	SfxID = 'SfxID',  ---特效ID
 	SfxKey = 'SfxKey',  ---特效编号
+	ShadowQuality = 'ShadowQuality',  ---阴影质量
 	SheetID = 'SheetID',  ---表格
 	Skeleton = 'Skeleton',  ---骨骼
 	SkinId = 'SkinId',  ---皮肤 ID
@@ -3252,6 +3277,16 @@ function GameAPI.create_eui_progress_at_position(_progress_bar_style_key, _paren
 ---@param _name string 名称
 ---@return ENode 环形进度条节点
 function GameAPI.create_eui_progresstimer_at_position(_progress_timer_style_key, _parent, _x, _y, _width, _height, _name) end
+
+---创建滑动条节点
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@return ESlider 滑动条节点
+function GameAPI.create_eui_slider_at_position(_parent, _x, _y, _width, _height, _name) end
 
 ---创建硬连接关节
 ---@param _unit1 Unit 连接主体
@@ -6800,6 +6835,66 @@ function Role.set_role_ctrl_enabled(_enable) end
 ---@param _score integer 积分
 function Role.set_score(_score) end
 
+---设置滑动条方向
+---@param _node ESlider 滑动条
+---@param _value Enums.ESliderDirection 方向
+function Role.set_slider_direction(_node, _value) end
+
+---设置滑动条禁用
+---@param _node ESlider 滑动条
+---@param _value boolean 禁用
+function Role.set_slider_disabled(_node, _value) end
+
+---设置滑动条滑块禁用图片
+---@param _node ESlider 滑动条
+---@param _image ImageKey 图片
+function Role.set_slider_handle_disabled_image(_node, _image) end
+
+---设置滑动条滑块常态图片
+---@param _node ESlider 滑动条
+---@param _image ImageKey 图片
+function Role.set_slider_handle_image(_node, _image) end
+
+---设置滑动条滑块按下图片
+---@param _node ESlider 滑动条
+---@param _image ImageKey 图片
+function Role.set_slider_handle_pressed_image(_node, _image) end
+
+---设置滑动条最大值
+---@param _node ESlider 滑动条
+---@param _value Fixed 最大值
+function Role.set_slider_max_value(_node, _value) end
+
+---设置滑动条最小值
+---@param _node ESlider 滑动条
+---@param _value Fixed 最小值
+function Role.set_slider_min_value(_node, _value) end
+
+---设置滑动条实际数值
+---@param _node ESlider 滑动条
+---@param _value Fixed 实际数值
+function Role.set_slider_progress(_node, _value) end
+
+---设置滑动条填充图片
+---@param _node ESlider 滑动条
+---@param _image ImageKey 图片
+function Role.set_slider_progress_image(_node, _image) end
+
+---设置滑动条启用范围
+---@param _node ESlider 滑动条
+---@param _value boolean 启用范围
+function Role.set_slider_range_enabled(_node, _value) end
+
+---设置滑动条步长
+---@param _node ESlider 滑动条
+---@param _value Fixed 步长
+function Role.set_slider_step(_node, _value) end
+
+---设置滑动条轨道图片
+---@param _node ESlider 滑动条
+---@param _image ImageKey 图片
+function Role.set_slider_track_image(_node, _image) end
+
 ---设置付费道具商店可见性
 ---@param _visible boolean 可见性
 ---@deprecated
@@ -8388,6 +8483,25 @@ function VirtualEquipment.set_name(_name) end
 ---@see Equipment.set_usable
 function VirtualEquipment.set_usable(_usable) end
 
+---@class VirtualUnit
+VirtualUnit = {}
+
+---获取动态光阴影开关
+---@return boolean 是否开启阴影
+function VirtualUnit.get_dynamic_light_shadow_enabled() end
+
+---获取动态光阴影质量
+---@return ShadowQuality 阴影质量
+function VirtualUnit.get_dynamic_light_shadow_quality() end
+
+---设置动态光阴影开关
+---@param _enable boolean 是否开启阴影
+function VirtualUnit.set_dynamic_light_shadow_enabled(_enable) end
+
+---设置动态光阴影质量
+---@param _quality ShadowQuality 阴影质量
+function VirtualUnit.set_dynamic_light_shadow_quality(_quality) end
+
 ---@class EVENT
 EVENT = {}
 
@@ -8884,6 +8998,22 @@ LuaAPI.global_register_trigger_event({EVENT.EUI_NODE_TOUCH_EVENT, _node, _touch_
 end)
 --]]
 EVENT.EUI_NODE_TOUCH_EVENT = "EUI_NODE_TOUCH_EVENT"
+
+---UI_EGGITOR_SLIDER_EVENT
+---事件主体 Default 多类型
+---注册参数 _node ESlider 滑条
+---注册参数 _phase Enums.ESliderEventType 事件类型
+---事件回调参数 role Role 触发事件的玩家
+---事件回调参数 eui_node_id ESlider 滑条
+---事件回调参数 progress Fixed 数值
+--[[
+LuaAPI.global_register_trigger_event({EVENT.EUI_SLIDER_EVENT, _node, _phase}, function(event_name, actor, data)
+	print(data.role)
+	print(data.eui_node_id)
+	print(data.progress)
+end)
+--]]
+EVENT.EUI_SLIDER_EVENT = "EUI_SLIDER_EVENT"
 
 ---游戏结束
 ---事件主体 Global 全局触发器
