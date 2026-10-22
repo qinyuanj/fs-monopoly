@@ -12,6 +12,7 @@ local ui_view = require("src.ui.coord.ui_runtime")
 local item_atlas = require("src.ui.screens.item_atlas")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
 local skin_nodes = require("src.ui.schema.skin")
+local gift_code_nodes = require("src.ui.schema.gift_code")
 local view_command_ports = require("src.ui.ports.view_command")
 local route_popup = require("src.ui.input.route_popup")
 local event_actor_policy = require("src.ui.coord.event_actor_policy")
@@ -437,6 +438,16 @@ it("test_closing_broadcast_popup_restores_bystander_to_previous_panel", function
   end)
   _assert_eq(_last_switch_target(skin_switches, 2), skin_nodes.canvas,
     "closing broadcast popup should restore bystander to skin panel canvas")
+
+  -- 礼包码屏(#195 review):同属「开着就回」的面板,收屏不能把人拽回基础屏。
+  local gift_code_state = _make_state()
+  gift_code_state.ui.gift_code = { open = true, role_id = 2 }
+  local gift_code_switches = _run_with_role_fanout(_make_roles(2), nil, function()
+    _push_broadcast_chance(gift_code_state)
+    popup_presenter.close_popup(gift_code_state)
+  end)
+  _assert_eq(_last_switch_target(gift_code_switches, 2), gift_code_nodes.canvas,
+    "closing broadcast popup should restore bystander to the gift code screen canvas")
 end)
 
 it("test_bystander_return_canvas_reresolves_at_close_time", function()

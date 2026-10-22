@@ -18,6 +18,7 @@ local tip_queue = require("src.foundation.tips")
 local host_events = require("src.ui.seams.host_events")
 local gift_code_port = require("src.ui.seams.gift_code")
 local gift_code_screen = require("src.ui.screens.gift_code")
+local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
 local redeem = require("src.app.gift_code.redeem")
 local transaction = require("src.app.cosmetics.transaction")
 local skin_archive = require("src.app.cosmetics.skin_archive")
@@ -313,6 +314,22 @@ describe("TestGiftCodeScreen", function()
     luassert.is_function(releases[1], "the active tip should hold a scheduled release")
     releases[1]()
     luassert.same({ "兑换码无效" }, _tips_for(world, 1), "no second copy should surface after release")
+  end)
+
+  -- 弹窗收屏/黑市开屏的 per-role 回屏按 canvas_coordinator 的面板态重解析
+  -- (#583 分道):礼包码屏开着时必须解析为「开着的人的礼包码 canvas」,
+  -- 否则广播弹窗收起后玩家被错误拽回基础屏(#195 review)。
+  it("test_the_open_screen_resolves_as_the_role_s_panel_canvas_until_cancel", function()
+    _click(state, world, ENTRY, 1)
+
+    _assert_eq(canvas_coordinator.resolve_role_panel_canvas(state.ui, 1), "礼包码屏",
+      "an open gift code screen should resolve as the clicker's panel canvas")
+    luassert.is_nil(canvas_coordinator.resolve_role_panel_canvas(state.ui, 2),
+      "a player without the screen open should have no panel canvas")
+
+    _click(state, world, CANCEL, 1)
+    luassert.is_nil(canvas_coordinator.resolve_role_panel_canvas(state.ui, 1),
+      "after cancel the role should no longer resolve to the gift code canvas")
   end)
 
   it("test_decoration_nodes_have_no_click_routes", function()

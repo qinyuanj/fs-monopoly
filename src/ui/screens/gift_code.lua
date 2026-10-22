@@ -46,9 +46,13 @@ local function _clear_input_field()
   node_ops.set_text(nil, gift_code_nodes.input_field, "")
 end
 
+-- open 记录 open/role_id:弹窗收屏与黑市开屏的 per-role 回屏按
+-- canvas_coordinator 的面板态重解析(#583 分道),不记录会被拽回基础屏。
 function gift_code.open(state, role_id)
   local screen = _ensure(state)
   screen.input_by_role[role_id_utils.normalize(role_id) or "?"] = nil
+  screen.open = true
+  screen.role_id = role_id
   canvas.switch_by_role_id(state.ui, gift_code_nodes.canvas, role_id)
   panel_helpers.with_owner_role(state, role_id, _clear_input_field)
   return screen
@@ -56,6 +60,7 @@ end
 
 function gift_code.close(state, role_id)
   local screen = _ensure(state)
+  screen.open = false
   canvas.switch_by_role_id(state.ui, base_nodes.canvas, role_id)
   return screen
 end
@@ -142,5 +147,12 @@ function gift_code.bind_input(state)
   end
   return true
 end
+
+local panel_interrupt = require("src.ui.state.panel_interrupt")
+-- screen registry 只有进程级注册、没有卸载生命周期；模块热重载时由固定键
+-- 覆盖旧 closer，避免保留旧模块闭包，也无需伪造 screen 实例注销点。
+panel_interrupt.register_panel_closer("gift_code", function(state, role_id)
+  gift_code.close(state, role_id)
+end)
 
 return gift_code
