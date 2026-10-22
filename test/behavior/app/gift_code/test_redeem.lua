@@ -134,6 +134,21 @@ describe("TestGiftCodeRedeem", function()
     _assert_eq(transaction.owns_product(reentered, 1, NAILONG), true, "skin should be owned after re-entry")
   end)
 
+  -- #195 review:提示里的皮肤名与发放路径(grant_ownership → 皮肤目录)同一份
+  -- 真源,不另扫一份静态 skins 配置——目录被换(测试定制)时提示要跟发放的一致。
+  it("test_the_message_names_the_skin_from_the_same_catalog_that_granted_it", function()
+    _install_host()
+    transaction.configure_catalog_for_tests({
+      { order = 1, product_id = NAILONG, name = "测试奶龙", price = 1, archive_key = NAILONG_KEY },
+    })
+
+    local result = redeem.redeem(_state(), 1, "EGG2026")
+
+    _assert_eq(result.status, "granted", "sanity: the code should still redeem")
+    luassert.truthy(result.message:find("测试奶龙", 1, true),
+      "the message should name the skin from the granting catalog, got: " .. result.message)
+  end)
+
   it("test_input_ignores_surrounding_spaces_and_letter_case", function()
     _install_host()
 

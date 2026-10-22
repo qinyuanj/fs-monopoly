@@ -13,8 +13,9 @@ local logger = require("src.foundation.log")
 local number_utils = require("src.foundation.number")
 local gift_codes = require("src.config.content.gift_codes")
 local gift_code_catalog = require("src.config.content.gift_code_catalog")
-local skins = require("src.config.content.skins")
+local redeem_record = require("src.app.gift_code.redeem_record")
 local transaction = require("src.app.cosmetics.transaction")
+local transaction_state = require("src.app.cosmetics.transaction_state")
 
 local redeem = {}
 
@@ -50,33 +51,6 @@ local function _expired(entry)
   return now > entry.expires_at
 end
 
-local function _parse_record(text)
-  local ids = {}
-  for token in string.gmatch(text, "[^,]+") do
-    local id = number_utils.to_integer(token)
-    if id ~= nil then
-      ids[#ids + 1] = id
-    end
-  end
-  return ids
-end
-
-local function _contains(ids, id)
-  for _, value in ipairs(ids) do
-    if value == id then
-      return true
-    end
-  end
-  return false
-end
-
-local function _append_record(record_text, id)
-  if record_text == "" then
-    return tostring(id)
-  end
-  return record_text .. "," .. tostring(id)
-end
-
 local function _write_record(role_id, text)
   local key = gift_codes.redeem_record_archive_key
   if runtime_ports.set_archive_str(role_id, key, text) ~= true then
@@ -85,13 +59,14 @@ local function _write_record(role_id, text)
   return runtime_ports.get_archive_str(role_id, key) == text
 end
 
+-- 皮肤名与发放路径同一份目录(#195 review):grant_ownership 按
+-- transaction_state.skin_by_product 解析皮肤,提示不另扫一份静态 skins。
 local function _skin_names(product_ids)
   local names = {}
   for _, product_id in ipairs(product_ids) do
-    for _, skin in ipairs(skins) do
-      if skin.product_id == product_id then
-        names[#names + 1] = skin.name
-      end
+    local skin = transaction_state.skin_by_product(product_id)
+    if skin ~= nil and skin.name ~= nil then
+      names[#names + 1] = skin.name
     end
   end
   return table.concat(names, "、")
@@ -130,7 +105,7 @@ local function _read_record(role_id, entry)
     _warn("redeem record unreadable", role_id, entry)
     return nil, _result("archive_unavailable")
   end
-  if _contains(_parse_record(text), entry.id) then
+  if redeem_record.contains(redeem_record.parse(text), entry.id) then
     return nil, _result("already_redeemed")
   end
   return text, nil
@@ -147,7 +122,7 @@ local function _grant_and_record(state, role_id, entry, record_text)
     _warn("skin ownership write failed, record not written", role_id, entry)
     return _result("write_failed", granted)
   end
-  if not _write_record(role_id, _append_record(record_text, entry.id)) then
+  if not _write_record(role_id, redeem_record.append(record_text, entry.id)) then
     _warn("redeem record write failed", role_id, entry, "record=" .. tostring(record_text))
     return _result("write_failed", granted)
   end
