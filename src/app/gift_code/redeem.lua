@@ -7,7 +7,7 @@
 -- 写档(ADR 0074 第 1 条,不另开归属真源)。
 -- 顺序:存档不可用直接拒绝(不读不写)→ 查码 → 过期 → 读兑换记录 → 发放未拥有
 -- 皮肤 → 追加兑换记录并回读核对。记录写档失败不撤销已发归属(ADR 0074 第 3 条),
--- 重试时这些皮肤按已拥有跳过;皮肤归属写档失败则不写记录,留给重试补发。
+-- 重试时这些皮肤按已拥有跳过;皮肤归属写档失败则不写记录,留给重试时发放。
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local logger = require("src.foundation.log")
 local number_utils = require("src.foundation.number")
