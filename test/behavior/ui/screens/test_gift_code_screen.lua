@@ -20,6 +20,7 @@ local host_events = require("src.ui.seams.host_events")
 local gift_code_port = require("src.ui.seams.gift_code")
 local gift_code_screen = require("src.ui.screens.gift_code")
 local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
+local panel_interrupt = require("src.ui.state.panel_interrupt")
 local redeem = require("src.app.gift_code.redeem")
 local transaction = require("src.app.cosmetics.transaction")
 local skin_archive = require("src.app.cosmetics.skin_archive")
@@ -331,6 +332,20 @@ describe("TestGiftCodeScreen", function()
     _click(state, world, CANCEL, 1)
     luassert.is_nil(canvas_coordinator.resolve_role_panel_canvas(state.ui, 1),
       "after cancel the role should no longer resolve to the gift code canvas")
+  end)
+
+  -- #202:黑市开屏清场不再收礼包码屏。屏保持开着,也就不发「隐藏礼包码屏」
+  -- 事件;操作者收屏后按面板态回到自己的礼包码 canvas。
+  it("test_market_open_keeps_the_screen_and_emits_no_hide_event", function()
+    _click(state, world, ENTRY, 1)
+    state.ui.market_active = true
+    state.ui.current_action_role_id = 1
+
+    panel_interrupt.interrupt(state)
+
+    luassert.is_true(state.ui.gift_code.open, "market open must not close the gift code screen")
+    _assert_eq(_count(world.roles["1"].events, HIDE_SCREEN), 0,
+      "an open gift code screen must not be hidden when the market opens")
   end)
 
   -- 键口径钉(#195 review):输入事件(data.role)与确认点击(intent 行动者)

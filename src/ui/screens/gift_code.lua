@@ -163,11 +163,4 @@ function gift_code.bind_input(state)
   return true
 end
 
-local panel_interrupt = require("src.ui.state.panel_interrupt")
--- screen registry 只有进程级注册、没有卸载生命周期；模块热重载时由固定键
--- 覆盖旧 closer，避免保留旧模块闭包，也无需伪造 screen 实例注销点。
-panel_interrupt.register_panel_closer("gift_code", function(state, role_id)
-  gift_code.close(state, role_id)
-end)
-
 return gift_code
