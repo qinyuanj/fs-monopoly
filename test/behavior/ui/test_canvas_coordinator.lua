@@ -2,10 +2,12 @@
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 -- canvas_coordinator.lua 直测:覆盖调试画布路径、choice 画布解析、
--- switch_for_role 角色解析分支、switch_by_role_id nil ui 守卫。
+-- switch_for_role 角色解析分支、switch_by_role_id nil ui 守卫,
+-- 以及收屏回屏共用的 role/global 分发与面板回屏回落。
 
 local coordinator = require("src.ui.coord.canvas_coordinator")
 local ui_events = require("src.ui.coord.ui_events")
+local gift_code_nodes = require("src.ui.schema.gift_code")
 
 describe("TestCanvasCoordinator", function()
 
@@ -254,6 +256,51 @@ it("test_switch_by_role_id_falls_back_when_no_role_resolved", function()
     _has_event(calls, ui_events.show[coordinator.CANVAS_BASE]),
     "fallback to switch should broadcast the base canvas show event"
   )
+end)
+
+-- switch_role_or_global: 有角色对象时按角色发
+it("test_switch_role_or_global_sends_to_the_role", function()
+  local role = {
+    get_roleid = function() return 1 end,
+    send_ui_custom_event = function(_, _) end,
+  }
+  local send, calls = _spy_sender()
+  local orig_send = ui_events.send_to_role
+  ui_events.send_to_role = send
+
+  coordinator.switch_role_or_global({}, coordinator.CANVAS_BASE, role)
+
+  ui_events.send_to_role = orig_send
+
+  luassert.truthy(
+    _has_event(calls, ui_events.show[coordinator.CANVAS_BASE], 2),
+    "with a role the canvas switch must be sent per role"
+  )
+end)
+
+-- switch_role_or_global: 无角色(全局扇出)时广播
+it("test_switch_role_or_global_broadcasts_without_a_role", function()
+  local send, calls = _spy_sender()
+  local orig_send = ui_events.send_to_all
+  ui_events.send_to_all = send
+
+  coordinator.switch_role_or_global({}, coordinator.CANVAS_BASE, nil)
+
+  ui_events.send_to_all = orig_send
+
+  luassert.truthy(
+    _has_event(calls, ui_events.show[coordinator.CANVAS_BASE]),
+    "without a role the canvas switch must broadcast to everyone"
+  )
+end)
+
+-- resolve_role_panel_canvas_or_base: 开着面板回面板 canvas,没开回基础屏
+it("test_resolve_role_panel_canvas_or_base_falls_back_to_base", function()
+  local ui = { gift_code = { open = true, role_id = 2 } }
+  luassert.is.equal(gift_code_nodes.canvas,
+    coordinator.resolve_role_panel_canvas_or_base(ui, 2))
+  luassert.is.equal(coordinator.CANVAS_BASE,
+    coordinator.resolve_role_panel_canvas_or_base(ui, 1))
 end)
 
 end)

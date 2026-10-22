@@ -318,6 +318,33 @@ describe("TestPopupModal", function()
       "bystander without an open panel should fall back to base canvas")
   end)
 
+  -- #202:礼包码屏不再注册 panel_interrupt 的 closer——操作者本人的礼包码屏
+  -- 黑市开屏时保持开着(不再被清场收掉),操作者照常进黑市屏。
+  it("test_open_market_panel_keeps_the_operator_s_gift_code_screen_open", function()
+    local canvas = require("src.ui.coord.canvas_coordinator")
+    local state, switches = _run_open_market_panel({
+      current_action_role_id = 1,
+      gift_code = { open = true, role_id = 1 },
+    })
+
+    _assert_eq(state.ui.gift_code.open, true,
+      "market open must not close the operator's gift code screen")
+    _assert_eq(_switch_target_for(switches, 1), canvas.CANVAS_MARKET,
+      "the operator still lands on the market canvas")
+  end)
+
+  -- #202:旁观者开着礼包码屏时黑市开屏,留在礼包码 canvas(#583 面板回屏口径)。
+  it("test_open_market_panel_keeps_gift_code_bystander_on_its_canvas", function()
+    local gift_code_nodes = require("src.ui.schema.gift_code")
+    local _, switches = _run_open_market_panel({
+      current_action_role_id = 1,
+      gift_code = { open = true, role_id = 2 },
+    })
+
+    _assert_eq(_switch_target_for(switches, 2), gift_code_nodes.canvas,
+      "bystander with the gift code screen open should stay on the gift code canvas")
+  end)
+
   it("test_event_log_ports_sync_restores_client_role_nil", function()
     local ui_event_state = require("src.ui.coord.event_state")
     local ui_view_service = require("src.ui.coord.ui_runtime")

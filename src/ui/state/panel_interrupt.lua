@@ -156,7 +156,8 @@ function panel_interrupt.interrupt(state)
   end
   _close_open_role_panel(state, ui, "item_atlas")
   _close_open_role_panel(state, ui, "skin_panel")
-  _close_open_role_panel(state, ui, "gift_code")
+  -- #202:礼包码屏不随黑市开屏收屏(不注册 closer):操作者进黑市,收屏后按
+  -- per-role 面板口径回到自己的礼包码屏;旁观者留在礼包码 canvas。
   _close_visible_event_logs(state, ui)
 end
 

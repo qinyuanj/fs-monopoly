@@ -664,6 +664,72 @@ it("test_route_popup_falls_back_to_static_nodes_when_screen_absent", function()
     "without popup_screen the route should fall back to the static dismiss nodes")
 end)
 
+it("test_广播弹窗收起且下一屏为基础屏时操作者回到自己的面板", function()
+  -- #202:弹窗收起解析出的下一屏是基础屏时,操作者本人不再被拽回基础屏,
+  -- 而是回到自己开着的面板 canvas(#583 per-role 口径);没开面板才真回基础屏。
+  local state = _make_state()
+  state.ui.current_action_role_id = 1
+  state.ui.gift_code = { open = true, role_id = 1 }
+  local switches = _run_with_role_fanout(_make_roles(2), nil, function()
+    _push_broadcast_chance(state)
+    popup_presenter.close_popup(state)
+  end)
+  _assert_eq(_last_switch_target(switches, 1), gift_code_nodes.canvas,
+    "the operator should return to their own open panel, not the base canvas")
+
+  local panelless = _make_state()
+  panelless.ui.current_action_role_id = 1
+  local panelless_switches = _run_with_role_fanout(_make_roles(2), nil, function()
+    _push_broadcast_chance(panelless)
+    popup_presenter.close_popup(panelless)
+  end)
+  _assert_eq(_last_switch_target(panelless_switches, 1), canvas.CANVAS_BASE,
+    "an operator without any open panel must still fall back to the base canvas")
+end)
+
+it("test_下一屏是选择屏或骰子屏时不被操作者面板覆盖", function()
+  -- #202:下一屏解析为选择屏 / 骰子屏时保持原逻辑,操作者面板不抢这些屏。
+  local choice_state = _make_state()
+  choice_state.ui.current_action_role_id = 1
+  choice_state.ui.gift_code = { open = true, role_id = 1 }
+  choice_state.ui.choice_active = true
+  choice_state.ui.active_choice_screen_key = "player"
+  local choice_switches = _run_with_role_fanout(_make_roles(2), nil, function()
+    _push_broadcast_chance(choice_state)
+    popup_presenter.close_popup(choice_state)
+  end)
+  _assert_eq(_last_switch_target(choice_switches, 1), canvas.CANVAS_PLAYER_CHOICE,
+    "a live choice screen must win over the operator's panel canvas")
+
+  local dice_state = _make_state()
+  dice_state.ui.current_action_role_id = 1
+  dice_state.ui.gift_code = { open = true, role_id = 1 }
+  dice_state.game.turn = { phase = "wait_action_anim", action_anim = { kind = "roll" } }
+  local dice_switches = _run_with_role_fanout(_make_roles(2), nil, function()
+    _push_broadcast_chance(dice_state)
+    popup_presenter.close_popup(dice_state)
+  end)
+  _assert_eq(_last_switch_target(dice_switches, 1), require("src.ui.schema.dice").canvas,
+    "the dice canvas during a roll action anim must win over the operator's panel canvas")
+end)
+
+it("test_破产弹窗收起时旁观者不跟随操作者的面板", function()
+  -- #202:操作者面板回屏只按操作者身份生效。破产弹窗的 target 对全员生效,
+  -- 不能在收起时把旁观者也切到操作者的礼包码 canvas。
+  local state = _make_state()
+  state.ui.current_action_role_id = 1
+  state.ui.gift_code = { open = true, role_id = 1 }
+  local switches = _run_with_role_fanout(_make_roles(2), nil, function()
+    popup_presenter.push_popup(state, { kind = "bankruptcy", text = "破产测试" })
+    popup_presenter.close_popup(state)
+  end)
+
+  _assert_eq(_last_switch_target(switches, 1), gift_code_nodes.canvas,
+    "the operator should return to their own open panel")
+  _assert_eq(_last_switch_target(switches, 2), canvas.CANVAS_BASE,
+    "the bystander must not follow the operator into their panel canvas")
+end)
+
 it("test_choice_close_returns_excluded_buyer_to_base_canvas", function()
   -- #604 黑市收屏滞留回归:买家在广播弹窗存活期关闭黑市,收屏走弹窗分支,
   -- 排除口径若整体跳过买家,「隐藏黑市屏」事件永远不发,客户端屏滞留到

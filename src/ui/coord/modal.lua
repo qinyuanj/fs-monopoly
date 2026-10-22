@@ -42,7 +42,10 @@ local function _switch_canvas_after_choice_close(state, ui)
     popup.switch_popup_canvas(state, ui.popup_kind or "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE, { excluded_return = true })
     return
   end
-  choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
+  -- #202:收屏回 per-role 面板态(#583):开着图鉴 / 皮肤 / 礼包码屏的角色回自己
+  -- 的面板 canvas,都没开才回基础屏。开屏路径(base_inline / item_phase_passive)
+  -- 仍走 switch_modal_canvas 切基础屏,不共用本条。
+  choice_common.switch_to_role_panels(state)
 end
 
 -- 只有「这个 route 自己的屏已经开着」才算重复开屏。判定必须和 choice_state 的
@@ -67,6 +70,13 @@ local function _close_or_reset_inline_choice(state)
   pending_confirmation.reset_item_phase_confirmed(state)
   if state.ui.choice_active then
     modal_presenter.close_choice_modal(state)
+    -- #202 review:收屏回的是 per-role 面板态,开着图鉴 / 皮肤 / 礼包码屏的角色
+    -- 会留在面板 canvas;而 base_inline 的内联选项住在基础屏,不收回来就会被
+    -- 面板盖住。这是开屏路径(不是收屏),须显式切基础屏;弹窗存活时回屏归
+    -- popup canvas,不去抢。
+    if state.ui.popup_active ~= true then
+      choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
+    end
     return
   end
   modal_state.close_choice(state)

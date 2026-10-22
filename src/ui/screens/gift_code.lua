@@ -4,8 +4,10 @@
 -- screens_registry 的说明)。入口按钮住基础屏(route_base 发 open_gift_code_screen)。
 -- 宿主没有读取输入框文本的接口:监听「输入框输入完成」事件按玩家缓存最近一次输入,
 -- 点确认时把缓存交给兑换门面(经 seams/gift_code 注入),没有缓存按空输入处理;
--- 开屏时清空输入框并清掉该玩家的缓存。结果提示文本取门面返回值,按玩家入队,
--- 接线层不另写文案、屏内不加结果节点;兑换后屏不关闭,点取消关闭。
+-- 开屏时把该玩家的草稿回填进输入框(无草稿写空串),点取消才清掉草稿与输入框
+-- (#201:取消 = 明确放弃,是唯一清草稿的路径;被打断或兑换后重开都保留草稿)。
+-- 结果提示文本取门面返回值,按玩家入队,接线层不另写文案、屏内不加结果节点;
+-- 兑换后屏不关闭,点取消关闭。草稿只活在本局内存,不写存档。
 local append_intent_spec = require("src.ui.input.route_specs")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
@@ -42,34 +44,43 @@ end
 
 -- ===== 开关屏 =====
 
--- 缓存键单一口径(#195 review):输入缓存、开屏清理、确认读取都经同一
+-- 缓存键单一口径(#195 review):输入缓存、开屏回填、取消清理、确认读取都经同一
 -- 归一化函数——入缓存的玩家和确认的玩家是同一个键(测试按字符串/数值
 -- 两种 id 表示钉住)。未解析出玩家时不落键,不再用 "?" 哨兵桶。
 local function _role_key(role_id)
   return role_id_utils.normalize(role_id)
 end
 
-local function _clear_input_field()
-  node_ops.set_text(nil, gift_code_nodes.input_field, "")
+local function _write_input_field(state, role_id, text)
+  panel_helpers.with_owner_role(state, role_id, function()
+    node_ops.set_text(nil, gift_code_nodes.input_field, text or "")
+  end)
 end
 
 -- open 记录 open/role_id:弹窗收屏与黑市开屏的 per-role 回屏按
 -- canvas_coordinator 的面板态重解析(#583 分道),不记录会被拽回基础屏。
+-- 开屏只回填草稿,不清缓存(#201):未点取消的输入在重开时仍在。
 function gift_code.open(state, role_id)
+  local screen = _ensure(state)
+  local key = _role_key(role_id)
+  local draft = key ~= nil and screen.input_by_role[key] or nil
+  screen.open = true
+  screen.role_id = role_id
+  canvas.switch_by_role_id(state.ui, gift_code_nodes.canvas, role_id)
+  _write_input_field(state, role_id, draft)
+  return screen
+end
+
+-- 取消 = 明确放弃:清掉该玩家草稿与输入框,再收屏。唯一清草稿的路径。
+-- 收屏只动 open 与 canvas,不动草稿;#202 起黑市开屏不再经此收屏(礼包码屏不注册
+-- panel_interrupt closer),所以“收屏但保留草稿”只有取消一条路。
+function gift_code.cancel(state, role_id)
   local screen = _ensure(state)
   local key = _role_key(role_id)
   if key ~= nil then
     screen.input_by_role[key] = nil
   end
-  screen.open = true
-  screen.role_id = role_id
-  canvas.switch_by_role_id(state.ui, gift_code_nodes.canvas, role_id)
-  panel_helpers.with_owner_role(state, role_id, _clear_input_field)
-  return screen
-end
-
-function gift_code.close(state, role_id)
-  local screen = _ensure(state)
+  _write_input_field(state, role_id, "")
   screen.open = false
   canvas.switch_by_role_id(state.ui, base_nodes.canvas, role_id)
   return screen
@@ -103,7 +114,7 @@ end
 
 local _ACTIONS = {
   confirm = gift_code.confirm,
-  cancel = gift_code.close,
+  cancel = gift_code.cancel,
 }
 
 function gift_code.handle_action(state, action, role_id)
@@ -162,12 +173,5 @@ function gift_code.bind_input(state)
   end
   return true
 end
-
-local panel_interrupt = require("src.ui.state.panel_interrupt")
--- screen registry 只有进程级注册、没有卸载生命周期；模块热重载时由固定键
--- 覆盖旧 closer，避免保留旧模块闭包，也无需伪造 screen 实例注销点。
-panel_interrupt.register_panel_closer("gift_code", function(state, role_id)
-  gift_code.close(state, role_id)
-end)
 
 return gift_code

@@ -131,9 +131,9 @@ it("test_acting_player_s_market_closes_atlas_skin_panel_and_only_the_acting_role
   luassert.truthy(event_log_view.is_open(s, 2) == true, "role 2 event log should remain open")
 end)
 
--- 礼包码屏(#195 review)与图鉴/皮肤面板同口径:本人黑市清场要关掉,
--- 否则 open 旗标残留,之后弹窗收屏会把人错误拽回已不在的礼包码 canvas。
-it("test_acting_player_s_market_closes_an_open_gift_code_screen", function()
+-- #202:礼包码屏不再注册 panel_interrupt 的 closer——黑市开屏不收礼包码屏,
+-- 操作者收屏后回到自己的礼包码屏(per-role 回屏口径),旁观者留在礼包码 canvas。
+it("test_acting_player_s_market_keeps_an_open_gift_code_screen", function()
   local s = _make_state()
   gift_code_screen.open(s, 1)
   luassert.truthy(s.ui.gift_code.open == true, "precondition: gift code screen is open")
@@ -142,7 +142,7 @@ it("test_acting_player_s_market_closes_an_open_gift_code_screen", function()
 
   panel_interrupt.interrupt(s)
 
-  luassert.truthy(s.ui.gift_code.open == false, "market interrupt should close the gift code screen")
+  luassert.truthy(s.ui.gift_code.open == true, "market interrupt must not close the gift code screen")
 end)
 
 it("test_other_player_s_market_keeps_the_gift_code_screen_open", function()

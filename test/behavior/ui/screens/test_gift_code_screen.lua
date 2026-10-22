@@ -20,6 +20,10 @@ local host_events = require("src.ui.seams.host_events")
 local gift_code_port = require("src.ui.seams.gift_code")
 local gift_code_screen = require("src.ui.screens.gift_code")
 local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
+local gift_code_nodes = require("src.ui.schema.gift_code")
+local panel_interrupt = require("src.ui.state.panel_interrupt")
+local modal_presenter = require("src.ui.coord.modal")
+local runtime_state = require("src.ui.state.runtime")
 local redeem = require("src.app.gift_code.redeem")
 local transaction = require("src.app.cosmetics.transaction")
 local skin_archive = require("src.app.cosmetics.skin_archive")
@@ -62,6 +66,17 @@ local function _count(list, value)
     end
   end
   return n
+end
+
+-- 事件流中最后一次出现的下标;0 表示没有出现过。
+local function _last_index(list, value)
+  local found = 0
+  for i, item in ipairs(list) do
+    if item == value then
+      found = i
+    end
+  end
+  return found
 end
 
 -- 宿主世界替身:两名玩家、内存存档(Int + Str)、按 role 记录输入框写入与提示。
@@ -233,14 +248,63 @@ describe("TestGiftCodeScreen", function()
     luassert.same({ "兑换码无效" }, _tips_for(world, 1), "empty input should be reported as an invalid code")
   end)
 
-  it("test_reopening_the_screen_forgets_the_previous_input", function()
+  -- 草稿口径(#201,取代 #195 Story 20):取消 = 明确放弃,是唯一清草稿的路径;
+  -- 开屏不再无条件清缓存,而是按玩家回填。
+  it("test_cancel_clears_the_draft_so_reopening_forgets_the_previous_input", function()
     _click(state, world, ENTRY, 1)
     _type(world, 1, "EGG2026")
     _click(state, world, CANCEL, 1)
+    world.input_writes = {}
     _click(state, world, ENTRY, 1)
+    luassert.same({ { role_id = 1, text = "" } }, world.input_writes,
+      "reopening after cancel should refill an empty input")
     _click(state, world, CONFIRM, 1)
 
-    luassert.same({ "兑换码无效" }, _tips_for(world, 1), "input typed before reopening should not be submitted")
+    luassert.same({ "兑换码无效" }, _tips_for(world, 1), "input typed before cancel should not be submitted")
+  end)
+
+  it("test_reopening_without_cancel_refills_the_draft_and_it_still_redeems", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+
+    luassert.same({ { role_id = 1, text = "EGG2026" } }, world.input_writes,
+      "reopening without cancel should refill the player's draft")
+    _click(state, world, CONFIRM, 1)
+    luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "the refilled draft should still redeem")
+  end)
+
+  it("test_drafts_are_refilled_per_player_on_reopen", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    _click(state, world, ENTRY, 2)
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+    _click(state, world, ENTRY, 2)
+
+    luassert.same({ { role_id = 1, text = "EGG2026" }, { role_id = 2, text = "" } }, world.input_writes,
+      "each player should be refilled with their own draft only")
+  end)
+
+  -- #195 Story 23:兑换后屏不关,玩家能看清刚兑的码;草稿保留到点取消为止。
+  it("test_redeeming_keeps_the_draft_until_cancel", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    _click(state, world, CONFIRM, 1)
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+    luassert.same({ { role_id = 1, text = "EGG2026" } }, world.input_writes,
+      "redeeming should not clear the draft")
+
+    _click(state, world, CANCEL, 1)
+    luassert.same({ { role_id = 1, text = "EGG2026" }, { role_id = 1, text = "" } }, world.input_writes,
+      "cancel should blank the input field as well as the draft")
+
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+    luassert.same({ { role_id = 1, text = "" } }, world.input_writes,
+      "after cancel the draft should be gone")
   end)
 
   it("test_cancel_hides_the_screen_for_that_player", function()
@@ -331,6 +395,58 @@ describe("TestGiftCodeScreen", function()
     _click(state, world, CANCEL, 1)
     luassert.is_nil(canvas_coordinator.resolve_role_panel_canvas(state.ui, 1),
       "after cancel the role should no longer resolve to the gift code canvas")
+  end)
+
+  -- #202:黑市开屏清场不再收礼包码屏。屏保持开着,也就不发「隐藏礼包码屏」
+  -- 事件;操作者收屏后按面板态回到自己的礼包码 canvas。
+  it("test_market_open_keeps_the_screen_and_emits_no_hide_event", function()
+    _click(state, world, ENTRY, 1)
+    state.ui.market_active = true
+    state.ui.current_action_role_id = 1
+
+    panel_interrupt.interrupt(state)
+
+    luassert.is_true(state.ui.gift_code.open, "market open must not close the gift code screen")
+    _assert_eq(_count(world.roles["1"].events, HIDE_SCREEN), 0,
+      "an open gift code screen must not be hidden when the market opens")
+  end)
+
+  -- #202:选择屏 / 黑市收屏统一到 per-role 面板回屏:开着礼包码屏的角色收到
+  -- 「显示礼包码屏」,没开面板的角色收到「显示基础屏」。
+  it("test_choice_close_returns_each_role_to_its_own_canvas", function()
+    _click(state, world, ENTRY, 1)
+    local shows_before = _count(world.roles["1"].events, SHOW_SCREEN)
+
+    modal_presenter.close_choice_modal(state)
+
+    luassert.is_true(_count(world.roles["1"].events, SHOW_SCREEN) > shows_before,
+      "the role with the gift code screen open should be shown the gift code screen again")
+    _assert_eq(_count(world.roles["2"].events, SHOW_SCREEN), 0,
+      "a role without the gift code screen open should not be switched to it")
+    luassert.is_true(_count(world.roles["2"].events, "显示基础屏") >= 1,
+      "a role without any open panel should be returned to the base canvas")
+  end)
+
+  -- #202 review:base_inline 的内联选项住在基础屏。走到这条开屏路径时若已有选择屏
+  -- 要收,收屏的 per-role 面板回屏会把开着礼包码屏的操作者留在面板 canvas,随后
+  -- 开出的内联选项被面板盖住——开屏路径必须显式把角色切回基础屏。
+  -- 判据用事件顺序:最后一次「显示基础屏」必须晚于最后一次「显示礼包码屏」。
+  it("test_base_inline_open_returns_the_operator_to_the_base_canvas", function()
+    _click(state, world, ENTRY, 1)
+    state.ui.choice_active = true
+    state.ui.active_choice_screen_key = "target_pick"
+    runtime_state.set_ui_model(state, {
+      current_player_id = 1,
+      item_slots_by_player_id = { [1] = {} },
+    })
+    local events = world.roles["1"].events
+
+    modal_presenter.open_choice_modal(state, { id = 7, route_key = "base_inline" })
+
+    luassert.is_true(_last_index(events, SHOW_SCREEN) < _last_index(events, "显示基础屏"),
+      "opening a base_inline choice must leave the operator on the base canvas")
+    _assert_eq(canvas_coordinator.resolve_role_panel_canvas(state.ui, 1), gift_code_nodes.canvas,
+      "sanity: the gift code panel itself stays open, only the canvas must move")
   end)
 
   -- 键口径钉(#195 review):输入事件(data.role)与确认点击(intent 行动者)
