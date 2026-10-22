@@ -235,10 +235,16 @@ function actions.refresh_ownership(root_state, role_id)
   return archived
 end
 
+-- 纯查询(#195 review):不建 panel——会话里还没有面板缓存时归属按 false,
+-- 一次查询不得把 ui.skin_panel 造出来。
 function actions.owns_product(root_state, role_id, product_id)
-  local panel = transaction_state.ensure_panel(root_state)
+  local ui = root_state and root_state.ui or nil
+  local panel = ui and ui.skin_panel or nil
+  if type(panel) ~= "table" or type(panel.owned_by_role) ~= "table" then
+    return false
+  end
   local skin = transaction_state.skin_by_product(product_id)
-  return panel ~= nil and transaction_state.owns_skin(panel, role_id, skin)
+  return transaction_state.owns_skin(panel, role_id, skin)
 end
 
 function actions.complete_skin_purchase(root_state, role_id, product_id)

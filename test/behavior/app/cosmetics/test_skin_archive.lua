@@ -311,6 +311,17 @@ describe("TestSkinArchive", function()
     _assert_eq(result.reason, "missing_product", "rejection reason should be stable")
   end)
 
+  -- #195 review:owns_product 是纯查询,查询不能把 ui.skin_panel 建出来(副作用)。
+  it("test_owns_product_is_a_pure_query_without_creating_the_panel", function()
+    _install_archives({ seed = { [NAILONG_KEY] = 1 } })
+    local state = _state()
+
+    _assert_eq(transaction.owns_product(state, 1, NAILONG), false,
+      "before refresh_ownership the session cache is empty")
+    luassert.is_nil(state.ui.skin_panel,
+      "a pure ownership query must not create the skin panel")
+  end)
+
   it("test_refresh_ownership_reports_archived_skins_or_nil_when_disabled", function()
     _install_archives({ seed = { [CAPYBARA_KEY] = 1 } })
     local state = _state()
