@@ -472,6 +472,109 @@ it("test_get_archive_int_reads_int_archive_from_resolved_role", _test_get_archiv
 it("test_set_archive_int_writes_int_archive_on_resolved_role", _test_set_archive_int_writes_int_archive_on_resolved_role)
 end)
 
+-- #198 / ADR 0075:礼包码兑换记录存一个 Str 玩家存档 key。读不到时返回 nil
+-- (区别于「从未写过」的空串),写不成返回 false;每条降级路径都要留 warn。
+describe("TestDefaultPortsStrArchiveAccess", function()
+  local STR = 5
+  local original_enums
+  local logger = require("src.foundation.log")
+  local original_warn
+  local warns
+
+  before_each(function()
+    original_enums = _G.Enums
+    _G.Enums = { ArchiveType = { Int = 4, Str = STR } }
+    original_warn = logger.warn
+    warns = {}
+    logger.warn = function(...)
+      warns[#warns + 1] = table.concat({ ... }, " ")
+    end
+  end)
+  after_each(function()
+    _G.Enums = original_enums
+    logger.warn = original_warn
+  end)
+
+  local function _ports_with(role)
+    local ctx = { env = { GameAPI = {} }, roles = role and { role } or {} }
+    return default_ports.build({ current = function() return ctx end })
+  end
+
+  local function _role(fields)
+    fields.get_roleid = function() return 9 end
+    return fields
+  end
+
+  it("test_get_archive_str_reads_str_archive_from_resolved_role", function()
+    local seen = {}
+    local ports = _ports_with(_role({
+      get_archive_by_type = function(archive_type, key)
+        seen[#seen + 1] = { archive_type = archive_type, key = key }
+        return "3,7"
+      end,
+    }))
+
+    _assert_equal(ports.get_archive_str(9, 1056), "3,7", "get_archive_str should return the stored string")
+    _assert_equal(seen[1].archive_type, STR, "get_archive_str should request the Str archive type")
+    _assert_equal(seen[1].key, 1056, "get_archive_str should pass the key through")
+  end)
+
+  it("test_set_archive_str_writes_str_archive_on_resolved_role", function()
+    local written
+    local ports = _ports_with(_role({
+      set_archive_by_type = function(archive_type, key, value)
+        written = { archive_type = archive_type, key = key, value = value }
+      end,
+    }))
+
+    _assert_equal(ports.set_archive_str(9, 1056, "3,7"), true, "set_archive_str should report a completed host call")
+    _assert_equal(written.archive_type, STR, "set_archive_str should target the Str archive type")
+    _assert_equal(written.key, 1056, "set_archive_str should pass the key")
+    _assert_equal(written.value, "3,7", "set_archive_str should pass the value")
+  end)
+
+  it("test_str_archive_degrades_when_type_enum_is_missing", function()
+    _G.Enums = { ArchiveType = { Int = 4 } }
+    local ports = _ports_with(_role({
+      get_archive_by_type = function() return "3" end,
+      set_archive_by_type = function() end,
+    }))
+
+    _assert_equal(ports.get_archive_str(9, 1056), nil, "read without Str enum should degrade to nil")
+    _assert_equal(ports.set_archive_str(9, 1056, "3"), false, "write without Str enum should report failure")
+    _assert_equal(#warns, 2, "each degraded call should leave a warn")
+  end)
+
+  it("test_str_archive_degrades_when_host_methods_are_missing", function()
+    local ports = _ports_with(_role({}))
+
+    _assert_equal(ports.get_archive_str(9, 1056), nil, "read without host method should degrade to nil")
+    _assert_equal(ports.set_archive_str(9, 1056, "3"), false, "write without host method should report failure")
+    _assert_equal(ports.get_archive_str(404, 1056), nil, "unresolved role should degrade to nil")
+    _assert_equal(#warns, 3, "each degraded call should leave a warn")
+  end)
+
+  it("test_str_archive_degrades_when_host_raises", function()
+    local ports = _ports_with(_role({
+      get_archive_by_type = function() error("host read exploded") end,
+      set_archive_by_type = function() error("host write exploded") end,
+    }))
+
+    _assert_equal(ports.get_archive_str(9, 1056), nil, "raising host read should degrade to nil")
+    _assert_equal(ports.set_archive_str(9, 1056, "3"), false, "raising host write should report failure")
+    _assert_equal(#warns, 2, "each raising call should leave a warn")
+    _assert_equal(warns[1]:find("host read exploded", 1, true) ~= nil, true, "warn should carry the host error")
+  end)
+
+  it("test_get_archive_str_degrades_for_non_string_value", function()
+    local ports = _ports_with(_role({
+      get_archive_by_type = function() return 12 end,
+    }))
+
+    _assert_equal(ports.get_archive_str(9, 1056), nil, "non-string archive value should degrade to nil")
+  end)
+end)
+
 -- ═══════════════════════════════════════════════════════════════════════
 -- #334 / ADR 0046:mark_role_lose 保留 role.lose() 不换方法,跳过分支必留痕;
 -- call_role_die 默认接线到 role_die 宿主适配(ADR 0046)。
