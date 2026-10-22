@@ -321,7 +321,6 @@ describe("TestPopupModal", function()
   -- #202:礼包码屏不再注册 panel_interrupt 的 closer——操作者本人的礼包码屏
   -- 黑市开屏时保持开着(不再被清场收掉),操作者照常进黑市屏。
   it("test_open_market_panel_keeps_the_operator_s_gift_code_screen_open", function()
-    require("src.ui.screens.gift_code") -- 确保礼包码屏的 panel closer 装载路径被覆盖到
     local canvas = require("src.ui.coord.canvas_coordinator")
     local state, switches = _run_open_market_panel({
       current_action_role_id = 1,
