@@ -71,16 +71,9 @@ function gift_code.open(state, role_id)
   return screen
 end
 
--- 只收屏,不动草稿:取消路径最后一步收屏,重开时要能回填。#202 起黑市开屏
--- 不再经此收屏(礼包码屏不注册 panel_interrupt closer)。
-function gift_code.close(state, role_id)
-  local screen = _ensure(state)
-  screen.open = false
-  canvas.switch_by_role_id(state.ui, base_nodes.canvas, role_id)
-  return screen
-end
-
 -- 取消 = 明确放弃:清掉该玩家草稿与输入框,再收屏。唯一清草稿的路径。
+-- 收屏只动 open 与 canvas,不动草稿;#202 起黑市开屏不再经此收屏(礼包码屏不注册
+-- panel_interrupt closer),所以“收屏但保留草稿”只有取消一条路。
 function gift_code.cancel(state, role_id)
   local screen = _ensure(state)
   local key = _role_key(role_id)
@@ -88,7 +81,9 @@ function gift_code.cancel(state, role_id)
     screen.input_by_role[key] = nil
   end
   _write_input_field(state, role_id, "")
-  return gift_code.close(state, role_id)
+  screen.open = false
+  canvas.switch_by_role_id(state.ui, base_nodes.canvas, role_id)
+  return screen
 end
 
 -- ===== 兑换提交 =====
