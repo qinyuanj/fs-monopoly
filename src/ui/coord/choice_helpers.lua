@@ -55,11 +55,7 @@ function M.switch_modal_canvas(state, target_canvas)
     local current_model = runtime_state.get_ui_model(state)
     local ctx = role_context.resolve(role, current_model, { runtime = runtime })
     local canvas_target = ctx.can_operate == true and target_canvas or canvas.CANVAS_BASE
-    if role then
-      canvas.switch_for_role(ui, canvas_target, role)
-    else
-      canvas.switch(ui, canvas_target)
-    end
+    canvas.switch_role_or_global(ui, canvas_target, role)
   end)
   runtime.set_client_role(nil)
 end
@@ -67,16 +63,13 @@ end
 -- #202:收屏回屏按 #583 的 per-role 面板口径——每个角色回到自己开着的面板
 -- canvas(图鉴 / 皮肤 / 礼包码),都没开才回基础屏。与 switch_modal_canvas 分开:
 -- 那条是开屏路径(盲切目标画布),不是在收屏时按面板态分流。
+-- 全局扇出(role == nil)没有角色归属,一律回基础屏——与 popup 的 _resolve_role_id
+-- 在角色解析不到时不回面板 canvas 的口径一致,不用哨兵键去猜面板归属。
 function M.switch_to_role_panels(state)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
-    local panel_canvas = canvas.resolve_role_panel_canvas(ui, runtime.resolve_role_id(role))
-    local canvas_target = panel_canvas or canvas.CANVAS_BASE
-    if role then
-      canvas.switch_for_role(ui, canvas_target, role)
-    else
-      canvas.switch(ui, canvas_target)
-    end
+    local canvas_target = canvas.resolve_role_panel_canvas_or_base(ui, runtime.resolve_role_id(role))
+    canvas.switch_role_or_global(ui, canvas_target, role)
   end)
   runtime.set_client_role(nil)
 end

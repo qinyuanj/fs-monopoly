@@ -191,8 +191,7 @@ local function _resolve_market_open_canvas(ui, ctx, role)
   if ctx.can_operate == true then
     return canvas.CANVAS_MARKET
   end
-  local role_id = runtime.resolve_role_id(role)
-  return canvas.resolve_role_panel_canvas(ui, role_id) or canvas.CANVAS_BASE
+  return canvas.resolve_role_panel_canvas_or_base(ui, runtime.resolve_role_id(role))
 end
 
 function M.open_market_panel(state, choice, choice_id, market)

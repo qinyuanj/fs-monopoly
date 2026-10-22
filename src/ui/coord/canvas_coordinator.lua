@@ -134,6 +134,15 @@ function coordinator.switch_by_role_id(ui, target, role_id)
   end
 end
 
+-- 扇出分发:有角色对象时按角色发,没有(全局扇出)时广播。收屏回屏的调用方都
+-- 按角色循环,但最后一个 role 可能是 nil,这里收口同一形状。
+function coordinator.switch_role_or_global(ui, target, role)
+  if role then
+    return coordinator.switch_for_role(ui, target, role)
+  end
+  return coordinator.switch(ui, target)
+end
+
 function coordinator.resolve_popup_return_canvas(ui)
   if ui.market_active then
     return coordinator.CANVAS_MARKET
@@ -169,6 +178,11 @@ function coordinator.resolve_role_panel_canvas(ui, role_id)
     end
   end
   return nil
+end
+
+-- 面板回屏的默认口径:开着面板回面板 canvas,没开(含角色未解析)回基础屏。
+function coordinator.resolve_role_panel_canvas_or_base(ui, role_id)
+  return coordinator.resolve_role_panel_canvas(ui, role_id) or coordinator.CANVAS_BASE
 end
 
 -- 只按「关闭时刻」的面板态判定,不接受调用方传入的目标屏:黑市屏可以在弹窗存活

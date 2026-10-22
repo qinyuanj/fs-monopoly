@@ -37,15 +37,7 @@ end
 -- 面板→canvas 映射住 canvas_coordinator(#583 起与黑市开屏分道共用一份)。
 local function _resolve_bystander_return_canvas(state, role_id)
   local ui = state and state.ui
-  return canvas.resolve_role_panel_canvas(ui, role_id) or canvas.CANVAS_BASE
-end
-
-local function _switch_canvas_for_role(ui, role, target)
-  if role then
-    canvas.switch_for_role(ui, target, role)
-  else
-    canvas.switch(ui, target)
-  end
+  return canvas.resolve_role_panel_canvas_or_base(ui, role_id)
 end
 
 local function _resolve_role_id(ctx, role)
@@ -95,7 +87,7 @@ local function _return_excluded_role(state, role, ctx)
   if role_id == nil then
     return
   end
-  _switch_canvas_for_role(state.ui, role, _resolve_bystander_return_canvas(state, role_id))
+  canvas.switch_role_or_global(state.ui, _resolve_bystander_return_canvas(state, role_id), role)
 end
 
 -- 排除角色的弹窗期处置:默认整体跳过(其 canvas 全程未离开),仅 excluded_return
@@ -122,11 +114,11 @@ local function _resolve_operator_return_canvas(state, ctx, role, switch_ctx, res
   if not role_id_utils.equals(role_id, switch_ctx.operator_role_id) then
     return resolved
   end
-  return canvas.resolve_role_panel_canvas(state.ui, role_id) or resolved
+  return canvas.resolve_role_panel_canvas_or_base(state.ui, role_id)
 end
 
--- 该角色最终要切的 canvas:旁观者回屏优先(回图鉴屏先清陈旧放大卡),
--- 否则沿用已解析的弹窗 canvas。
+-- 该角色最终要切的 canvas:旁观者回屏优先(回图鉴屏先清陈旧放大卡);否则操作者
+-- 在下一屏解析成基础屏时回自己开着的面板 canvas;其余沿用已解析的弹窗 canvas。
 local function _resolve_switch_canvas(state, ctx, role, switch_ctx, resolved)
   local target = _resolve_bystander_canvas(state, ctx, role, switch_ctx)
     or _resolve_operator_return_canvas(state, ctx, role, switch_ctx, resolved)
@@ -146,7 +138,7 @@ local function _resolve_and_switch_for_role(state, role, switch_ctx)
   if resolved == nil then
     return
   end
-  _switch_canvas_for_role(state.ui, role, _resolve_switch_canvas(state, ctx, role, switch_ctx, resolved))
+  canvas.switch_role_or_global(state.ui, _resolve_switch_canvas(state, ctx, role, switch_ctx, resolved), role)
 end
 
 function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canvas, opts)
