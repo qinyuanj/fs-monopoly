@@ -235,14 +235,63 @@ describe("TestGiftCodeScreen", function()
     luassert.same({ "兑换码无效" }, _tips_for(world, 1), "empty input should be reported as an invalid code")
   end)
 
-  it("test_reopening_the_screen_forgets_the_previous_input", function()
+  -- 草稿口径(#201,取代 #195 Story 20):取消 = 明确放弃,是唯一清草稿的路径;
+  -- 开屏不再无条件清缓存,而是按玩家回填。
+  it("test_cancel_clears_the_draft_so_reopening_forgets_the_previous_input", function()
     _click(state, world, ENTRY, 1)
     _type(world, 1, "EGG2026")
     _click(state, world, CANCEL, 1)
+    world.input_writes = {}
     _click(state, world, ENTRY, 1)
+    luassert.same({ { role_id = 1, text = "" } }, world.input_writes,
+      "reopening after cancel should refill an empty input")
     _click(state, world, CONFIRM, 1)
 
-    luassert.same({ "兑换码无效" }, _tips_for(world, 1), "input typed before reopening should not be submitted")
+    luassert.same({ "兑换码无效" }, _tips_for(world, 1), "input typed before cancel should not be submitted")
+  end)
+
+  it("test_reopening_without_cancel_refills_the_draft_and_it_still_redeems", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+
+    luassert.same({ { role_id = 1, text = "EGG2026" } }, world.input_writes,
+      "reopening without cancel should refill the player's draft")
+    _click(state, world, CONFIRM, 1)
+    luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "the refilled draft should still redeem")
+  end)
+
+  it("test_drafts_are_refilled_per_player_on_reopen", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    _click(state, world, ENTRY, 2)
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+    _click(state, world, ENTRY, 2)
+
+    luassert.same({ { role_id = 1, text = "EGG2026" }, { role_id = 2, text = "" } }, world.input_writes,
+      "each player should be refilled with their own draft only")
+  end)
+
+  -- #195 Story 23:兑换后屏不关,玩家能看清刚兑的码;草稿保留到点取消为止。
+  it("test_redeeming_keeps_the_draft_until_cancel", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    _click(state, world, CONFIRM, 1)
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+    luassert.same({ { role_id = 1, text = "EGG2026" } }, world.input_writes,
+      "redeeming should not clear the draft")
+
+    _click(state, world, CANCEL, 1)
+    luassert.same({ { role_id = 1, text = "EGG2026" }, { role_id = 1, text = "" } }, world.input_writes,
+      "cancel should blank the input field as well as the draft")
+
+    world.input_writes = {}
+    _click(state, world, ENTRY, 1)
+    luassert.same({ { role_id = 1, text = "" } }, world.input_writes,
+      "after cancel the draft should be gone")
   end)
 
   it("test_cancel_hides_the_screen_for_that_player", function()
