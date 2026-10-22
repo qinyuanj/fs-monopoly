@@ -15,6 +15,19 @@ function transaction.complete_skin_purchase(state, role_id, product_id)
   return actions.complete_skin_purchase(state, role_id, product_id)
 end
 
+-- #198:授予归属(礼包码奖励等),与购买共用写档路径。
+function transaction.grant_ownership(state, role_id, product_id)
+  return actions.grant_ownership(state, role_id, product_id)
+end
+
+function transaction.refresh_ownership(state, role_id)
+  return actions.refresh_ownership(state, role_id)
+end
+
+function transaction.owns_product(state, role_id, product_id)
+  return actions.owns_product(state, role_id, product_id)
+end
+
 function transaction.restore_role(state, role_id)
   return actions.restore_role(state, role_id)
 end
