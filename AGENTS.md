@@ -54,6 +54,6 @@ WSL Ubuntu 24.04 是唯一受支持的开发平台；原生 Windows 只是部署
 
 ## 操作边界
 
-- 运行 `editor-cli` 的 `run_game`、`stop_game`、`clear-logs`，或改动部署目录前，先说明并等待用户明确同意。
+- 运行 `editor-cli` 的 `play start` / `play stop`（或 `EditorAPI.run_game` / `stop_game`）、模拟输入，或改动部署目录前，先说明并等待用户明确同意。
 - 开发环境只支持 WSL Ubuntu 24.04（ADR 0073）：Lua 5.4 与 LuaRocks 5.4 tree，入口显式写 `lua5.4`；新自动化脚本默认 bash，`cmd.exe` 只作为部署时取 `%USERPROFILE%` 的互操作面。Eggy 宿主位于 Windows 端，部署入口是 `lua5.4 tools/cli.lua deploy`（写入 `/mnt/c/...`，缺 `cmd.exe` / `wslpath` 退 3）。
 - `EggyAPI.lua` 与 `EggyEditorAPI.lua` 保持第三方边界，不把它们当作当前宿主契约。

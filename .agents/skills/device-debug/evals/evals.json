@@ -10,7 +10,7 @@
     {
       "id": 1,
       "prompt": "试玩我已经开好了，帮我截一张当前画面，把截图拷到指定输出目录，说说截图里能看到什么。",
-      "expected_output": "status 确认 In Game Runtime → take_screenshot → Read 看图 → 拷图汇报；不代跑 stop_game，结束试玩交给用户",
+      "expected_output": "status 确认 in_game_runtime → screenshot game → Read 看图 → 拷图汇报；不代跑 play stop，结束试玩交给用户",
       "files": []
     },
     {
