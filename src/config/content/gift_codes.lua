@@ -1,13 +1,19 @@
--- 礼包码码表(#195 / ADR 0075)。每个码:
---   id         短整数,上线后不可复用(兑换记录只存 id,改 code 文本不影响已兑换记录)
---   code       玩家输入的兑换码;比对前去首尾空格、不区分大小写
+-- 礼包码码表(#195 / #203 / ADR 0075)。礼包码是一人一码的补偿码,每个码:
+--   id         短整数,上线后不可复用(兑换记录只存 id);停用的 id 列进 retired_ids
+--   code_hash  规范化后(去空白与连字符、转大写)码的 SHA-256,64 位小写十六进制;
+--              码表不存明文 code,出现即加载报错
 --   rewards    礼包码奖励的皮肤 product_id 列表(须在 skins.lua 且配了 archive_key)
 --   expires_at 可选,墙钟秒;墙钟超过即过期,墙钟取不到不判过期
--- 码表随客户端明文分发(ADR 0075 接受此风险)。加载期校验见 gift_code_catalog。
+--   note       工单号或补偿原因,不写玩家昵称
+-- 新码一律用 `lua5.4 tools/cli.lua gift-code new` 生成:它只在 codes 列表末尾
+-- 追加一条,明文码只在终端打印一次。「id → 玩家、明文码、发放日期」记在仓外。
+-- 加载期校验见 gift_code_catalog。
 local gift_codes = {
   codes = {
-    { id = 1, code = "TEST2026", rewards = { 5005 } }, -- 测试码:奶龙,不设过期(#200 真机验收)
+    { id = 2, code_hash = "602f521bc1c37fe7b2c7447cfe8b743fac9f5a4cf7630ff3b7ac9227d93e623b", rewards = { 5005 }, expires_at = 1808295571, note = "#200 真机验收测试码(取代停用的 id 1 TEST2026)" },
   },
+  -- 停用 id,永不再分配:1 = 旧明文测试码 TEST2026(#203 停用)。
+  retired_ids = { 1 },
 }
 
 -- 兑换记录的 Str 玩家存档 key,存已兑换码 id 的逗号分隔列表。

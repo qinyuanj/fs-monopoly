@@ -1,4 +1,4 @@
--- #198 / ADR 0075:礼包码兑换门面。经 redeem(state, role_id, input_text) 输入文本,
+-- #198 / #203 / ADR 0075:礼包码兑换门面。码表只放哈希条目,用明文输入驱动。经 redeem(state, role_id, input_text) 输入文本,
 -- 观察返回结果、存档替身里的兑换记录与皮肤归属,以及之后 cosmetics 门面看到的
 -- 本局与跨局归属。宿主存档(Int + Str)与墙钟只在 runtime_ports 边界替身。
 require("test.bootstrap").install_package_paths()
@@ -20,10 +20,16 @@ local CAPYBARA_KEY = 1053
 local SPONGEBOB = 5003 -- 海绵宝宝,存档 key 1055
 local SPONGEBOB_KEY = 1055
 
+-- code_hash 由外部 sha256sum 对规范化后的明文算出:EGG2026 / BUNDLE / SUMMER /
+-- ABCDEFGHJKMN(CLI 生成格式的 12 位码)。
+local GROUPED_CODE = "ABCD-EFGH-JKMN"
 local CODES = {
-  { id = 3, code = "EGG2026", rewards = { NAILONG } },
-  { id = 7, code = "Bundle", rewards = { NAILONG, CAPYBARA, SPONGEBOB } },
-  { id = 9, code = "SUMMER", rewards = { CAPYBARA }, expires_at = 1000 },
+  { id = 3, code_hash = "682f05b696b1ca1d9b2818d793b2b352f4128f8ba4fa9db8770cfb279fce1f3f", rewards = { NAILONG } },
+  { id = 7, code_hash = "4ed9aa46fbbc9b278dac1aa3507747dcdd361832ce9a97f07ecb412d0a601c58",
+    rewards = { NAILONG, CAPYBARA, SPONGEBOB } },
+  { id = 9, code_hash = "20281d1b6cf1a97468ec8153ec64a4f14b0675023b6fc2b32a1e0afcdf689298",
+    rewards = { CAPYBARA }, expires_at = 1000 },
+  { id = 11, code_hash = "f798776cb4d1e5975b47ed94fcc91314bc8d5c6935ff56b33c03b08c52356818", rewards = { SPONGEBOB } },
 }
 
 local function _assert_eq(actual, expected, message)
@@ -157,11 +163,34 @@ describe("TestGiftCodeRedeem", function()
     _assert_eq(result.status, "granted", "normalized input should match the code")
   end)
 
+  it("test_grouped_code_redeems_with_or_without_hyphens_case_and_spaces", function()
+    for role_id, input in ipairs({ GROUPED_CODE, "abcdefghjkmn", "  abcd - EFGH jkmn\t", "ABCD EFGH-JKMN" }) do
+      local host = _install_host()
+      local result = redeem.redeem(_state(), role_id, input)
+      _assert_eq(result.status, "granted", "input should redeem: [" .. input .. "]")
+      _assert_eq(result.message, "兑换成功，获得：海绵宝宝", "granted message should name the skin")
+      _assert_eq(host.read(role_id, RECORD_KEY), "11", "record should store the code id")
+    end
+  end)
+
+  -- #203 User Story 27:码表里只有哈希,解包者拿到的任何串都兑不出来。
+  it("test_no_text_from_the_code_table_redeems", function()
+    local host = _install_host()
+    local state = _state()
+
+    for _, entry in ipairs(CODES) do
+      for _, input in ipairs({ entry.code_hash, tostring(entry.id) }) do
+        _assert_eq(redeem.redeem(state, 1, input).status, "invalid_code", "table text should not redeem: " .. input)
+      end
+    end
+    _assert_eq(host.read(1, RECORD_KEY), nil, "nothing should be recorded")
+  end)
+
   it("test_unknown_and_empty_input_are_invalid_code", function()
     local host = _install_host()
     local state = _state()
 
-    for _, input in ipairs({ "NOPE", "", "   " }) do
+    for _, input in ipairs({ "NOPE", "", "   ", "---", "ABCD-EFGH-JKMP" }) do
       local result = redeem.redeem(state, 1, input)
       _assert_eq(result.status, "invalid_code", "input should be invalid: [" .. input .. "]")
       _assert_eq(result.message, "兑换码无效", "invalid code message should come from the facade")

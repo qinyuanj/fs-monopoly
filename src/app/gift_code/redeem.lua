@@ -1,5 +1,5 @@
--- 礼包码兑换门面(#198 / ADR 0075)。redeem(state, role_id, input_text) 封装规范化、
--- 查码、过期判定、兑换记录读写与奖励发放,返回结构化结果:
+-- 礼包码兑换门面(#198 / #203 / ADR 0075)。redeem(state, role_id, input_text) 封装
+-- 规范化、按哈希查码(gift_code_catalog)、过期判定、兑换记录读写与奖励发放,返回结构化结果:
 --   { status = <下列之一>, granted = { product_id... }, message = <提示文本> }
 --   granted / all_owned / invalid_code / expired / already_redeemed /
 --   archive_unavailable / write_failed

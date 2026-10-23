@@ -39,8 +39,9 @@ local HIDE_SCREEN = "隐藏礼包码屏"
 local NAILONG = 5005 -- 奶龙
 local CAPYBARA = 5006 -- 水豚嘟嘟
 local CODES = {
-  { id = 3, code = "EGG2026", rewards = { NAILONG } },
-  { id = 4, code = "CAPY2026", rewards = { CAPYBARA } },
+  -- code_hash:外部 sha256sum 对 EGG2026 / CAPY2026 算出。
+  { id = 3, code_hash = "682f05b696b1ca1d9b2818d793b2b352f4128f8ba4fa9db8770cfb279fce1f3f", rewards = { NAILONG } },
+  { id = 4, code_hash = "f0b0bd89ad788053a1090fffb1055257fe81c7a83a7f4765562548434e04205b", rewards = { CAPYBARA } },
 }
 
 local function _assert_eq(actual, expected, message)

@@ -1,19 +1,26 @@
--- 礼包码码表的加载期校验与查码(#198 / ADR 0075,User Story 18)。
--- build 对任意码表与皮肤目录校验并建索引,违规以 error(msg, 0) 报出;
--- 默认码表在 require 时即构建,配置错误随加载暴露。
+-- 礼包码码表的加载期校验与查码(#198 / #203 / ADR 0075,User Story 18)。
+-- build 对任意码表、皮肤目录与停用 id 列表校验并建哈希索引,违规以
+-- error(msg, 0) 报出;默认码表在 require 时即构建,配置错误随加载暴露。
+-- 码表只存 code_hash;查码先规范化输入再算 SHA-256。gift-code new CLI 用
+-- 同一个 code_hash 算写入码表的哈希,两边口径一致。
 local gift_codes = require("src.config.content.gift_codes")
 local skins = require("src.config.content.skins")
 local number_utils = require("src.foundation.number")
+local sha256 = require("src.foundation.sha256")
 
 local gift_code_catalog = {}
 
--- 去首尾空格并统一为大写;非字符串按空串处理。
+-- 去掉全部空白与连字符并统一为大写;非字符串按空串处理。
 function gift_code_catalog.normalize(text)
   if type(text) ~= "string" then
     return ""
   end
-  local trimmed = text:gsub("^%s+", ""):gsub("%s+$", "")
-  return string.upper(trimmed)
+  return string.upper((text:gsub("[%s%-]", "")))
+end
+
+-- 规范化后的 SHA-256(64 位小写十六进制),即码表 code_hash 的口径。
+function gift_code_catalog.code_hash(text)
+  return sha256.hex(gift_code_catalog.normalize(text))
 end
 
 local function _fail(message)
@@ -32,7 +39,19 @@ local function _is_positive_integer(value)
   return number_utils.is_numeric(value) and number_utils.to_integer(value) == value and value > 0
 end
 
-local function _validate_id(entry, seen_ids)
+-- 停用 id 永不再分配(#203):返回 { [id] = true }。
+local function _retired_set(retired_ids)
+  local retired = {}
+  for _, id in ipairs(retired_ids or {}) do
+    if not _is_positive_integer(id) then
+      _fail("invalid retired gift code id: " .. tostring(id))
+    end
+    retired[id] = true
+  end
+  return retired
+end
+
+local function _validate_id(entry, seen_ids, retired)
   local id = entry.id
   if not _is_positive_integer(id) then
     _fail("invalid gift code id: " .. tostring(id))
@@ -40,18 +59,25 @@ local function _validate_id(entry, seen_ids)
   if seen_ids[id] then
     _fail("duplicate gift code id: " .. tostring(id))
   end
+  if retired[id] then
+    _fail("gift code id is retired: " .. tostring(id))
+  end
   seen_ids[id] = true
 end
 
-local function _validate_code(entry, by_code)
-  local normalized = gift_code_catalog.normalize(entry.code)
-  if normalized == "" then
-    _fail("empty gift code: id=" .. tostring(entry.id))
+-- 明文 code 会随客户端分发,出现即拒绝(#203 User Story 22)。
+local function _validate_code_hash(entry, by_hash)
+  if entry.code ~= nil then
+    _fail("gift code must not carry plaintext code: id=" .. tostring(entry.id))
   end
-  if by_code[normalized] ~= nil then
-    _fail("duplicate gift code: " .. normalized)
+  local code_hash = entry.code_hash
+  if type(code_hash) ~= "string" or #code_hash ~= 64 or code_hash:find("[^0-9a-f]") then
+    _fail("invalid gift code_hash: id=" .. tostring(entry.id))
   end
-  return normalized
+  if by_hash[code_hash] ~= nil then
+    _fail("duplicate gift code_hash: id=" .. tostring(entry.id))
+  end
+  return code_hash
 end
 
 local function _validate_reward(entry, skin_by_product, product_id)
@@ -85,25 +111,29 @@ local function _validate_expires_at(entry)
 end
 
 -- 返回 { find = function(input_text) -> entry|nil };entry 即码表原条目。
-function gift_code_catalog.build(codes, skin_catalog)
+function gift_code_catalog.build(codes, skin_catalog, retired_ids)
   local skin_by_product = _skins_by_product(skin_catalog or skins)
+  local retired = _retired_set(retired_ids)
   local seen_ids = {}
-  local by_code = {}
+  local by_hash = {}
   for _, entry in ipairs(codes or {}) do
-    _validate_id(entry, seen_ids)
-    local normalized = _validate_code(entry, by_code)
+    _validate_id(entry, seen_ids, retired)
+    local code_hash = _validate_code_hash(entry, by_hash)
     _validate_rewards(entry, skin_by_product)
     _validate_expires_at(entry)
-    by_code[normalized] = entry
+    by_hash[code_hash] = entry
   end
   return {
     find = function(input_text)
-      return by_code[gift_code_catalog.normalize(input_text)]
+      if gift_code_catalog.normalize(input_text) == "" then
+        return nil
+      end
+      return by_hash[gift_code_catalog.code_hash(input_text)]
     end,
   }
 end
 
-local default_catalog = gift_code_catalog.build(gift_codes.codes, skins)
+local default_catalog = gift_code_catalog.build(gift_codes.codes, skins, gift_codes.retired_ids)
 
 function gift_code_catalog.default()
   return default_catalog
