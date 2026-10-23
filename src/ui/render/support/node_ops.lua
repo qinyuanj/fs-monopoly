@@ -68,6 +68,11 @@ local function set_visible(_, name, visible)
   mutate_node(name, _visible_mutator)
 end
 
+local function set_visible_all(_, name, visible)
+  _visible_val = visible == true
+  mutate_nodes_all(name, _visible_mutator)
+end
+
 local function set_touch_enabled(_, name, enabled)
   _disabled_val = not enabled
   mutate_node(name, _disabled_mutator)
@@ -146,6 +151,7 @@ end
 M.query_node = query_node
 M.set_text = set_text
 M.set_visible = set_visible
+M.set_visible_all = set_visible_all
 M.set_touch_enabled = set_touch_enabled
 M.set_touch_enabled_all = set_touch_enabled_all
 M.set_event_log = set_event_log

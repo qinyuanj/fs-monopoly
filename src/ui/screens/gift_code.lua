@@ -1,7 +1,9 @@
 -- gift_code(礼包码屏)屏:点击意图 + 开关屏 + 输入缓存 + 兑换提交,单一归宿(#199)。
 --
 -- 这是 canvas 面,不是选择屏:没有 descriptor / open / canvas 三契约(详见
--- screens_registry 的说明)。入口按钮住基础屏(route_base 发 open_gift_code_screen)。
+-- screens_registry 的说明)。入口按钮住基础屏,其点击路由(open_gift_code_screen)
+-- 也由本屏发射,受入口开关 gift_codes.entry_enabled 控制:关闭时不路由入口点击,
+-- 开局压灭入口按钮及其装饰节点。
 -- 宿主没有读取输入框文本的接口:监听「输入框输入完成」事件按玩家缓存最近一次输入,
 -- 点确认时把缓存交给兑换门面(经 seams/gift_code 注入),没有缓存按空输入处理;
 -- 开屏时把该玩家的草稿回填进输入框(无草稿写空串),点取消才清掉草稿与输入框
@@ -20,6 +22,7 @@ local gift_code_port = require("src.ui.seams.gift_code")
 local tip_queue = require("src.foundation.tips")
 local role_id_utils = require("src.foundation.identity")
 local logger = require("src.foundation.log")
+local gift_codes = require("src.config.content.gift_codes")
 
 local gift_code = { key = "gift_code" }
 
@@ -35,8 +38,34 @@ end
 
 local _append = append_intent_spec.builder("gift_code_action")
 
+-- 测试替身:nil 时以配置为准。config 模块会被测试重载,测试改开关只经这里。
+local _entry_enabled_override = nil
+
+local function _entry_enabled()
+  if _entry_enabled_override ~= nil then
+    return _entry_enabled_override
+  end
+  return gift_codes.entry_enabled == true
+end
+
+function gift_code.configure_entry_for_tests(enabled)
+  _entry_enabled_override = enabled == true
+end
+
+function gift_code.reset_entry_for_tests()
+  _entry_enabled_override = nil
+end
+
 function gift_code.build_route_specs(_state)
   local specs = {}
+  if _entry_enabled() then
+    specs[#specs + 1] = {
+      name = base_nodes.gift_code_button,
+      build_intent = function()
+        return { type = "open_gift_code_screen" }
+      end,
+    }
+  end
   _append(specs, gift_code_nodes.confirm_button, "confirm")
   _append(specs, gift_code_nodes.cancel_button, "cancel")
   return specs
@@ -172,6 +201,27 @@ function gift_code.bind_input(state)
     return false
   end
   return true
+end
+
+local function _hide_entry_node(name)
+  local ok, err = pcall(node_ops.set_visible_all, nil, name, false)
+  if not ok then
+    logger.warn("gift_code entry hide failed:", name, tostring(err))
+  end
+end
+
+-- 开局入口(app/ui_bootstrap 调用):入口开启时挂输入监听;关闭时压灭基础屏入口
+-- 按钮及其装饰节点(同名节点全量命中),玩家看不到也点不到。压灭失败与查输入框
+-- 同口径:带 err 留 warn,不打断开局。
+function gift_code.install_entry(state)
+  if _entry_enabled() then
+    return gift_code.bind_input(state)
+  end
+  _hide_entry_node(base_nodes.gift_code_button)
+  for _, name in ipairs(base_nodes.gift_code_decor_nodes) do
+    _hide_entry_node(name)
+  end
+  return false
 end
 
 return gift_code

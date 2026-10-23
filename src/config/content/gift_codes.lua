@@ -122,6 +122,11 @@ local gift_codes = {
 -- 号码以宿主编辑器配置为准:编辑器存档「礼包码兑换记录」(Str)即 1056(#200 已核实)。
 gift_codes.redeem_record_archive_key = 1056
 
+-- 礼包码入口开关:false 时开局压灭基础屏入口按钮及其装饰节点,不路由点击、不挂输入
+-- 监听;兑换核心与码表保留,改回 true 即恢复。地图做不到全服每码一次(无服务端
+-- 记录),功能暂下线。
+gift_codes.entry_enabled = false
+
 -- 兑换结果提示文本(按兑换门面的状态取用);granted 的 %s 为本次发放的皮肤名,顿号分隔。
 gift_codes.messages = {
   granted = "兑换成功，获得：%s",

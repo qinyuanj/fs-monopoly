@@ -30,6 +30,15 @@ local nodes = {
   share_button = "基础_分享图标",
   -- 礼包码屏入口(#199);其文本/图标/环/动效装饰节点不加逻辑。
   gift_code_button = "基础_礼包码",
+  -- 入口关闭(gift_codes.entry_enabled = false)时与按钮一并压灭;「基础_礼包码动效」
+  -- 同名两个,走全量命中。
+  gift_code_decor_nodes = {
+    "基础_礼包码文本",
+    "基础_礼包码图标",
+    "基础_礼包码环",
+    "基础_礼包码环_1",
+    "基础_礼包码动效",
+  },
   -- 分享按钮的装饰子节点（Eggy 覆盖节点默认吸触摸，先例 auto_effect/skin_label）：
   -- 运行时统一压触摸，否则子节点盖住按钮吞掉点击。「基础_分享动效」同名两个，
   -- 必须走 set_touch_enabled_all 全量命中。

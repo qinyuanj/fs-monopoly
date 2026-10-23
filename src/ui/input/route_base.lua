@@ -103,12 +103,6 @@ function intents.build(state)
         return { type = "open_share_panel" }
       end,
     },
-    {
-      name = base_nodes.gift_code_button,
-      build_intent = function()
-        return { type = "open_gift_code_screen" }
-      end,
-    },
   }
 end
 

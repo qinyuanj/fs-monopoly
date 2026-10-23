@@ -604,15 +604,20 @@ local function _test_missing_child_label_falls_back_to_node_id_for_unnamed_entri
 end
 
 
--- #199:GAME_INIT 在礼包码输入框上注册宿主「输入完成」监听(按节点 id)。
-local function _test_game_init_registers_gift_code_input_listener()
+-- 开局时按礼包码入口开关(gift_codes.entry_enabled)跑一次 GAME_INIT,
+-- 返回 (注册了输入监听的节点 id 列表, 按节点名记录的宿主节点替身)。
+local function _game_init_with_gift_code_entry(enabled)
   local registered = {}
+  local nodes_by_name = {}
+  local gift_code_screen = require("src.ui.screens.gift_code")
+  gift_code_screen.configure_entry_for_tests(enabled)
   _with_install_patches({
     { target = package.loaded, key = "Data.UIManagerNodes", value = { validate = function() return {} end } },
     { target = _G, key = "UIManager", value = {
       Builder = { new = function() return {} end },
       query_nodes_by_name = function(name)
-        return { { id = "node:" .. name } }
+        nodes_by_name[name] = nodes_by_name[name] or { { id = "node:" .. name } }
+        return nodes_by_name[name]
       end,
     } },
     { target = require("src.ui.seams.host_events"), key = "register_input_text_end", value = function(node_id)
@@ -622,7 +627,31 @@ local function _test_game_init_registers_gift_code_input_listener()
   }, function()
     _install_with_runtime({ ui = {} })
   end)
+  gift_code_screen.reset_entry_for_tests()
+  return registered, nodes_by_name
+end
+
+-- 礼包码入口关闭:开局压灭基础屏入口按钮及其装饰节点,且不挂输入监听。
+local function _test_game_init_hides_gift_code_entry_when_disabled()
+  local registered, nodes_by_name = _game_init_with_gift_code_entry(false)
+  luassert.same({}, registered, "disabled gift code entry should not listen on the input field")
+  for _, name in ipairs({
+    "基础_礼包码", "基础_礼包码文本", "基础_礼包码图标",
+    "基础_礼包码环", "基础_礼包码环_1", "基础_礼包码动效",
+  }) do
+    local nodes = nodes_by_name[name]
+    luassert.is_table(nodes, name .. " should be hidden at game init")
+    for _, node in ipairs(nodes) do
+      luassert.is_false(node.visible, name .. " should be invisible")
+    end
+  end
+end
+
+-- #199:GAME_INIT 在礼包码输入框上注册宿主「输入完成」监听(按节点 id)。
+local function _test_game_init_registers_gift_code_input_listener()
+  local registered, nodes_by_name = _game_init_with_gift_code_entry(true)
   luassert.same({ "node:礼包码_输入框" }, registered, "GAME_INIT should listen on the gift code input field")
+  luassert.is_nil(nodes_by_name["基础_礼包码"], "enabled gift code entry should keep its editor visibility")
 end
 
 
@@ -642,6 +671,7 @@ it("test_spawns_startup_synthetic_actors", _test_spawns_startup_synthetic_actors
 it("test_role_globals_install_receives_the_resolved_roles", _test_role_globals_install_receives_the_resolved_roles)
 it("test_game_init_wires_like_collect_subscribe_setup", _test_game_init_wires_like_collect_subscribe_setup)
 it("test_game_init_registers_gift_code_input_listener", _test_game_init_registers_gift_code_input_listener)
+it("test_game_init_hides_gift_code_entry_when_disabled", _test_game_init_hides_gift_code_entry_when_disabled)
 it("test_empty_name_entry_label_keeps_plain_node_id", _test_empty_name_entry_label_keeps_plain_node_id)
 it("test_configured_and_repeated_children_are_not_reported_missing", _test_configured_and_repeated_children_are_not_reported_missing)
 it("test_children_read_failure_message_carries_label_and_error", _test_children_read_failure_message_carries_label_and_error)

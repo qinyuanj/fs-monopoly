@@ -196,6 +196,8 @@ describe("TestGiftCodeScreen", function()
   local original_query
 
   before_each(function()
+    -- 本文件验证礼包码屏接线本身,入口开关打开(关闭态另有用例)。
+    gift_code_screen.configure_entry_for_tests(true)
     transaction.reset_for_tests()
     transaction.configure_archive(skin_archive)
     redeem.configure_codes_for_tests(CODES)
@@ -214,6 +216,7 @@ describe("TestGiftCodeScreen", function()
   end)
 
   after_each(function()
+    gift_code_screen.reset_entry_for_tests()
     UIManager.query_nodes_by_name = original_query
     UIManager.client_role = nil
     gift_code_port.reset_for_tests()
@@ -492,6 +495,15 @@ describe("TestGiftCodeScreen", function()
     end
     luassert.truthy(found,
       "the warn should carry the host error for diagnosis, got: " .. table.concat(warns, " | "))
+  end)
+
+  it("test_disabled_entry_has_no_click_route", function()
+    gift_code_screen.configure_entry_for_tests(false)
+
+    luassert.has_error(function()
+      _click(state, world, ENTRY, 1)
+    end, nil, "disabled gift code entry must not route clicks")
+    _assert_eq(_count(world.roles["1"].events, SHOW_SCREEN), 0, "the screen should stay closed")
   end)
 
   it("test_decoration_nodes_have_no_click_routes", function()

@@ -166,8 +166,9 @@ function M.install(state, current_game_ref, opts)
     local ui_manager_nodes = _build_ui_manager_nodes()
     local current_game = _resolve_current_game(state, current_game_ref, opts)
     _bind_current_game(state, current_game_ref)
-    -- #199:宿主无读输入框文本接口,开局在礼包码输入框上挂「输入完成」监听。
-    gift_code_screen.bind_input(state)
+    -- #199:宿主无读输入框文本接口,开局在礼包码输入框上挂「输入完成」监听;
+    -- 入口关闭时改为压灭基础屏入口(gift_codes.entry_enabled)。
+    gift_code_screen.install_entry(state)
     _sync_ui_event_roles()
     _assert_required_ui_nodes(ui_manager_nodes)
     _initialize_game_ui(state, current_game)
