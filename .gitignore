@@ -40,6 +40,10 @@ Thumbs.db
 .sisyphus/
 .omo/
 
+# ── 运营本地密件 ─────────────────────────────────────────────────
+# 礼包码明文发放记录(#203):码表只存哈希,明文永不入库,只在本机保留。
+/.secrets/
+
 # ── uml-viewer 质量入口(#93)───────────────────────────────────────
 # crapper/mutator 的度量 .metrics/(crap.edn、mutate/*.edn)按上游 README 入库,
 # 不在此忽略;只忽略覆盖率中间产物 target/coverage/(见 tools/specs/uml_quality.prompt)。
