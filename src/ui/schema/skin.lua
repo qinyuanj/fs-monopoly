@@ -24,7 +24,6 @@ nodes.static_visual_nodes = {
 
 -- #178:叠在背景/关闭按钮上的纯展示文字,运行时关闭触摸让点击穿透。
 nodes.passthrough_nodes = {
-  "皮肤_关闭皮肤文本",
   "皮肤_关闭皮肤文本提示",
 }
 

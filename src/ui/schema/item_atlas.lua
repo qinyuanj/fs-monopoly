@@ -11,7 +11,6 @@ local nodes = {
   background = "图鉴-背景",
   -- 叠在背景/关闭按钮上的纯展示文字,运行时关闭触摸让点击穿透。
   passthrough_nodes = {
-    "图鉴_关闭图鉴文本",
     "图鉴_关闭图鉴文本提示",
   },
   card_images = {},

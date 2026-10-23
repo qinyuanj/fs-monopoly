@@ -936,7 +936,7 @@ describe("TestMarketPanel", function()
     _refresh_two_entry_market(state, 7, entry_a, entry_b, nil)
 
     _assert_eq(touch["黑市_背景矩形"], true, "market background must accept touch while open")
-    for _, name in ipairs({ "黑市_关闭黑市文本", "黑市_关闭黑市文本提示", "黑市_关闭黑市按钮底图" }) do
+    for _, name in ipairs({ "黑市_关闭黑市文本提示", "黑市_关闭黑市按钮底图" }) do
       _assert_eq(touch[name], false, name .. " must not swallow touch")
     end
     _assert_eq(touch[market_layout.item_buttons[1]], true, "item buttons above background stay clickable")

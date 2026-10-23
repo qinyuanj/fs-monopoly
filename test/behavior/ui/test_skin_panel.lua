@@ -718,13 +718,11 @@ it("test_shows_action_buttons_and_card_frames_only_for_occupied_slots", function
 end)
 
 it("test_open_render_enables_background_touch_and_passes_through_close_texts", function()
-  -- #178 点背景关闭:背景可点,"关闭"文字与提示文字关闭触摸;关闭按钮与卡牌照常可点。
+  -- #178 点背景关闭:背景可点,提示文字关闭触摸;关闭按钮与卡牌照常可点。
   local state, calls = _make_render_state()
   skin_panel_view.refresh_slots(state, _make_catalog(3))
   _assert_eq(_find_call(calls, "set_touch_enabled", "皮肤商店-活动背景"), true,
     "skin shop background must accept touch")
-  _assert_eq(_find_call(calls, "set_touch_enabled", "皮肤_关闭皮肤文本"), false,
-    "close text must not swallow touch")
   _assert_eq(_find_call(calls, "set_touch_enabled", "皮肤_关闭皮肤文本提示"), false,
     "click-background hint must not swallow touch")
   _assert_eq(_find_call(calls, "set_touch_enabled", skin_nodes.close_button), true,

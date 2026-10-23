@@ -335,7 +335,6 @@ it("test_background_click_closes_atlas_but_enlarged_state_backs_out_one_layer", 
 
   item_atlas.open(s, 1)
   luassert.equal(true, _find_call(calls, "set_touch_enabled", "图鉴-背景"), "background touchable once atlas opens")
-  luassert.equal(false, _find_call(calls, "set_touch_enabled", "图鉴_关闭图鉴文本"), "close text passes touch through")
   luassert.equal(false, _find_call(calls, "set_touch_enabled", "图鉴_关闭图鉴文本提示"), "hint text passes touch through")
   luassert.equal(true, _find_call(calls, "set_touch_enabled", item_atlas_nodes.card_images[1]), "cards stay clickable")
 
