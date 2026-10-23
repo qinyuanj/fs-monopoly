@@ -6,7 +6,8 @@
 --   expires_at 可选,墙钟秒;墙钟超过即过期,墙钟取不到不判过期
 --   note       工单号或补偿原因,不写玩家昵称
 -- 新码一律用 `lua5.4 tools/cli.lua gift-code new` 生成:它只在 codes 列表末尾
--- 追加一条,明文码只在终端打印一次。「id → 玩家、明文码、发放日期」记在仓外。
+-- 追加一条(按 `  codes = {` 与其后第一个 `  },` 行定位,改排版须同步 CLI),
+-- 明文码只在终端打印一次。「id → 玩家、明文码、发放日期」记在仓外。
 -- 加载期校验见 gift_code_catalog。
 local gift_codes = {
   codes = {

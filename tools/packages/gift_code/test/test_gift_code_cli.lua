@@ -209,11 +209,13 @@ it("missing or malformed arguments are usage errors that touch nothing", functio
 end)
 
 it("help prints usage and exits 0", function()
-  local code, out, _, content = _run({ "--help" })
+  for _, args in ipairs({ { "--help" }, { "new", "--help" } }) do
+    local code, out, _, content = _run(args)
 
-  check.equal(0, code)
-  check.truthy(out:find("gift-code new", 1, true), out)
-  check.equal(FIXTURE, content)
+    check.equal(0, code, table.concat(args, " "))
+    check.truthy(out:find("gift-code new", 1, true), out)
+    check.equal(FIXTURE, content)
+  end
 end)
 
 end)

@@ -158,7 +158,7 @@ local function _generate_code(random_bytes)
   return table.concat(chars)
 end
 
-local function _group(code)
+local function _format_grouped(code)
   return code:sub(1, 4) .. "-" .. code:sub(5, 8) .. "-" .. code:sub(9, 12)
 end
 
@@ -194,7 +194,7 @@ local function _verify_written(path, id, code)
   if not ok then
     return false, tostring(catalog)
   end
-  local entry = catalog.find(_group(code))
+  local entry = catalog.find(_format_grouped(code))
   if entry == nil or entry.id ~= id then
     return false, "新码未能按哈希查回 id " .. id
   end
@@ -245,13 +245,16 @@ local function _new(options, env, stdout, stderr)
   end
   local verified, verify_err = _verify_written(path, id, code)
   if not verified then
-    fs_lib.write_file(path, original)
+    if not fs_lib.write_file(path, original) then
+      stderr:write("gift-code new 失败且回滚失败,请手工还原 " .. path .. ": " .. tostring(verify_err) .. "\n")
+      return 1
+    end
     stderr:write("gift-code new 失败(码表已回滚): " .. tostring(verify_err) .. "\n")
     return 1
   end
   stdout:write(table.concat({
     "id: " .. id,
-    "码: " .. _group(code),
+    "码: " .. _format_grouped(code),
     "过期: " .. os.date("%Y-%m-%d", expires_at) .. " (" .. expires_at .. ")",
     "奖励: " .. _skin_names(options.rewards),
     "",
@@ -265,7 +268,7 @@ function M.main(args, env)
   local stdout = env.stdout or io.stdout
   local stderr = env.stderr or io.stderr
   local first = args[1]
-  if first == "--help" or first == "-h" then
+  if first == "--help" or first == "-h" or (first == "new" and (args[2] == "--help" or args[2] == "-h")) then
     stdout:write(M.usage())
     return 0
   end
