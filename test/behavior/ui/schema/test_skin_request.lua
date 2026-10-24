@@ -5,7 +5,7 @@ local request_shape = require("src.ui.schema.skin_request")
 
 -- request_shape 是皮肤交易请求/UI action 字段别名的单一所有者(type|action,
 -- slot_index|index|slot)。这里把别名优先级与非表输入的兜底钉成属性,任何一边的
--- 消费者(transaction_actions / skin_panel 门面)都以此为准。
+-- 消费者(skin_panel 门面)都以此为准。
 
 local KINDS = { "open", "close", "buy", "gift", "equip", "activate_slot", "unequip", "page_next", "prev" }
 
