@@ -107,9 +107,19 @@ function session.mark_owned(slot, role_id, product_id)
   return true, _persist_owned(role_id, product_id)
 end
 
+-- 换模型抛错只留 warn 并按没换成处理,不打断穿戴记账、写档与完成回调。
+local function _apply_model(op, ...)
+  local ok, applied = pcall(model[op], ...)
+  if not ok then
+    logger.warn("skin_ownership: model " .. op .. " failed", "role_id=" .. tostring((...)), tostring(applied))
+    return false
+  end
+  return applied
+end
+
 -- 穿上:换模型、记本局穿戴、写穿戴存档;模型换成才上报成就进度。返回模型是否换成。
 function session.wear(slot, role_id, skin)
-  local applied = model.equip(role_id, skin.product_id)
+  local applied = _apply_model("equip", role_id, skin.product_id)
   if applied then
     achievement_progress.skin_equipped(nil, role_id, skin)
   end
@@ -121,7 +131,7 @@ end
 function session.take_off(slot, role_id)
   slot.equipped_by_role[session.role_key(role_id)] = nil
   _persist_equipped(role_id, nil)
-  model.unequip(role_id)
+  _apply_model("unequip", role_id)
 end
 
 -- 读档并入本局归属,返回存档归属表;存档读不到时返回 nil。

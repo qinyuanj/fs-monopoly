@@ -2,6 +2,8 @@
 -- (ui_no_rules)。皮肤商店屏只经这里看到皮肤归属的窄接口;实现由 app 组合根
 -- (compose_game)经 install 注入——生产装配注入规则层皮肤归属模块,屏测试注入
 -- 假实现。调用时才取实现,消费方可在装配前 require。
+-- 只收皮肤商店屏用到的操作:restore 由 app 开局直调,redeem 经礼包码 port 进来,
+-- 都不经 ui,故不在此列。
 local skin_ownership_seam = {}
 
 local OPERATIONS = {

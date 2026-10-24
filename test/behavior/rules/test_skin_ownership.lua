@@ -8,6 +8,7 @@ local luassert = assert
 local support = require("test.support.shared_support")
 local host_double = require("test.support.skin_ownership_host")
 local logger = require("src.foundation.log")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
 local skins = require("src.config.content.skins")
 local gift_codes = require("src.config.content.gift_codes")
@@ -375,13 +376,50 @@ describe("TestSkinOwnership", function()
       local gateway = host_double.install_paid_gateway({ start = case.start })
       local state = host_double.state()
 
-      local refused = _buy(state, 1, NAILONG, gateway)
+      local refused
+      _with_warns(function()
+        refused = _buy(state, 1, NAILONG, gateway)
+      end)
       _assert_eq(refused.accepted, false, "gateway refusal: " .. case.reason)
       _assert_eq(refused.reason, case.reason, "gateway refusal reason")
 
       local retry_gateway = host_double.install_paid_gateway()
       _assert_eq(_buy(state, 1, NAILONG, retry_gateway).accepted, true, "refusal clears the in-flight purchase")
     end
+  end)
+
+  it("test_gateway_error_leaves_a_warn_with_the_error_and_role", function()
+    host_double.install()
+    local gateway = host_double.install_paid_gateway({ start = function() error("gateway boom") end })
+
+    local warns = _with_warns(function()
+      _buy(host_double.state(), 1, NAILONG, gateway)
+    end)
+
+    local joined = table.concat(warns, "\n")
+    luassert.truthy(joined:find("gateway boom", 1, true) and joined:find("role_id=1", 1, true), joined)
+  end)
+
+  it("test_completion_still_wears_and_reports_when_resolving_the_role_throws", function()
+    local host = host_double.install()
+    local gateway = host_double.install_paid_gateway()
+    local state = host_double.state()
+    local _, entry, completed = _buy(state, 1, NAILONG, gateway)
+
+    local warns = _with_warns(function()
+      _patch({
+        { target = runtime_ports, key = "resolve_role", value = function() error("role boom") end },
+      }, function()
+        entry.on_purchase()
+      end)
+    end)
+
+    _assert_eq(#completed, 1, "on_complete still called")
+    _assert_eq(completed[1].accepted, true, "completion accepted")
+    _assert_eq(completed[1].equipped, false, "model change reported as failed")
+    _assert_eq(skin_ownership.equipped(state, 1), NAILONG, "worn this session")
+    _assert_eq(host.read(1, EQUIPPED_KEY), NAILONG, "equipped archived")
+    luassert.truthy(table.concat(warns, "\n"):find("role boom", 1, true), table.concat(warns, "\n"))
   end)
 
   it("test_purchase_rejects_missing_buyer_contexts_and_invalid_products", function()
@@ -443,6 +481,27 @@ describe("TestSkinOwnership", function()
     _assert_eq(skin_ownership.equipped(state, 1), NAILONG, "selection kept")
     _assert_eq(host.read(1, EQUIPPED_KEY), NAILONG, "equipped archived")
     _assert_eq(#achievements, 0, "no achievement without a model change")
+  end)
+
+  it("test_unequip_still_clears_the_saved_skin_when_resolving_the_role_throws", function()
+    local host = host_double.install()
+    local state = host_double.state()
+    skin_ownership.grant(state, 1, NAILONG)
+    skin_ownership.equip(state, 1, NAILONG)
+
+    local result
+    local warns = _with_warns(function()
+      _patch({
+        { target = runtime_ports, key = "resolve_role", value = function() error("role boom") end },
+      }, function()
+        result = skin_ownership.unequip(state, 1)
+      end)
+    end)
+
+    _assert_eq(result.accepted, true, "unequip accepted")
+    _assert_eq(skin_ownership.equipped(state, 1), nil, "selection cleared")
+    _assert_eq(host.read(1, EQUIPPED_KEY), 0, "saved skin cleared to 0")
+    luassert.truthy(table.concat(warns, "\n"):find("role boom", 1, true), table.concat(warns, "\n"))
   end)
 
   it("test_unequip_clears_saved_skin_and_resets_the_model", function()

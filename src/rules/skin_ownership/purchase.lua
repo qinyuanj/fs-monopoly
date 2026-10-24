@@ -81,6 +81,7 @@ local function _start_via_paid_port(root_state, role_id, entry)
   end
   local ok, started, reason = pcall(paid_purchase_port.start, game, player, entry)
   if not ok then
+    logger.warn("skin_ownership: paid purchase start failed", "role_id=" .. tostring(role_id), tostring(started))
     return false, "paid_gateway_missing"
   end
   if started ~= true then
