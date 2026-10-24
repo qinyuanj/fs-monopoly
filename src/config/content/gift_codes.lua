@@ -8,7 +8,7 @@
 -- 新码一律用 `lua5.4 tools/cli.lua gift-code new` 生成:它只在 codes 列表末尾
 -- 追加一条(按 `  codes = {` 与其后第一个 `  },` 行定位,改排版须同步 CLI),
 -- 明文码只在终端打印一次。「id → 玩家、明文码、发放日期」记在仓外。
--- 加载期校验见 gift_code_catalog。
+-- 加载期校验与哈希口径见皮肤归属模块的 src.rules.skin_ownership.gift_code_table。
 local gift_codes = {
   codes = {
     { id = 2, code_hash = "602f521bc1c37fe7b2c7447cfe8b743fac9f5a4cf7630ff3b7ac9227d93e623b", rewards = { 5005 }, expires_at = 1808295571, note = "#200 真机验收测试码(取代停用的 id 1 TEST2026)" },

@@ -1,17 +1,18 @@
--- 礼包码码表的加载期校验与查码(#198 / #203 / ADR 0075,User Story 18)。
+-- 礼包码码表的加载期校验、哈希口径与查码(#198 / #203 / #204 / ADR 0075)。
+-- 皮肤归属模块内部:码表数据留在配置层(gift_codes),规则住这里。
 -- build 对任意码表、皮肤目录与停用 id 列表校验并建哈希索引,违规以
--- error(msg, 0) 报出;默认码表在 require 时即构建,配置错误随加载暴露。
--- 码表只存 code_hash;查码先规范化输入再算 SHA-256。gift-code new CLI 用
--- 同一个 code_hash 算写入码表的哈希,两边口径一致。
+-- error(msg, 0) 报出;配置码表在 require 时即构建,配置错误随加载暴露。
+-- 码表只存 code_hash;查码先规范化输入再算 SHA-256。gift-code new CLI 引用
+-- 本模块的 code_hash 算写入码表的哈希,两边口径同一处定义。
 local gift_codes = require("src.config.content.gift_codes")
 local skins = require("src.config.content.skins")
 local number_utils = require("src.foundation.number")
 local sha256 = require("src.foundation.sha256")
 
-local gift_code_catalog = {}
+local gift_code_table = {}
 
 -- 去掉全部空白与连字符并统一为大写;非字符串按空串处理。
-function gift_code_catalog.normalize(text)
+function gift_code_table.normalize(text)
   if type(text) ~= "string" then
     return ""
   end
@@ -19,8 +20,8 @@ function gift_code_catalog.normalize(text)
 end
 
 -- 规范化后的 SHA-256(64 位小写十六进制),即码表 code_hash 的口径。
-function gift_code_catalog.code_hash(text)
-  return sha256.hex(gift_code_catalog.normalize(text))
+function gift_code_table.code_hash(text)
+  return sha256.hex(gift_code_table.normalize(text))
 end
 
 local function _fail(message)
@@ -111,7 +112,7 @@ local function _validate_expires_at(entry)
 end
 
 -- 返回 { find = function(input_text) -> entry|nil };entry 即码表原条目。
-function gift_code_catalog.build(codes, skin_catalog, retired_ids)
+function gift_code_table.build(codes, skin_catalog, retired_ids)
   local skin_by_product = _skins_by_product(skin_catalog or skins)
   local retired = _retired_set(retired_ids)
   local seen_ids = {}
@@ -125,18 +126,28 @@ function gift_code_catalog.build(codes, skin_catalog, retired_ids)
   end
   return {
     find = function(input_text)
-      if gift_code_catalog.normalize(input_text) == "" then
+      if gift_code_table.normalize(input_text) == "" then
         return nil
       end
-      return by_hash[gift_code_catalog.code_hash(input_text)]
+      return by_hash[gift_code_table.code_hash(input_text)]
     end,
   }
 end
 
-local default_catalog = gift_code_catalog.build(gift_codes.codes, skins, gift_codes.retired_ids)
+-- 配置码表的索引按码表与停用表的表身份记忆:配置换表(测试打补丁)即重建并重新校验。
+local configured = {}
 
-function gift_code_catalog.default()
-  return default_catalog
+function gift_code_table.default()
+  if configured.codes ~= gift_codes.codes or configured.retired_ids ~= gift_codes.retired_ids then
+    configured = {
+      codes = gift_codes.codes,
+      retired_ids = gift_codes.retired_ids,
+      index = gift_code_table.build(gift_codes.codes, skins, gift_codes.retired_ids),
+    }
+  end
+  return configured.index
 end
 
-return gift_code_catalog
+gift_code_table.default()
+
+return gift_code_table

@@ -5,7 +5,7 @@
 --   M.usage()         -> 完整 usage 文本(包内单一真源)
 --
 -- gift-code new 一条命令为一名受损玩家生成补偿码:读安全随机源生成 12 位码 →
--- 分配 id(max(现有 id, 停用 id) + 1)→ 用 gift_code_catalog.code_hash(与游戏
+-- 分配 id(max(现有 id, 停用 id) + 1)→ 用 skin_ownership.gift_code_table.code_hash(与游戏
 -- 查码同一份规范化 + SHA-256)算哈希 → 在码表 codes 列表末尾追加一条,其余
 -- 内容逐字保留 → 立即用码表模块重新加载校验,不过则回滚文件退 1。明文码只
 -- 打印到 stdout,不落盘。
@@ -18,7 +18,7 @@ local boundary = require("foundation.platform_boundary")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local number_utils = require("src.foundation.number")
-local gift_code_catalog = require("src.config.content.gift_code_catalog")
+local gift_code_table = require("src.rules.skin_ownership.gift_code_table")
 local skins = require("src.config.content.skins")
 
 local CODE_TABLE = "src/config/content/gift_codes.lua"
@@ -168,7 +168,7 @@ local function _entry_line(id, code, rewards, expires_at, note)
     reward_texts[i] = tostring(product_id)
   end
   return string.format('    { id = %d, code_hash = "%s", rewards = { %s }, expires_at = %d, note = %q },\n',
-    id, gift_code_catalog.code_hash(code), table.concat(reward_texts, ", "), expires_at, note)
+    id, gift_code_table.code_hash(code), table.concat(reward_texts, ", "), expires_at, note)
 end
 
 -- 在 `  codes = {` 之后第一个 `  },` 行前插入;定位不到返回 nil。
@@ -190,7 +190,7 @@ local function _verify_written(path, id, code)
   if code_table == nil then
     return false, load_err
   end
-  local ok, catalog = pcall(gift_code_catalog.build, code_table.codes, skins, code_table.retired_ids)
+  local ok, catalog = pcall(gift_code_table.build, code_table.codes, skins, code_table.retired_ids)
   if not ok then
     return false, tostring(catalog)
   end

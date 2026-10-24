@@ -1,11 +1,12 @@
 -- #198 / #203 / ADR 0075:礼包码码表在加载期校验(User Story 18 / #203 22-24):
 -- id 唯一且不撞停用 id、code_hash 为 64 位小写十六进制且唯一、不得出现明文
 -- code、奖励指向存在且配了存档 key 的皮肤。查码先规范化输入再按哈希比对。
+-- #204:码表校验与哈希口径随皮肤归属模块住规则层,gift-code new CLI 共用同一 code_hash。
 require("test.bootstrap").install_package_paths()
 -- busted injects the extensible assertion object into each file environment.
 -- luacheck: ignore 143
 local luassert = assert
-local gift_code_catalog = require("src.config.content.gift_code_catalog")
+local gift_code_table = require("src.rules.skin_ownership.gift_code_table")
 
 local SKINS = {
   { product_id = 5005, name = "奶龙", archive_key = 1054 },
@@ -19,7 +20,7 @@ local HASH_ABCDEFGHJKMN = "f798776cb4d1e5975b47ed94fcc91314bc8d5c6935ff56b33c03b
 local HASH_SUMMER = "20281d1b6cf1a97468ec8153ec64a4f14b0675023b6fc2b32a1e0afcdf689298"
 
 local function _build_error(codes, retired_ids)
-  local ok, err = pcall(gift_code_catalog.build, codes, SKINS, retired_ids)
+  local ok, err = pcall(gift_code_table.build, codes, SKINS, retired_ids)
   luassert.is_false(ok, "invalid code table should fail to build")
   local text = tostring(err)
   luassert.is_nil(text:match("^[^\n]-%.lua:%d+: "), "config error should carry no source-position prefix, got: " .. text)
@@ -30,15 +31,27 @@ local function _assert_mentions(text, fragment)
   luassert.truthy(text:find(fragment, 1, true) ~= nil, "error should mention " .. fragment .. ", got: " .. text)
 end
 
-describe("TestGiftCodes", function()
+describe("TestSkinOwnershipGiftCodeTable", function()
   it("test_default_code_table_loads_and_registers_redeem_record_key", function()
+    -- 重新加载验证加载期构建;收尾装回原模块实例,不让新实例泄漏给同进程后续 spec。
+    local originals = {
+      codes = package.loaded["src.config.content.gift_codes"],
+      table = package.loaded["src.rules.skin_ownership.gift_code_table"],
+    }
     package.loaded["src.config.content.gift_codes"] = nil
-    package.loaded["src.config.content.gift_code_catalog"] = nil
-    local gift_codes = require("src.config.content.gift_codes")
-    local catalog = require("src.config.content.gift_code_catalog")
+    package.loaded["src.rules.skin_ownership.gift_code_table"] = nil
+    local ok, err = pcall(function()
+      local gift_codes = require("src.config.content.gift_codes")
+      local catalog = require("src.rules.skin_ownership.gift_code_table")
 
-    luassert.is_number(gift_codes.redeem_record_archive_key, "redeem record Str key should be registered")
-    luassert.is_table(catalog.default(), "default code table should build at load time")
+      luassert.is_number(gift_codes.redeem_record_archive_key, "redeem record Str key should be registered")
+      luassert.is_table(catalog.default(), "default code table should build at load time")
+    end)
+    package.loaded["src.config.content.gift_codes"] = originals.codes
+    package.loaded["src.rules.skin_ownership.gift_code_table"] = originals.table
+    if not ok then
+      error(err, 0)
+    end
   end)
 
   -- #203:测试码 TEST2026(id 1)已停用,码表里只剩哈希,明文不再命中。
@@ -46,11 +59,11 @@ describe("TestGiftCodes", function()
     local gift_codes = require("src.config.content.gift_codes")
 
     luassert.same({ 1 }, gift_codes.retired_ids, "id 1 should be registered as retired")
-    luassert.is_nil(gift_code_catalog.default().find("TEST2026"), "the retired plaintext test code should not match")
+    luassert.is_nil(gift_code_table.default().find("TEST2026"), "the retired plaintext test code should not match")
   end)
 
   it("test_lookup_ignores_case_hyphens_and_any_whitespace", function()
-    local catalog = gift_code_catalog.build({
+    local catalog = gift_code_table.build({
       { id = 1, code_hash = HASH_ABCDEFGHJKMN, rewards = { 5005 }, note = "#203" },
     }, SKINS)
 
@@ -63,6 +76,12 @@ describe("TestGiftCodes", function()
     luassert.is_nil(catalog.find(HASH_ABCDEFGHJKMN), "the stored hash itself should not match")
     luassert.is_nil(catalog.find("  - "), "blank input should not match")
     luassert.is_nil(catalog.find(nil), "missing input should not match")
+  end)
+
+  it("test_code_hash_is_the_sha256_of_the_normalized_code", function()
+    luassert.equal(HASH_ABCDEFGHJKMN, gift_code_table.code_hash("  abcd-EFGH jkmn\t"))
+    luassert.equal("ABCDEFGHJKMN", gift_code_table.normalize(" abcd-efgh jkmn "))
+    luassert.equal("", gift_code_table.normalize(nil), "non-string input normalizes to empty")
   end)
 
   it("test_rejects_plaintext_code_field", function()
@@ -134,7 +153,7 @@ describe("TestGiftCodes", function()
   end)
 
   it("test_accepts_absent_and_numeric_expires_at", function()
-    local catalog = gift_code_catalog.build({
+    local catalog = gift_code_table.build({
       { id = 1, code_hash = HASH_EGG2026, rewards = { 5005 } },
       { id = 2, code_hash = HASH_SUMMER, rewards = { 5006 }, expires_at = 1893456000 },
     }, SKINS)
