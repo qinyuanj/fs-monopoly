@@ -10,11 +10,8 @@ local screen_openers_port = require("src.ui.seams.screen_openers")
 local resolver_seam = require("src.ui.seams.local_actor_resolver")
 local config_sanity = require("src.config.gameplay.config_sanity")
 local runtime_assets = require("src.config.runtime_assets")
-local skin_panel = require("src.ui.screens.skin_panel")
-local skin_equip = require("src.rules.cosmetics")
-local skin_archive = require("src.app.cosmetics.skin_archive")
 local gift_code_port = require("src.ui.seams.gift_code")
-local gift_code_redeem = require("src.app.gift_code.redeem")
+local skin_ownership = require("src.rules.skin_ownership")
 local achievement_runtime = require("src.app.host_integrations.achievement_runtime")
 local host_runtime = require("src.host.init")
 local sign_in_rewards = require("src.app.host_integrations.sign_in_rewards")
@@ -33,22 +30,6 @@ local M = {}
 config_sanity.configure_runtime_asset_validator(function()
   return runtime_assets.validate_catalog()
 end)
-
--- 从皮肤取装备资源 id:皮肤缺失/未登记产品/模型无资源时统一 nil,
--- 交给 skin_equip.equip 走其缺省语义。
-local function _resolve_skin_resource(skin)
-  local model = skin and runtime_assets.skin_model_for_product(skin.product_id) or nil
-  return model and model.asset_id or nil
-end
-
--- 装配 skin_panel 的 equip 回调:装配成功后记一次遥测。
-local function _equip_skin(role_id, skin)
-  local equipped = skin_equip.equip(role_id, _resolve_skin_resource(skin))
-  if equipped then
-    achievement_progress_port.skin_equipped(nil, role_id, skin)
-  end
-  return equipped
-end
 
 local function _install_context(install_globals)
   local runtime_ctx = runtime_context.new({
@@ -105,17 +86,11 @@ local function _load_required_modules(opts)
       return require("src.ui.screens.market").close(...)
     end,
   })
-  skin_panel.configure_equip(_equip_skin)
-  skin_panel.configure_unequip(function(role_id)
-    return skin_equip.unequip(role_id, runtime_assets.default_skin_model().asset_id)
-  end)
-  -- ADR 0074:皮肤归属与穿戴以宿主玩家存档为真源,经 runtime_ports 读写。
-  skin_panel.configure_archive(skin_archive)
-  -- #199:礼包码屏经 seams/gift_code 调 app 层兑换门面;闭包调用时读模块字段,
-  -- 测试补丁仍可打在门面字段上。
+  -- #199 / #204:礼包码屏经 seams/gift_code 调皮肤归属模块的兑换;闭包调用时读
+  -- 模块字段,测试补丁仍可打在模块字段上。
   gift_code_port.configure({
     redeem = function(...)
-      return gift_code_redeem.redeem(...)
+      return skin_ownership.redeem(...)
     end,
   })
   sign_in_rewards.install(opts)

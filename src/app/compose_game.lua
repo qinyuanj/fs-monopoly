@@ -9,9 +9,8 @@ local balance_ops = require("src.player.actions.balance")
 local deity_ops = require("src.player.actions.deity")
 local location_ops = require("src.player.actions.location")
 local game_victory = require("src.rules.endgame")
-local cosmetics_port = require("src.ui.seams.cosmetics")
-local cosmetics_transaction = require("src.app.cosmetics.transaction")
-local cosmetics_transaction_state = require("src.app.cosmetics.transaction_state")
+local skin_ownership_seam = require("src.ui.seams.skin_ownership")
+local skin_ownership = require("src.rules.skin_ownership")
 local game_defaults = require("src.app.game_defaults")
 
 local function _install_class_mixin(target_class, source_table, source_name)
@@ -34,12 +33,9 @@ end
 
 game_state.check_victory = game_victory.check_victory
 
--- cosmetics port 装配(工单 #244):ui.ports.cosmetics 是纯接口壳,transaction
--- 实现在组合根注入,与 mixin 安装同住 compose_game(ADR 0001)。
-cosmetics_port.install({
-  transaction = cosmetics_transaction,
-  transaction_state = cosmetics_transaction_state,
-})
+-- 皮肤归属 ui seam 装配(#244 / #204):seam 是纯接口壳,规则层皮肤归属模块在
+-- 组合根注入,与 mixin 安装同住 compose_game(ADR 0001)。
+skin_ownership_seam.install(skin_ownership)
 
 local composition_root = {}
 

@@ -1,80 +1,28 @@
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
--- #293 批3 pin:src/ui/screens/skin_panel/skin_panel_state.lua 的幸存者:
--- 包装层(ensure_panel 调用、assert(panel, err or "missing_state") 与
--- 返回)的三处换 nil 变异。transaction_state 经 cosmetics port 转发代理
--- 取用,桩经 debug.setupvalue 直接替换 port 模块的 _impl upvalue(不依赖
--- compose_game 是否已装配,tearDown 原样还原)。
+-- #204:皮肤商店屏的展示状态只有开关、页码与所属角色,住 state.ui.skin_panel;
+-- 归属与穿戴不在这里(归皮肤归属模块)。
+local panel_state = require("src.ui.screens.skin_panel.skin_panel_state")
 
-local cosmetics = require("src.ui.seams.cosmetics")
-
-local _impl_upvalue_index = nil
-do
-  for i = 1, 10 do
-    local name = debug.getupvalue(cosmetics.install, i)
-    if name == "_impl" then
-      _impl_upvalue_index = i
-      break
-    end
-  end
-end
-
-local _saved_impl = nil
-local _captured = nil
-
-local function _set_impl(impl)
-  debug.setupvalue(cosmetics.install, _impl_upvalue_index, impl)
-end
 describe("TestSkinPanelState", function()
-before_each(function()
-  _captured = {}
-  -- debug.getupvalue 返回 (name, value) 两值,单赋值只取 name——必须显式
-  -- 取第二返回值,否则 tearDown 会把 "_impl" 名字串写回,污染后续用例。
-  local _, saved = debug.getupvalue(cosmetics.install, _impl_upvalue_index)
-  _saved_impl = saved
-  _set_impl({
-    transaction_state = {
-      ensure_panel = function(root_state)
-        _captured.root = root_state
-        if root_state == nil or root_state.ui == nil then
-          return nil, "missing_state"
-        end
-        root_state.ui.skin_panel = root_state.ui.skin_panel or { open = false }
-        return root_state.ui.skin_panel
-      end,
-    },
-  })
-end)
-
-after_each(function()
-  _set_impl(_saved_impl)
-end)
-
-it("test_ensure_returns_the_panel_from_the_port", function()
-  -- L6 ensure_panel 调用换 nil 与 L7 assert 调用换 nil:成功路径必须把
-  -- port 返回的 panel 原样透出。
+it("test_ensure_creates_a_closed_first_page_panel", function()
   local root_state = { ui = {} }
-  local panel = require("src.ui.screens.skin_panel.skin_panel_state").ensure(root_state)
-  luassert.truthy(panel ~= nil, "ensure must return the panel")
-  luassert.truthy(panel == root_state.ui.skin_panel, "returned panel must be the recorded one")
-  luassert.truthy(_captured.root == root_state, "ensure must forward the root state")
+  local panel = panel_state.ensure(root_state)
+  luassert.same({ open = false, page_index = 1 }, panel, "fresh panel is closed on page 1")
+  luassert.truthy(panel == root_state.ui.skin_panel, "panel lives at state.ui.skin_panel")
 end)
 
 it("test_ensure_reuses_an_existing_panel", function()
   local existing = { open = true }
   local root_state = { ui = { skin_panel = existing } }
-  local panel = require("src.ui.screens.skin_panel.skin_panel_state").ensure(root_state)
-  luassert.truthy(panel == existing, "existing panel must be reused, not replaced")
+  luassert.truthy(panel_state.ensure(root_state) == existing, "existing panel must be reused, not replaced")
 end)
 
 it("test_ensure_raises_missing_state_without_ui", function()
-  -- L7 `err or "missing_state"` 的 err 换 nil 等消息链在此钉死:无 ui 时
-  -- 必须带 missing_state 语义报错。
-  local ok, err = pcall(function()
-    require("src.ui.screens.skin_panel.skin_panel_state").ensure({})
-  end)
-  luassert.truthy(ok == false, "ensure must fail without ui state")
-  luassert.truthy(tostring(err):find("missing_state") ~= nil, "error must carry missing_state")
+  for _, root_state in ipairs({ {}, false }) do
+    local ok, err = pcall(panel_state.ensure, root_state or nil)
+    luassert.truthy(ok == false, "ensure must fail without ui state")
+    luassert.truthy(tostring(err):find("missing_state") ~= nil, "error must carry missing_state")
+  end
 end)
-
 end)

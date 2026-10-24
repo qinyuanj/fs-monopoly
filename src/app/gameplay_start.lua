@@ -6,7 +6,7 @@ local camera_sync = require("src.ui.ports.ui_sync")._camera
 local tick_clock = require("src.turn.loop.tick_clock")
 local frame_timer = require("src.host.frame_timer")
 local leaderboard_settlement = require("src.app.host_integrations.leaderboard_settlement")
-local cosmetics_transaction = require("src.app.cosmetics.transaction")
+local skin_ownership = require("src.rules.skin_ownership")
 
 local M = {}
 
@@ -68,7 +68,7 @@ end
 local function _restore_skins(state, game)
   for _, player in ipairs(game and game.players or {}) do
     if not player.is_ai then
-      cosmetics_transaction.restore_role(state, player.id)
+      skin_ownership.restore(state, player.id)
     end
   end
 end

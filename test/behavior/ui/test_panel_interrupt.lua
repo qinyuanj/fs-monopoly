@@ -1,6 +1,6 @@
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
-require("src.app.compose_game") -- 组合根装配:注入 ui.ports.cosmetics 的 transaction 实现(工单 #244)
+require("src.app.compose_game") -- 组合根装配:注入皮肤归属 ui seam 的实现(#244 / #204)
 local support = require("test.support.shared_support")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
 local item_atlas = require("src.ui.screens.item_atlas")
@@ -23,7 +23,6 @@ end
 describe("TestPanelInterrupt", function()
 before_each(function()
   item_atlas.reset_for_tests()
-  skin_panel.reset_for_tests()
   tips.clear()
   _captured_tips = {}
   tips.configure_runtime({

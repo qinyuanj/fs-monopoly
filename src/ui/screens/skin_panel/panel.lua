@@ -1,12 +1,12 @@
--- skin_panel 面板门面(自 screens/skin_panel.lua 拆分,>100 mutation sites
--- 行为保持):事务派发、结果应用(canvas 切换/槽位刷新/提示)、公开动作 API。
-local cosmetics_ports = require("src.ui.seams.cosmetics")
-local transaction = cosmetics_ports.build().transaction
+-- skin_panel 面板门面(#204):把面板动作映射为皮肤归属 seam 的命令与查询,再把
+-- 领域结果映射为展示——canvas 切换、槽位刷新与提示。归属规则不在这里。
+local skin_ownership = require("src.ui.seams.skin_ownership")
 local tip_queue = require("src.foundation.tips")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
 local skin_nodes = require("src.ui.schema.skin")
 local skin_panel_view = require("src.ui.render.widgets.skin_panel")
+local slot_views = require("src.ui.render.widgets.skin_panel_slot_views")
 local panel_helpers = require("src.ui.render.support.panel_helpers")
 local panel_state = require("src.ui.screens.skin_panel.skin_panel_state")
 local request_shape = require("src.ui.schema.skin_request")
@@ -14,154 +14,157 @@ local number_utils = require("src.foundation.number")
 
 local panel = {}
 
-local function _notify(text, key)
+local UNLOCK_REFUSED_TIP = "皮肤尚未解锁"
+
+-- 购买被拒的提示:存档不可用单独说明;角色缺失与已有在途购买不提示;其余
+-- (非可购买皮肤、买家解析失败、付费网关拒绝)一律按尚未解锁提示。
+local SILENT_PURCHASE_REFUSALS = {
+  missing_state = true,
+  missing_role = true,
+  purchase_in_flight = true,
+}
+
+local PURCHASE_REFUSAL_TIPS = {
+  archive_unavailable = "存档未开启，暂时无法购买皮肤",
+}
+
+-- 提示去重键:skin_panel:<动作>:<角色>:<商品>。
+local function _tip(action, role_id, product_id, text, opts)
+  if opts and opts.silent == true then
+    return
+  end
   tip_queue.enqueue({
     text = text,
     duration = 2.0,
-    dedupe_key = key,
+    dedupe_key = "skin_panel:" .. action .. ":" .. tostring(role_id) .. ":" .. tostring(product_id or ""),
     blocks_inter_turn = false,
     source = "ui.skin_panel",
   })
 end
 
--- configure/reset/open 时从 transaction_context 拉新排序目录，供槽位渲染使用。
-function panel.sync_catalog()
-  transaction.refresh_catalog()
-  panel.catalog = transaction.catalog
-end
-
-local function _refresh_slots_for_owner(state, p)
+local function _refresh_slots(state, p)
   return panel_helpers.with_owner_role(state, p.role_id, function()
-    return skin_panel_view.refresh_slots(state, panel.catalog)
+    return skin_panel_view.refresh_slots(state, skin_ownership.catalog())
   end)
 end
 
-local function _panel_from_result(state, result)
-  if result and result.panel then
-    return result.panel
-  end
-  return panel_state.ensure(state)
+local function _switch_to_base(state, role_id)
+  canvas.switch_by_role_id(state and state.ui, base_nodes.canvas, role_id)
 end
 
-local function _result_key(result, role_id)
-  local product_id = result.product_id or result.equipped_product or ""
-  return "skin_panel:" .. tostring(result.action or "unknown")
-    .. ":" .. tostring(role_id)
-    .. ":" .. tostring(product_id)
+local function _skin_at(p, slot_index)
+  return slot_views.skin_at(p, slot_index, skin_ownership.catalog())
 end
 
-local function _notify_result(result, role_id, opts)
-  if opts and opts.silent == true then
+-- 换装成功(直接穿上或购买完成)的展示:收屏、刷新槽位、回基础屏、提示。
+local function _show_equipped(state, p, role_id, action, skin)
+  p.open = false
+  _refresh_slots(state, p)
+  _switch_to_base(state, role_id)
+  _tip(action, role_id, skin.product_id, "已换装 " .. tostring(skin.name))
+end
+
+local function _on_purchase_complete(state, result)
+  if result.accepted ~= true then
     return
   end
-  if result == nil or result.notification == nil then
+  local p = panel_state.ensure(state)
+  local skin = slot_views.skin_by_product(skin_ownership.catalog(), result.product_id)
+  if skin == nil then
     return
   end
-  _notify(result.notification, _result_key(result, role_id))
+  _show_equipped(state, p, p.role_id, "purchase_complete", skin)
 end
 
-local function _switch_open_result(state, effective_role, result)
-  if result and result.action == "open" then
-    canvas.switch_by_role_id(state and state.ui, skin_nodes.canvas, effective_role)
+local function _start_purchase(state, p, role_id, skin)
+  local result = skin_ownership.start_purchase(state, role_id, skin.product_id, function(completed)
+    _on_purchase_complete(state, completed)
+  end)
+  if result.accepted ~= true and not SILENT_PURCHASE_REFUSALS[result.reason] then
+    _tip("unknown", role_id, nil, PURCHASE_REFUSAL_TIPS[result.reason] or UNLOCK_REFUSED_TIP)
   end
-end
-
-local function _refresh_result_slots(state, p, result)
-  if result and result.slot_view_dirty == true then
-    _refresh_slots_for_owner(state, p)
-  end
-end
-
-local function _switch_close_result(state, effective_role, result)
-  if result and result.panel_should_close == true then
-    canvas.switch_by_role_id(state and state.ui, base_nodes.canvas, result.role_id or effective_role)
-  end
-end
-
-local function _apply_transaction_result(state, role_id, result, opts)
-  local p = _panel_from_result(state, result)
-  local effective_role = role_id or p.role_id
-  _switch_open_result(state, effective_role, result)
-  _refresh_result_slots(state, p, result)
-  _switch_close_result(state, effective_role, result)
-  _notify_result(result, effective_role, opts)
   return p
 end
 
-local function _default_apply_transaction_result(state, result)
-  return _apply_transaction_result(state, nil, result, {})
-end
-
-function panel.apply_transaction_result(state, result, opts)
-  return _apply_transaction_result(state, nil, result, opts or {})
-end
-
-local function _handle_transaction(state, role_id, request, opts)
-  local result = transaction.handle_skin_transaction(state, role_id, request)
-  return _apply_transaction_result(state, role_id, result, opts)
-end
-
-function panel.is_slot_equipped(state, slot_index)
-  return transaction.is_slot_equipped(state, slot_index)
-end
-
-function panel.configure_equip(callback)
-  transaction.configure_equip(callback)
-end
-
-function panel.configure_unequip(callback)
-  transaction.configure_unequip(callback)
-end
-
-function panel.configure_archive(archive)
-  transaction.configure_archive(archive)
-end
-
-function panel.configure_catalog_for_tests(catalog)
-  transaction.configure_catalog_for_tests(catalog)
-  panel.sync_catalog()
-end
-
-function panel.reset_for_tests()
-  transaction.reset_for_tests()
-  panel.sync_catalog()
-  transaction.configure_transaction_result_applier(_default_apply_transaction_result)
-end
-
-function panel.install_default_result_applier()
-  transaction.configure_transaction_result_applier(_default_apply_transaction_result)
-end
-
 function panel.open(state, role_id)
-  panel.sync_catalog()  -- open 前重新排序，确保槽位渲染使用当前目录
-  return _handle_transaction(state, role_id, { type = "open" })
+  local p = panel_state.ensure(state)
+  p.open = true
+  p.role_id = role_id
+  p.page_index = 1
+  local restored = skin_ownership.sync_on_shop_open(state, role_id)
+  canvas.switch_by_role_id(state.ui, skin_nodes.canvas, role_id)
+  _refresh_slots(state, p)
+  _tip("open", role_id, restored, "皮肤已打开")
+  return p
 end
 
 function panel.close(state, role_id, opts)
-  return _handle_transaction(state, role_id, { type = "close" }, opts)
+  local p = panel_state.ensure(state)
+  p.open = false
+  local effective_role = role_id or p.role_id
+  _switch_to_base(state, effective_role)
+  _tip("close", effective_role, nil, "已关闭", opts)
+  return p
 end
 
-function panel.unlock(state, role_id, source, slot_index)
-  return _handle_transaction(state, role_id, {
-    type = "unlock_slot",
-    source = source,
-    slot_index = slot_index,
-  })
+local function _page(state, delta)
+  local p = panel_state.ensure(state)
+  p.page_index = slot_views.clamp_page((p.page_index or 1) + delta, skin_ownership.catalog())
+  _refresh_slots(state, p)
+  return p
 end
 
+-- 礼物等非购买来源的解锁(source 仅标记来源,归属不分来源)。
+function panel.unlock(state, role_id, _source, slot_index)
+  local p = panel_state.ensure(state)
+  local effective_role = role_id or p.role_id
+  local skin = _skin_at(p, slot_index)
+  if skin == nil then
+    return p
+  end
+  if skin_ownership.grant(state, effective_role, skin.product_id).accepted == true then
+    _refresh_slots(state, p)
+    _tip("unlock", effective_role, skin.product_id, tostring(skin.name) .. " 已解锁")
+  end
+  return p
+end
+
+-- 已拥有则穿上,未拥有则发起购买。
 function panel.equip(state, role_id, slot_index)
-  return _handle_transaction(state, role_id, {
-    type = "equip_slot",
-    slot_index = slot_index,
-  })
+  local p = panel_state.ensure(state)
+  local effective_role = role_id or p.role_id
+  local skin = _skin_at(p, slot_index)
+  if skin == nil then
+    return p
+  end
+  if not skin_ownership.owns(state, effective_role, skin.product_id) then
+    return _start_purchase(state, p, effective_role, skin)
+  end
+  if skin_ownership.equip(state, effective_role, skin.product_id).accepted == true then
+    _show_equipped(state, p, effective_role, "equip", skin)
+  end
+  return p
 end
 
 local function _unequip(state, role_id)
-  return _handle_transaction(state, role_id, { type = "unequip" })
+  local p = panel_state.ensure(state)
+  local effective_role = role_id or p.role_id
+  if skin_ownership.unequip(state, effective_role).accepted == true then
+    _refresh_slots(state, p)
+    _tip("unequip", effective_role, nil, "已脱下皮肤")
+  end
+  return p
 end
 
-local function _page(state, request_type)
-  return _handle_transaction(state, nil, { type = request_type }, { silent = true })
+-- 槽位按钮:已穿戴则脱下,否则穿上(或发起购买)。
+local function _activate_slot(state, role_id, slot_index)
+  local p = panel_state.ensure(state)
+  local effective_role = role_id or p.role_id
+  local skin = _skin_at(p, slot_index)
+  if slot_views.status(state, effective_role, skin) == "equipped" then
+    return _unequip(state, effective_role)
+  end
+  return panel.equip(state, effective_role, slot_index)
 end
 
 local _ACTION_HANDLERS = {
@@ -169,15 +172,10 @@ local _ACTION_HANDLERS = {
   buy     = function(state, role_id, a)  return panel.unlock(state, role_id, "buy", request_shape.slot_index(a)) end,
   gift    = function(state, role_id, a)  return panel.unlock(state, role_id, "gift", request_shape.slot_index(a)) end,
   equip   = function(state, role_id, a)  return panel.equip(state, role_id, request_shape.slot_index(a)) end,
-  activate_slot = function(state, role_id, a)
-    return _handle_transaction(state, role_id, {
-      type = "activate_slot",
-      slot_index = request_shape.slot_index(a),
-    })
-  end,
+  activate_slot = function(state, role_id, a) return _activate_slot(state, role_id, request_shape.slot_index(a)) end,
   unequip = function(state, role_id, _)  return _unequip(state, role_id) end,
-  next    = function(state, _, _)        return _page(state, "page_next") end,
-  prev    = function(state, _, _)        return _page(state, "page_prev") end,
+  next    = function(state, _, _)        return _page(state, 1) end,
+  prev    = function(state, _, _)        return _page(state, -1) end,
 }
 
 function panel.handle_action(state, action, role_id)
@@ -190,4 +188,3 @@ function panel.handle_action(state, action, role_id)
 end
 
 return panel
-

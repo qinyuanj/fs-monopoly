@@ -748,7 +748,7 @@ end)
 
 it("test_skin_gallery_view_actions_update_local_state", function()
   local skin_gallery = require("src.ui.screens.skin_panel.skin_gallery")
-  local transaction = require("src.app.cosmetics.transaction")
+  local skin_ownership = require("src.rules.skin_ownership")
   local tip_queue_mod = require("src.foundation.tips")
   local state = { ui = {} }
   local tips = {}
@@ -763,8 +763,8 @@ it("test_skin_gallery_view_actions_update_local_state", function()
     _assert_eq(state.ui.skin_gallery.mode, "skin", "skin panel mode should be skin")
     skin_gallery.handle_action(state, "buy", 1)
     skin_gallery.handle_action(state, "equip", 1)
-    _assert_eq(state.ui.skin_panel.selected_by_role["1"], transaction.catalog[1].product_id,
-      "equip should select unlocked skin")
+    _assert_eq(skin_ownership.equipped(state, 1), skin_ownership.catalog()[1].product_id,
+      "equip should wear the unlocked skin")
     skin_gallery.open_gallery(state, 1)
     _assert_eq(state.ui.skin_gallery.mode, "gallery", "gallery button should open gallery mode")
     skin_gallery.handle_action(state, "close", 1)
@@ -777,7 +777,7 @@ end)
 
 it("test_skin_gallery_routes_close_without_mirroring_panel_state", function()
   local skin_gallery = require("src.ui.screens.skin_panel.skin_gallery")
-  local transaction = require("src.app.cosmetics.transaction")
+  local skin_ownership = require("src.rules.skin_ownership")
   local tip_queue_mod = require("src.foundation.tips")
   local state = { ui = {} }
 
@@ -791,11 +791,11 @@ it("test_skin_gallery_routes_close_without_mirroring_panel_state", function()
     _assert_eq(route.page_index, nil, "route state should not mirror panel pagination")
     _assert_eq(route.role_id, nil, "route state should not mirror panel ownership")
 
-    local pid = transaction.catalog[1].product_id
+    local pid = skin_ownership.catalog()[1].product_id
     skin_gallery.open_skin(state, 1)
     local skin_state = skin_gallery.handle_action(state, "buy", 1)
     _assert_eq(skin_state, state.ui.skin_panel, "buy should return canonical skin state")
-    _assert_eq(state.ui.skin_panel.owned_by_role["1"][pid], true, "buy should update canonical ownership")
+    _assert_eq(skin_ownership.owns(state, 1, pid), true, "buy should update canonical ownership")
     _assert_eq(route.owned_by_role, nil, "route state should not mirror ownership")
 
     -- equip 成功会自动关面板,close 分发要趁面板还开着时钉住
@@ -805,12 +805,13 @@ it("test_skin_gallery_routes_close_without_mirroring_panel_state", function()
     skin_gallery.open_skin(state, 1)
     local equipped_state = skin_gallery.handle_action(state, "equip", 1)
     _assert_eq(equipped_state, state.ui.skin_panel, "equip should return canonical skin state")
-    _assert_eq(state.ui.skin_panel.selected_by_role["1"], pid, "equip should update canonical selection")
+    _assert_eq(skin_ownership.equipped(state, 1), pid, "equip should update canonical selection")
     _assert_eq(route.selected_by_role, nil, "route state should not mirror selection")
 
     skin_gallery.open_skin(state, 2)
     local gift_state = skin_gallery.handle_action(state, "gift", 2)
-    _assert_eq(gift_state.owned_by_role["2"][pid], true, "gift should unlock via skin panel")
+    _assert_eq(gift_state, state.ui.skin_panel, "gift should return canonical skin state")
+    _assert_eq(skin_ownership.owns(state, 2, pid), true, "gift should unlock via skin panel")
     skin_gallery.handle_action(state, "close", 2)
 
     skin_gallery.open_gallery(state, 1)

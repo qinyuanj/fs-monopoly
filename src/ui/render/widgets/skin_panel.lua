@@ -1,8 +1,7 @@
 local nodes = require("src.ui.schema.skin")
 local panel_runtime = require("src.ui.render.support.panel_runtime")
 local ui_controls = require("src.ui.render.support.ui_controls")
-local cosmetics_port = require("src.ui.seams.cosmetics").build()
-local transaction = cosmetics_port.transaction
+local slot_views = require("src.ui.render.widgets.skin_panel_slot_views")
 local skin_buttons = require("src.ui.render.widgets.skin_panel_buttons")
 local skin_cards = require("src.ui.render.widgets.skin_panel_cards")
 
@@ -20,12 +19,12 @@ end
 function skin_panel_view.refresh_slots(state, catalog, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local slot_views = transaction.slot_view_models(state, catalog)
+  local page_views = slot_views.build_page(state, catalog)
 
   _refresh_static_nodes(ui)
 
   for slot in ipairs(nodes.card_images) do
-    local view = slot_views[slot]
+    local view = page_views[slot]
     skin_cards.refresh_slot_visuals(state, ui, runtime, slot, view)
     skin_buttons.refresh_button(ui, slot, view)
   end

@@ -8,7 +8,8 @@
 -- 点确认时把缓存交给兑换门面(经 seams/gift_code 注入),没有缓存按空输入处理;
 -- 开屏时把该玩家的草稿回填进输入框(无草稿写空串),点取消才清掉草稿与输入框
 -- (#201:取消 = 明确放弃,是唯一清草稿的路径;被打断或兑换后重开都保留草稿)。
--- 结果提示文本取门面返回值,按玩家入队,接线层不另写文案、屏内不加结果节点;
+-- 兑换结果是领域状态 { status, granted }(#204),本屏按 status 取配置里的提示模板,
+-- granted 时填入皮肤名,按玩家入队;屏内不加结果节点;
 -- 兑换后屏不关闭,点取消关闭。草稿只活在本局内存,不写存档。
 local append_intent_spec = require("src.ui.input.route_specs")
 local canvas = require("src.ui.coord.canvas_coordinator")
@@ -23,6 +24,7 @@ local tip_queue = require("src.foundation.tips")
 local role_id_utils = require("src.foundation.identity")
 local logger = require("src.foundation.log")
 local gift_codes = require("src.config.content.gift_codes")
+local skins = require("src.config.content.skins")
 
 local gift_code = { key = "gift_code" }
 
@@ -117,16 +119,41 @@ end
 
 -- ===== 兑换提交 =====
 
+-- 发放的皮肤名,顿号分隔;名字取自皮肤目录配置。
+local function _skin_names(product_ids)
+  local names = {}
+  for _, product_id in ipairs(product_ids or {}) do
+    for _, skin in ipairs(skins) do
+      if skin.product_id == product_id and skin.name ~= nil then
+        names[#names + 1] = skin.name
+      end
+    end
+  end
+  return table.concat(names, "、")
+end
+
+local function _message(result)
+  if type(result) ~= "table" then
+    return nil
+  end
+  local template = gift_codes.messages[result.status]
+  if template ~= nil and result.status == "granted" then
+    return string.format(template, _skin_names(result.granted))
+  end
+  return template
+end
+
 local function _enqueue_result(role_id, result)
-  if type(result) ~= "table" or result.message == nil then
+  local message = _message(result)
+  if message == nil then
     return
   end
   -- 去重粒度按玩家 + 提示文本:连续兑换两个码得到的不同提示都要展示,
   -- 同一条提示重复触发才吞(#195 review:只按 status 会吞掉第二条成功提示)。
   tip_queue.enqueue({
-    text = result.message,
+    text = message,
     duration = TIP_DURATION,
-    dedupe_key = "gift_code:" .. tostring(role_id) .. ":" .. result.message,
+    dedupe_key = "gift_code:" .. tostring(role_id) .. ":" .. message,
     blocks_inter_turn = false,
     role_id = role_id,
     source = "ui.gift_code",

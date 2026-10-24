@@ -12,7 +12,6 @@ end
 describe("TestHostInstall", function()
 
   after_each(function()
-  require("src.ui.screens.skin_panel").reset_for_tests()
   require("src.host.context").set_current(nil)
   -- 本 spec 反复把运行时端口拆到未配置态验证安装路径;拆完必须把共享测试基线装回去,
   -- 否则同进程后续 suite 会撞上「missing market paid gateway」之类的空端口。全量
@@ -38,11 +37,26 @@ local function _test_host_ports_lists_five_capability_slots_in_fixed_order()
   _assert_eq(require("src.ui.seams.host_scene_ui"), refired[5], "slot 5 is host_scene_ui")
 end
 
+-- 记录换模型调用的角色替身(宿主边界);单位没有 reset_model,脱下走默认造型。
+local function _model_recorder(calls)
+  return function(role_id)
+    return {
+      get_ctrl_unit = function()
+        return {
+          set_model_by_creature_key = function(...)
+            calls[#calls + 1] = { role_id = role_id, args = { ... } }
+            return true
+          end,
+        }
+      end,
+    }
+  end
+end
+
 local function _test_skip_context_install_wires_purchase_skins_to_paid_port()
   local host_install = require("src.app.host_install")
   local paid_purchase_port = require("src.rules.ports.paid_purchase")
   local skin_panel = require("src.ui.screens.skin_panel")
-  local skin_equip = require("src.rules.cosmetics")
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local player = { id = 9 }
   local state = {
@@ -67,20 +81,13 @@ local function _test_skip_context_install_wires_purchase_skins_to_paid_port()
         return true
       end,
     },
-    {
-      target = skin_equip,
-      key = "equip",
-      value = function()
-        return true
-      end,
-    },
   }, function()
     host_install.install({ skip_context_install = true })
     skin_panel.open(state, 9)
-    -- 生产装配注入了皮肤存档适配器:存档未开启时不发起购买(ADR 0074)。
-    local refused = skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
+    -- 皮肤归属经 runtime_ports 读写存档:存档未开启时不发起购买(ADR 0074),
+    -- 也不留在途购买——开启后同一角色能立即再发起。
+    skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
     _assert_eq(captured, nil, "purchase should not start while archives are disabled")
-    _assert_eq(refused.pending_skin_purchase_by_role["9"], nil, "refused purchase should leave nothing pending")
     runtime_ports.configure({ archives_enabled = function() return true end })
     skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
   end)
@@ -397,72 +404,29 @@ local function _test_install_wires_runtime_context_aliases_and_default_ports()
   end, { skip_runtime_context_refresh = true })
 end
 
-local function _test_skip_context_install_wires_skin_panel_to_skin_equip()
+local function _test_skip_context_install_wires_skin_panel_to_the_role_model()
   local host_install = require("src.app.host_install")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local skin_panel = require("src.ui.screens.skin_panel")
-  local skin_equip = require("src.rules.cosmetics")
+  local skin_ownership = require("src.rules.skin_ownership")
   local runtime_refs = require("src.config.content.runtime_refs")
-  local captured = nil
+  local calls = {}
 
-  with_patches({
-    {
-      target = skin_equip,
-      key = "equip",
-      value = function(role_id, creature_key)
-        captured = { role_id = role_id, creature_key = creature_key }
-        return true
-      end,
-    },
-  }, function()
-    host_install.install({ skip_context_install = true })
-    local state = { ui = {} }
-    skin_panel.open(state, 9)
-    skin_panel.handle_action(state, { type = "buy", slot_index = 3 }, 9)
-    skin_panel.handle_action(state, { type = "equip", slot_index = 3 }, 9)
-  end)
+  host_install.install({ skip_context_install = true })
+  runtime_ports.configure({ resolve_role = _model_recorder(calls) })
+  local state = { ui = {} }
+  skin_panel.open(state, 9)
+  skin_panel.handle_action(state, { type = "buy", slot_index = 3 }, 9)
+  skin_panel.handle_action(state, { type = "equip", slot_index = 3 }, 9)
+  skin_panel.handle_action(state, { type = "unequip", slot_index = 3 }, 9)
 
-  _assert_eq(captured and captured.role_id, 9, "skin equip should receive role id")
-  _assert_eq(captured and captured.creature_key,
-    runtime_refs.skins[tostring(require("src.app.cosmetics.transaction").catalog[3].product_id)],
-    "skin equip should receive the numeric resource id resolved from refs.skins")
-end
-
-local function _test_skip_context_install_wires_skin_panel_to_skin_unequip()
-  local host_install = require("src.app.host_install")
-  local skin_panel = require("src.ui.screens.skin_panel")
-  local skin_equip = require("src.rules.cosmetics")
-  local runtime_refs = require("src.config.content.runtime_refs")
-  local captured = nil
-
-  with_patches({
-    {
-      target = skin_equip,
-      key = "equip",
-      value = function()
-        return true
-      end,
-    },
-    {
-      target = skin_equip,
-      key = "unequip",
-      value = function(role_id, default_creature_key)
-        captured = { role_id = role_id, default_creature_key = default_creature_key }
-        return true
-      end,
-    },
-  }, function()
-    host_install.install({ skip_context_install = true })
-    local state = { ui = {} }
-    skin_panel.open(state, 9)
-    skin_panel.handle_action(state, { type = "buy", slot_index = 3 }, 9)
-    skin_panel.handle_action(state, { type = "equip", slot_index = 3 }, 9)
-    skin_panel.handle_action(state, { type = "unequip", slot_index = 3 }, 9)
-  end)
-
-  _assert_eq(captured and captured.role_id, 9, "skin unequip should receive role id")
-  _assert_eq(captured and captured.default_creature_key,
-    runtime_refs.default_creature,
-    "skin unequip should receive the default creature fallback from refs.default_creature")
+  _assert_eq(calls[1] and calls[1].role_id, 9, "equip should change the acting role's model")
+  _assert_eq(calls[1] and calls[1].args[1],
+    runtime_refs.skins[tostring(skin_ownership.catalog()[3].product_id)],
+    "equip should apply the numeric resource id resolved from refs.skins")
+  _assert_eq(calls[2] and calls[2].role_id, 9, "unequip should restore the acting role's model")
+  _assert_eq(calls[2] and calls[2].args[1], runtime_refs.default_creature,
+    "unequip without reset_model should apply the default creature from refs.default_creature")
 end
 
 local function _test_reward_day_without_consume_dirty_is_a_safe_noop()
@@ -641,10 +605,10 @@ local function _test_install_configures_achievement_progress_with_built_port()
 end
 
 
--- #199:礼包码屏经 seams/gift_code 调兑换门面;门面在 app 层,由本组合根注入。
-local function _test_install_wires_gift_code_port_to_redeem_facade()
+-- #199 / #204:礼包码屏经 seams/gift_code 调皮肤归属模块的兑换,由本组合根注入。
+local function _test_install_wires_gift_code_port_to_skin_ownership_redeem()
   local gift_code_port = require("src.ui.seams.gift_code")
-  local redeem = require("src.app.gift_code.redeem")
+  local redeem = require("src.rules.skin_ownership")
   gift_code_port.reset_for_tests()
   local seen = nil
   with_patches({
@@ -653,17 +617,17 @@ local function _test_install_wires_gift_code_port_to_redeem_facade()
       key = "redeem",
       value = function(state, role_id, input_text)
         seen = { state = state, role_id = role_id, input_text = input_text }
-        return { status = "invalid_code", granted = {}, message = "兑换码无效" }
+        return { status = "invalid_code", granted = {} }
       end,
     },
   }, function()
     require("src.app.host_install").install({ skip_context_install = true })
     local state = { ui = {} }
     local result = gift_code_port.redeem(state, 4, "EGG2026")
-    _assert_eq(result and result.message, "兑换码无效", "port should return the facade result")
-    _assert_eq(seen and seen.state, state, "facade should receive the ui root state")
-    _assert_eq(seen and seen.role_id, 4, "facade should receive the redeeming role")
-    _assert_eq(seen and seen.input_text, "EGG2026", "facade should receive the input text")
+    _assert_eq(result and result.status, "invalid_code", "port should return the redeem result")
+    _assert_eq(seen and seen.state, state, "redeem should receive the root state")
+    _assert_eq(seen and seen.role_id, 4, "redeem should receive the redeeming role")
+    _assert_eq(seen and seen.input_text, "EGG2026", "redeem should receive the input text")
   end)
   gift_code_port.reset_for_tests()
 end
@@ -676,11 +640,10 @@ it("test_reward_day_events_refresh_player_ui_from_dirty_immediately", _test_rewa
 it("test_reward_day_grant_survives_missing_ui_sync_ports", _test_reward_day_grant_survives_missing_ui_sync_ports)
 it("test_skips_reward_day_wiring_when_either_lazy_accessor_is_missing", _test_skips_reward_day_wiring_when_either_lazy_accessor_is_missing)
 it("test_install_wires_runtime_context_aliases_and_default_ports", _test_install_wires_runtime_context_aliases_and_default_ports)
-it("test_skip_context_install_wires_skin_panel_to_skin_equip", _test_skip_context_install_wires_skin_panel_to_skin_equip)
-it("test_skip_context_install_wires_skin_panel_to_skin_unequip", _test_skip_context_install_wires_skin_panel_to_skin_unequip)
+it("test_skip_context_install_wires_skin_panel_to_the_role_model", _test_skip_context_install_wires_skin_panel_to_the_role_model)
 it("test_reward_day_without_consume_dirty_is_a_safe_noop", _test_reward_day_without_consume_dirty_is_a_safe_noop)
 it("test_after_grant_guard_returns_false_and_never_crashes", _test_after_grant_guard_returns_false_and_never_crashes)
 it("test_after_grant_returns_false_when_ui_sync_missing", _test_after_grant_returns_false_when_ui_sync_missing)
 it("test_install_configures_achievement_progress_with_built_port", _test_install_configures_achievement_progress_with_built_port)
-it("test_install_wires_gift_code_port_to_redeem_facade", _test_install_wires_gift_code_port_to_redeem_facade)
+it("test_install_wires_gift_code_port_to_skin_ownership_redeem", _test_install_wires_gift_code_port_to_skin_ownership_redeem)
 end)

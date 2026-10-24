@@ -1,5 +1,5 @@
 -- 皮肤交易请求/UI action 共用一套字段别名(type|action, slot_index|index|slot),
--- 归一化只住这里:别名链一变,transaction_actions 与 skin_panel 门面同步生效。
+-- 归一化只住这里:别名链一变,skin_panel 门面各动作同步生效。
 local request_shape = {}
 
 function request_shape.kind(request)

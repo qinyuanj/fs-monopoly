@@ -1,8 +1,9 @@
 -- #199 / #195 User Stories 20–23:礼包码屏接线。经节点点击路由(route spec →
 -- 意图派发)与宿主「输入框输入完成」事件驱动,观察宿主侧可见行为:按玩家收到的
--- canvas 显隐事件、按玩家写入输入框的文本、按玩家入队的提示。兑换走真实门面,
--- 宿主存档/墙钟/角色只在 runtime_ports 边界替身;输入事件只在 host_events
--- 端口替身;输入框节点只在 UIManager 查询边界替身。
+-- canvas 显隐事件、按玩家写入输入框的文本、按玩家入队的提示。兑换经礼包码 seam
+-- 注入假实现(#204:屏只把 { status, granted } 映射为提示,兑换规则由
+-- test/behavior/rules/test_skin_ownership_redeem.lua 覆盖);角色只在 runtime_ports
+-- 边界替身;输入事件只在 host_events 端口替身;输入框节点只在 UIManager 查询边界替身。
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143
@@ -24,9 +25,7 @@ local gift_code_nodes = require("src.ui.schema.gift_code")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
 local modal_presenter = require("src.ui.coord.modal")
 local runtime_state = require("src.ui.state.runtime")
-local redeem = require("src.app.gift_code.redeem")
-local transaction = require("src.app.cosmetics.transaction")
-local skin_archive = require("src.app.cosmetics.skin_archive")
+local gift_codes = require("src.config.content.gift_codes")
 
 local ENTRY = "基础_礼包码"
 local INPUT = "礼包码_输入框"
@@ -38,11 +37,20 @@ local HIDE_SCREEN = "隐藏礼包码屏"
 
 local NAILONG = 5005 -- 奶龙
 local CAPYBARA = 5006 -- 水豚嘟嘟
-local CODES = {
-  -- code_hash:外部 sha256sum 对 EGG2026 / CAPY2026 算出。
-  { id = 3, code_hash = "682f05b696b1ca1d9b2818d793b2b352f4128f8ba4fa9db8770cfb279fce1f3f", rewards = { NAILONG } },
-  { id = 4, code_hash = "f0b0bd89ad788053a1090fffb1055257fe81c7a83a7f4765562548434e04205b", rewards = { CAPYBARA } },
+-- 兑换假实现:按输入原文给结果,其余一律 invalid_code;记录每次调用。
+local REDEEM_RESULTS = {
+  EGG2026 = { status = "granted", granted = { NAILONG } },
+  CAPY2026 = { status = "granted", granted = { CAPYBARA } },
 }
+
+local function _fake_redeem(calls)
+  return {
+    redeem = function(redeem_state, role_id, input_text)
+      calls[#calls + 1] = { state = redeem_state, role_id = role_id, input_text = input_text }
+      return REDEEM_RESULTS[input_text] or { status = "invalid_code", granted = {} }
+    end,
+  }
+end
 
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -194,14 +202,13 @@ describe("TestGiftCodeScreen", function()
   local world
   local state
   local original_query
+  local redeem_calls
 
   before_each(function()
     -- 本文件验证礼包码屏接线本身,入口开关打开(关闭态另有用例)。
     gift_code_screen.configure_entry_for_tests(true)
-    transaction.reset_for_tests()
-    transaction.configure_archive(skin_archive)
-    redeem.configure_codes_for_tests(CODES)
-    gift_code_port.configure({ redeem = redeem.redeem })
+    redeem_calls = {}
+    gift_code_port.configure(_fake_redeem(redeem_calls))
     world = _install_world()
     original_query = UIManager.query_nodes_by_name
     local input_node = _input_node(world)
@@ -220,8 +227,6 @@ describe("TestGiftCodeScreen", function()
     UIManager.query_nodes_by_name = original_query
     UIManager.client_role = nil
     gift_code_port.reset_for_tests()
-    transaction.reset_for_tests()
-    redeem.reset_for_tests()
     tip_queue.clear()
     support.restore_runtime_services()
   end)
@@ -243,6 +248,55 @@ describe("TestGiftCodeScreen", function()
     luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "redeem message should be tipped to the redeemer")
     luassert.same({}, _tips_for(world, 2), "other players should get no tip")
     _assert_eq(_count(world.roles["1"].events, HIDE_SCREEN), 0, "screen should stay open after redeeming")
+  end)
+
+  it("test_confirm_passes_the_root_state_role_and_draft_to_redeem", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "EGG2026")
+    _click(state, world, CONFIRM, 1)
+
+    _assert_eq(redeem_calls[1].state, state, "redeem receives the root state")
+    _assert_eq(redeem_calls[1].role_id, 1, "redeem receives the confirming role")
+    _assert_eq(redeem_calls[1].input_text, "EGG2026", "redeem receives the cached draft")
+  end)
+
+  -- #204:兑换结果只带领域状态,提示模板由本屏按 status 取配置;granted 填入
+  -- 发放皮肤名(顿号分隔)。
+  it("test_each_redeem_status_is_tipped_with_its_configured_message", function()
+    local results = {
+      { status = "granted", granted = { NAILONG, CAPYBARA }, text = "兑换成功，获得：奶龙、水豚嘟嘟" },
+      { status = "all_owned", text = gift_codes.messages.all_owned },
+      { status = "expired", text = gift_codes.messages.expired },
+      { status = "already_redeemed", text = gift_codes.messages.already_redeemed },
+      { status = "archive_unavailable", text = gift_codes.messages.archive_unavailable },
+      { status = "write_failed", granted = { NAILONG }, text = gift_codes.messages.write_failed },
+    }
+    for role_id, case in ipairs(results) do
+      gift_code_port.configure({
+        redeem = function()
+          return { status = case.status, granted = case.granted or {} }
+        end,
+      })
+      local role = role_id % 2 + 1
+      tip_queue.clear()
+      world.tips = {}
+      _click(state, world, ENTRY, role)
+      _click(state, world, CONFIRM, role)
+      luassert.same({ case.text }, _tips_for(world, role), case.status .. " tip")
+    end
+  end)
+
+  it("test_a_missing_redeem_result_or_unknown_status_tips_nothing", function()
+    for _, result in ipairs({ false, { status = "mystery", granted = {} } }) do
+      gift_code_port.configure({
+        redeem = function()
+          return result or nil
+        end,
+      })
+      _click(state, world, ENTRY, 1)
+      _click(state, world, CONFIRM, 1)
+    end
+    luassert.same({}, _tips_for(world, 1), "nothing to tip")
   end)
 
   it("test_confirm_without_input_tips_invalid_code", function()

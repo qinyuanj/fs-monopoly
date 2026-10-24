@@ -98,7 +98,10 @@ local function _assert_panel_opens_without_event_actor(opts)
       tips[#tips + 1] = payload and payload.text or ""
     end },
   }), function()
-    coord_module.reset_for_tests()
+    -- 皮肤商店屏已无模块态(#204),只对仍有测试复位入口的屏复位。
+    if type(coord_module.reset_for_tests) == "function" then
+      coord_module.reset_for_tests()
+    end
     local state = {
       ui = ui_view.build_ui_state(),
     }

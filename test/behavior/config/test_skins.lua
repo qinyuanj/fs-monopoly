@@ -4,6 +4,16 @@ require("test.bootstrap").install_package_paths()
 local luassert = assert
 
 describe("TestSkins", function()
+  -- 各例重载配置验证加载期内容;收尾装回原实例,不让新实例泄漏给同进程后续 spec(#204)。
+  local original
+
+  before_each(function()
+    original = package.loaded["src.config.content.skins"]
+  end)
+
+  after_each(function()
+    package.loaded["src.config.content.skins"] = original
+  end)
 
   it("test_prices_every_default_skin_as_a_jindou_purchase", function()
     package.loaded["src.config.content.skins"] = nil

@@ -8,9 +8,9 @@ local view_command = require("src.ui.input.view_command")
 local presentation_ports = require("src.ui.ports")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local ui_events = require("src.ui.coord.ui_events")
-local skin_panel = require("src.ui.screens.skin_panel")
 local skin_intents = require("src.ui.screens.skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
+local fake_skin_ownership = require("test.support.fake_skin_ownership")
 
 local function _no_op() end
 
@@ -29,8 +29,14 @@ local function _build_ui_state()
 end
 
 describe("TestSkinPanelIntentCanvasOpenViaViewCommandDispatch", function()
+local restore_seam
+
 before_each(function()
-  skin_panel.reset_for_tests()
+  restore_seam = fake_skin_ownership.install(fake_skin_ownership.new())
+end)
+
+after_each(function()
+  restore_seam()
 end)
 
 it("test_open_skin_panel_intent_switches_canvas_for_resolved_role", function()
@@ -100,29 +106,37 @@ local function _spec_named(specs, name)
   return nil
 end
 
+local fake
+local restore_seam
+
 local function _state_with(selected)
+  fake.own(1, "s1")
+  fake.own(1, "s2")
+  if selected ~= nil then
+    fake.wear(1, selected)
+  end
   return {
     ui = {
       skin_panel = {
         role_id = 1,
         page_index = 1,
-        owned_by_role = { ["1"] = { ["s1"] = true, ["s2"] = true } },
-        selected_by_role = { ["1"] = selected },
       },
     },
   }
 end
 
 before_each(function()
-  skin_panel.reset_for_tests()
-  skin_panel.configure_catalog_for_tests({
-    { product_id = "s1", name = "皮肤一" },
-    { product_id = "s2", name = "皮肤二" },
+  fake = fake_skin_ownership.new({
+    catalog = {
+      { product_id = "s1", name = "皮肤一" },
+      { product_id = "s2", name = "皮肤二" },
+    },
   })
+  restore_seam = fake_skin_ownership.install(fake)
 end)
 
 after_each(function()
-  skin_panel.reset_for_tests()
+  restore_seam()
 end)
 
 it("test_action_button_routes_activate_slot_for_equipped_slot", function()
@@ -154,7 +168,7 @@ it("test_action_intent_does_not_read_live_equipped_state", function()
   luassert.is_not_nil(spec, "slot 1 action button must have a canvas route")
   luassert.truthy(spec.build_intent().action.type == "activate_slot",
     "nothing equipped should still route through activate_slot")
-  state.ui.skin_panel.selected_by_role["1"] = "s1"
+  fake.wear(1, "s1")
   luassert.truthy(spec.build_intent().action.type == "activate_slot",
     "equipped state changes should not alter the input-layer action")
 end)

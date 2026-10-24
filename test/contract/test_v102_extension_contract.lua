@@ -2,11 +2,26 @@ local luassert = assert
 
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
-local transaction = require("src.app.cosmetics.transaction")
+local skin_ownership = require("src.rules.skin_ownership")
+
+-- 记录换模型调用的角色替身(宿主边界)。
+local function _model_recorder(calls)
+  return function(role_id)
+    return {
+      get_ctrl_unit = function()
+        return {
+          set_model_by_creature_key = function(...)
+            calls[#calls + 1] = { role_id = role_id, args = { ... } }
+            return true
+          end,
+        }
+      end,
+    }
+  end
+end
 
 describe("TestV102ExtensionContract", function()
   after_each(function()
-    require("src.ui.screens.skin_panel").reset_for_tests()
     require("src.ui.screens.item_atlas").reset_for_tests()
     support.restore_runtime_services()
   end)
@@ -69,8 +84,8 @@ describe("TestV102ExtensionContract", function()
   item_atlas.handle_action(state, { type = "select", slot_index = 2 }, 1)
 
   luassert.is.equal(false, state.ui.skin_panel.open, "skin panel should auto-close after owned equip (design 336)")
-  luassert.is.equal(transaction.catalog[1].product_id, state.ui.skin_panel.selected_by_role["1"],
-    "skin panel should keep selected skin by role")
+  luassert.is.equal(skin_ownership.catalog()[1].product_id, skin_ownership.equipped(state, 1),
+    "skin ownership should keep the worn skin by role")
   luassert.is.equal(true, state.ui.item_atlas.open, "item atlas should open independently")
   luassert.is.equal(item_atlas.catalog[2].id, state.ui.item_atlas.selected_item_id,
     "item atlas should select catalog items by slot")
@@ -78,15 +93,7 @@ describe("TestV102ExtensionContract", function()
 
   it("test_view_command_dispatches_v102_extension_intents", function()
   local view_command = require("src.ui.ports.view_command").build()
-  local skin_panel = require("src.ui.screens.skin_panel")
   local state = { ui = {} }
-  local equipped = nil
-
-  skin_panel.reset_for_tests()
-  skin_panel.configure_equip(function(role_id, skin)
-    equipped = { role_id = role_id, skin = skin }
-    return true
-  end)
 
   luassert.truthy(view_command.dispatch(state, { type = "open_skin_panel", actor_role_id = 7 }) == true,
     "skin open intent should be handled")
@@ -99,53 +106,37 @@ describe("TestV102ExtensionContract", function()
   luassert.truthy(view_command.dispatch(state, { type = "item_atlas_action", action = { type = "select", slot_index = 1 }, actor_role_id = 7 }) == true,
     "atlas action intent should be handled")
 
-  luassert.is.equal(true, state.ui.skin_panel.owned_by_role["7"][transaction.catalog[2].product_id],
-    "skin action should update selected slot")
-  luassert.is.equal(7, equipped and equipped.role_id, "skin equip callback should receive actor role")
-  luassert.is.equal(transaction.catalog[2], equipped and equipped.skin, "skin equip callback should receive selected skin")
+  local skin = skin_ownership.catalog()[2]
+  luassert.is.equal(true, skin_ownership.owns(state, 7, skin.product_id), "skin action should own the selected slot")
+  luassert.is.equal(skin.product_id, skin_ownership.equipped(state, 7), "skin equip intent should wear it for the actor")
   luassert.is.equal(require("src.ui.screens.item_atlas").catalog[1].id, state.ui.item_atlas.selected_item_id,
     "atlas action should update item atlas")
-
-  skin_panel.reset_for_tests()
   end)
 
-  it("test_host_install_wires_skin_panel_to_skin_equip", function()
+  it("test_host_install_wires_skin_panel_equips_to_the_role_model", function()
   local host_install = require("src.app.host_install")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local skin_panel = require("src.ui.screens.skin_panel")
-  local skin_equip = require("src.rules.cosmetics")
   local runtime_refs = require("src.config.content.runtime_refs")
-  local captured = nil
+  local calls = {}
 
-  skin_panel.reset_for_tests()
-  _with_patches({
-    {
-      target = skin_equip,
-      key = "equip",
-      value = function(role_id, creature_key)
-        captured = { role_id = role_id, creature_key = creature_key }
-        return true
-      end,
-    },
-  }, function()
-    host_install.install({ skip_context_install = true })
-    local state = { ui = {} }
-    skin_panel.open(state, 9)
-    skin_panel.handle_action(state, { type = "buy", slot_index = 3 }, 9)
-    skin_panel.handle_action(state, { type = "equip", slot_index = 3 }, 9)
-  end)
+  host_install.install({ skip_context_install = true })
+  runtime_ports.configure({ resolve_role = _model_recorder(calls) })
+  local state = { ui = {} }
+  skin_panel.open(state, 9)
+  skin_panel.handle_action(state, { type = "buy", slot_index = 3 }, 9)
+  skin_panel.handle_action(state, { type = "equip", slot_index = 3 }, 9)
 
-  luassert.is.equal(9, captured and captured.role_id, "host install should pass role id to skin equip")
-  luassert.is.equal(runtime_refs.skins[tostring(transaction.catalog[3].product_id)],
-    captured and captured.creature_key,
-    "host install should map selected skin to the numeric resource id from refs.skins")
-  skin_panel.reset_for_tests()
+  luassert.is.equal(9, calls[1] and calls[1].role_id, "equip should change the model of the acting role")
+  luassert.is.equal(runtime_refs.skins[tostring(skin_ownership.catalog()[3].product_id)],
+    calls[1] and calls[1].args[1],
+    "equip should map the selected skin to the numeric resource id from refs.skins")
   end)
 
   it("test_host_install_wires_purchase_skins_to_paid_goods", function()
   local host_install = require("src.app.host_install")
   local paid_purchase_port = require("src.rules.ports.paid_purchase")
   local skin_panel = require("src.ui.screens.skin_panel")
-  local skin_equip = require("src.rules.cosmetics")
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local archive = {}
   local player = { id = 9, name = "玩家9" }
@@ -159,7 +150,6 @@ describe("TestV102ExtensionContract", function()
   }
   local captured = nil
 
-  skin_panel.reset_for_tests()
   _with_patches({
     {
       target = paid_purchase_port,
@@ -173,18 +163,12 @@ describe("TestV102ExtensionContract", function()
         return true
       end,
     },
-    {
-      target = skin_equip,
-      key = "equip",
-      value = function()
-        return true
-      end,
-    },
   }, function()
     host_install.install({ skip_context_install = true })
     -- ADR 0074:存档可用才卖皮肤;宿主存档在 runtime_ports 边界替身。
     runtime_ports.configure({
       archives_enabled = function() return true end,
+      resolve_role = _model_recorder({}),
       get_archive_int = function(_, key) return archive[key] or 0 end,
       set_archive_int = function(_, key, value)
         archive[key] = value
@@ -197,20 +181,17 @@ describe("TestV102ExtensionContract", function()
     captured.entry.on_purchase(state.game, player, captured.entry, {})
   end)
 
-  local skin = transaction.catalog[1]
+  local skin = skin_ownership.catalog()[1]
   luassert.is.equal(state.game, captured and captured.game, "skin purchase should use current game")
   luassert.is.equal(player, captured and captured.player, "skin purchase should resolve player by role id")
   luassert.is.equal(skin.product_id, captured and captured.entry.product_id,
     "skin purchase should pass selected skin product")
   luassert.is.equal("skin", captured and captured.entry.kind, "skin purchase entry should be tagged as skin")
   luassert.truthy(type(captured.entry.on_purchase) == "function", "skin purchase should carry fulfillment callback")
-  luassert.is.equal(true, state.ui.skin_panel.owned_by_role["9"][skin.product_id],
-    "paid skin callback should unlock skin")
-  luassert.is.equal(skin.product_id, state.ui.skin_panel.selected_by_role["9"],
-    "paid skin callback should equip skin")
+  luassert.is.equal(true, skin_ownership.owns(state, 9, skin.product_id), "paid skin callback should unlock skin")
+  luassert.is.equal(skin.product_id, skin_ownership.equipped(state, 9), "paid skin callback should equip skin")
   luassert.is.equal(1, archive[skin.archive_key], "paid skin callback should persist ownership")
   luassert.is.equal(skin.product_id, archive[1051], "paid skin callback should persist the equipped skin")
-  skin_panel.reset_for_tests()
   end)
 
   it("test_achievement_integration_is_implemented", function()
@@ -241,42 +222,27 @@ describe("TestV102ExtensionContract", function()
   luassert.is.equal(1002, leaderboard.total_assets_archive_key, "leaderboard should target the total-assets archive key")
   end)
 
-  it("test_skin_equip_contract_loads_without_ui_dependency", function()
-  local skin_equip = require("src.rules.cosmetics")
-
-  luassert.is.equal("function", type(skin_equip.equip), "skin equip should expose equip")
-  luassert.is.equal("function", type(skin_equip.unequip), "skin equip should expose unequip")
+  it("test_skin_ownership_contract_loads_without_ui_dependency", function()
+  for _, name in ipairs({ "restore", "sync_on_shop_open", "owns", "equipped", "equip", "unequip",
+      "start_purchase", "grant", "redeem", "catalog" }) do
+    luassert.is.equal("function", type(skin_ownership[name]), "skin ownership should expose " .. name)
+  end
   end)
 
   it("test_skin_equip_applies_creature_key_to_role_unit", function()
   local runtime_ports = require("src.foundation.ports.runtime_ports")
-  local skin_equip = require("src.rules.cosmetics")
+  local runtime_refs = require("src.config.content.runtime_refs")
   local calls = {}
+  local state = { ui = {} }
+  local skin = skin_ownership.catalog()[1]
 
-  _with_patches({
-    {
-      target = runtime_ports,
-      key = "resolve_role",
-      value = function(role_id)
-        luassert.is.equal(11, role_id, "skin equip should resolve target role")
-        return {
-          get_ctrl_unit = function()
-            return {
-              set_model_by_creature_key = function(...)
-                calls[#calls + 1] = { ... }
-                return true
-              end,
-            }
-          end,
-        }
-      end,
-    },
-  }, function()
-    luassert.is.equal(true, skin_equip.equip(11, "skin_key"), "skin equip should report model change success")
-  end)
+  runtime_ports.configure({ resolve_role = _model_recorder(calls) })
+  skin_ownership.grant(state, 11, skin.product_id)
+  luassert.is.equal(true, skin_ownership.equip(state, 11, skin.product_id).equipped,
+    "skin equip should report model change success")
 
-  luassert.is.equal(1, #calls, "skin equip should call unit model setter")
-  luassert.is.equal("skin_key", calls[1][1], "skin equip should pass creature key")
+  luassert.is.equal(11, calls[1] and calls[1].role_id, "skin equip should resolve target role")
+  luassert.is.equal(runtime_refs.skins[tostring(skin.product_id)], calls[1].args[1],
+    "skin equip should pass the skin's creature key")
   end)
 end)
-
