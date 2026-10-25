@@ -68,11 +68,10 @@ local function _tile_of(board, tile_id)
   return board and board.get_tile_by_id and board:get_tile_by_id(tile_id) or nil
 end
 
--- 土地类地块按其等级累加投入;非土地或地块缺省时总额不变。
+-- 土地类地块按其等级累加地块总投入(口径唯一在 gameplay_read_port);非土地或地块缺省时总额不变。
 local function _accumulate_tile_invested(tile, total)
   if tile and tile.type == "land" then
-    local level = tile.level or 0
-    return total + gameplay_read_port.total_land_invested(tile, level)
+    return total + gameplay_read_port.total_land_invested(tile, tile.level)
   end
   return total
 end

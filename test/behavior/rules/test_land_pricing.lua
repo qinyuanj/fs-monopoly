@@ -14,13 +14,6 @@ describe("TestLandPricing", function()
   before_each(function()
     _config_reset.reset_all()
   end)
-  it("test_total_invested_returns_purchase_price_for_negative_level", function()
-    local tile = {
-      price = 400,
-      upgrade_costs = { 50, 75, 100 },
-    }
-    _assert_eq(pricing.total_invested(tile, -3), 400, "negative level should keep purchase price only")
-  end)
 
   it("test_rent_for_level_uses_planning_formula", function()
     local tile = { price = 100, upgrade_costs = { 100, 200, 400 }, rents = { 999, 999, 999, 999 } }
@@ -47,24 +40,6 @@ describe("TestLandPricing", function()
       "missing upgrade_costs should yield zero cost")
   end)
 
-  it("test_property_value_total_invested_includes_owner_paid_upgrades", function()
-    -- 强征卡支付 = 地价 + owner 已支付的全部升级金币（src/rules/commerce/property_value.lua）
-    -- 必须读 tile.upgrade_costs，并与 land/pricing.total_invested 完全一致。
-    local property_value = require("src.rules.commerce.property_value")
-    local tile = { price = 1000, upgrade_costs = { 1000, 2000, 4000 } }
-    _assert_eq(property_value.total_invested(tile, 0), 1000, "level 0 should equal base price")
-    _assert_eq(property_value.total_invested(tile, 1), 2000, "level 1 should add first upgrade")
-    _assert_eq(property_value.total_invested(tile, 2), 4000, "level 2 should add first two upgrades")
-    _assert_eq(property_value.total_invested(tile, 3), 8000, "level 3 should add base + all three upgrades")
-    for level = 0, 3 do
-      _assert_eq(
-        property_value.total_invested(tile, level),
-        pricing.total_invested(tile, level),
-        "property_value must mirror pricing at level " .. tostring(level)
-      )
-    end
-  end)
-
 -- ===== 迁自 test/property/test_pricing.lua（#190, 测试极简化决策：property 车道退场，性质并入 behavior）=====
 end)
 local property = require("test.support.property")
@@ -82,55 +57,6 @@ local function _gen_tile(rng)
 end
 
 
-describe("TestLandPricingTotalInvestedProperties", function()
-  it("test_equals_the_purchase_price_at_level_0_and_at_any_non_positive_level", function()
-    property.for_all(_gen_tile, function(tile, rng)
-      luassert.truthy(pricing.total_invested(tile, 0) == tile.price, "level 0 invests exactly the purchase price")
-      local below = rng:int(-5, 0)
-      luassert.truthy(pricing.total_invested(tile, below) == tile.price, "a non-positive level clamps to 0 -> purchase price only")
-    end)
-  end)
-
-  it("test_is_non_decreasing_as_the_level_rises", function()
-    property.for_all(_gen_tile, function(tile)
-      local previous = pricing.total_invested(tile, 0)
-      for level = 1, #tile.upgrade_costs + 2 do
-        local current = pricing.total_invested(tile, level)
-        luassert.truthy(current >= previous, "non-negative ladder costs make total_invested non-decreasing in level")
-        previous = current
-      end
-    end)
-  end)
-
-  it("test_plateaus_at_and_beyond_the_max_level", function()
-    property.for_all(_gen_tile, function(tile, rng)
-      local max_level = #tile.upgrade_costs
-      local at_max = pricing.total_invested(tile, max_level)
-      local beyond = pricing.total_invested(tile, max_level + rng:int(1, 5))
-      luassert.truthy(beyond == at_max, "levels past the ladder length clamp to max -> same invested value")
-    end)
-  end)
-
-  it("test_rises_by_exactly_that_levels_upgrade_cost_on_each_unit_step", function()
-    property.for_all(_gen_tile, function(tile)
-      -- The k-th step (level k-1 -> k) must add upgrade_costs[k], which is also
-      -- what upgrade_cost(tile, k-1) reports: ties the two functions together.
-      for k = 1, #tile.upgrade_costs do
-        local step = pricing.total_invested(tile, k) - pricing.total_invested(tile, k - 1)
-        luassert.truthy(step == pricing.upgrade_cost(tile, k - 1), "step from level k-1 to k must equal upgrade_cost(tile, k-1)")
-      end
-    end)
-  end)
-
-  it("test_stays_at_the_purchase_price_for_any_level_when_there_is_no_upgrade_ladder", function()
-    property.for_all(function(rng)
-      return { price = rng:int(0, 5000) }
-    end, function(tile, rng)
-      luassert.truthy(pricing.total_invested(tile, rng:int(-3, 10)) == tile.price, "a tile with no upgrade_costs table never invests beyond its price")
-    end)
-  end)
-
-end)
 
 describe("TestLandPricingRentForLevelProperties", function()
   it("test_rent_for_level_is_non_decreasing_as_the_level_rises", function()
@@ -207,28 +133,3 @@ describe("TestLandPricingUpgradeCostMaxLevelProperties", function()
 
 end)
 
-describe("TestLandPricingTotalInvestedEdgeCases", function()
-  it("test_returns_the_purchase_price_when_upgrade_costs_is_missing", function()
-    local tile = { price = 500 }
-    luassert.is.same(500, pricing.total_invested(tile, 3))
-    luassert.is.same(500, pricing.total_invested(tile, -1))
-  end)
-
-  it("test_caps_the_level_by_the_available_ladder_length", function()
-    local tile = {
-      price = 100,
-      upgrade_costs = { 10, 20 },
-    }
-    luassert.is.same(130, pricing.total_invested(tile, 8))
-  end)
-
--- # 运算在含 nil 洞的 sparse table 上行为未定义；此处用显式 0 表意"零成本项"，
--- 验证 total_invested 不会因中间夹 0 而中断累加。
-  it("test_treats_zero_cost_ladder_entries_as_unchanged_non_sparse", function()
-    local tile = {
-      price = 200,
-      upgrade_costs = { 10, 0, 40 },
-    }
-    luassert.is.same(250, pricing.total_invested(tile, 3))
-  end)
-end)

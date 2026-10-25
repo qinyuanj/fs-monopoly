@@ -5,7 +5,7 @@ local land_actions = require("src.rules.land.actions")
 local land_choice_specs = require("src.rules.land.choice_specs")
 local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
-local board_utils = require("src.rules.land.board_utils")
+local property_value = require("src.rules.commerce.property_value")
 
 local tile_state = tile_mod.get_state
 
@@ -51,7 +51,7 @@ local function _consume_pending_free_rent(ctx, player, tile)
 end
 
 local function _apply_rent_card_or_payment(ctx, player, tile, tile_state_value)
-  local total_value = board_utils.total_invested(tile, tile_state_value.level)
+  local total_value = property_value.total_invested(tile, tile_state_value.level)
   local strong_idx, free_idx = _find_rent_item_indices(player)
 
   if _can_use_strong_card(player, strong_idx, total_value, ctx.game) then

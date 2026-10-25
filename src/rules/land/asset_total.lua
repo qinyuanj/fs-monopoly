@@ -1,4 +1,4 @@
-local pricing = require("src.rules.land.pricing")
+local property_value = require("src.rules.commerce.property_value")
 local tile_mod = require("src.rules.board.tile")
 
 local asset_total = {}
@@ -12,7 +12,7 @@ function asset_total.player_total(game, player)
     local tile = game.board:get_tile_by_id(tile_id)
     assert(tile ~= nil and tile.type == "land", "invalid property tile: " .. tostring(tile_id))
     local st = tile_mod.get_state(game, tile)
-    total = total + pricing.total_invested(tile, st.level)
+    total = total + property_value.total_invested(tile, st.level)
   end
   return total
 end
