@@ -1,6 +1,6 @@
 """Resolve exactly the same scoped mutation files as the upstream dispatcher (#93).
 
-POSIX form of mutation_targets.ps1: imports the adjacent uml-viewer's own scope
+Imports the adjacent uml-viewer's own scope
 adapter instead of re-implementing selection here. Writes the JSON target list
 that mutation_evidence.py consumes.
 """

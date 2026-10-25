@@ -135,7 +135,7 @@ it("ir writes policy.edn from the projection and passes the upstream exit code t
   check.equal("ir", calls.op)
   check.equal(1, #calls.launch)
   check.same({ "python3", "-I", "-B", calls.launch[1].root .. "/.uml-viewer/uml-viewer/scripts/uml_posix.py",
-    "command", calls.launch[1].root, "ir", "tmp/uml/monopoly.edn" }, calls.launch[1].argv)
+    "command", calls.launch[1].root, "ir", "policy.edn", "tmp/uml/monopoly.edn" }, calls.launch[1].argv)
 end)
 
 -- 推演只写覆盖文件;每次重生都必须把它带回 policy.edn,不被投影冲掉。

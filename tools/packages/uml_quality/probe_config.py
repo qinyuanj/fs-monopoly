@@ -1,4 +1,4 @@
-"""uml-quality.json probe for #93 (POSIX form of probe_config.ps1).
+"""uml-quality.json probe for #93.
 
 Validates the repository config with the adjacent uml-viewer's own reader and
 scope adapter (no local re-implementation), then prints the dispatch branch the

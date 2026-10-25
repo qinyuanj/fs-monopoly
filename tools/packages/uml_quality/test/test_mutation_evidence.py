@@ -82,13 +82,13 @@ class MutationEvidenceTest(unittest.TestCase):
         args_file = self.root / 'args.json'
         args_file.write_text(json.dumps(['src/foundation/move_anim_debug.lua', 'tools/cli.lua']))
         output_file = self.root / 'selected.json'
-        result = subprocess.run(['pwsh', '-NoProfile', '-File', str(SCRIPT.with_name('mutation_targets.ps1')),
-                                 '-Root', str(repo), '-Scripts', str(scripts),
-                                 '-ArgsFile', str(args_file), '-OutFile', str(output_file)],
+        result = subprocess.run([sys.executable, '-I', '-B', str(SCRIPT.with_name('mutation_targets.py')),
+                                 str(repo), str(scripts.parent), str(args_file), str(output_file)],
                                 capture_output=True, text=True, check=False)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertEqual(['src/foundation/move_anim_debug.lua'], json.loads(output_file.read_text(encoding='utf-8-sig')))
-        self.assertIn('omitted mutation target', result.stderr)
+        # 上游 POSIX targets() 静默丢弃范围外目标、不再打诊断(qinyuanj/uml-viewer#165);只钉 JSON 不混入诊断。
+        self.assertNotIn('omitted', output_file.read_text(encoding='utf-8-sig'))
 
     def test_scan_error_is_not_no_sites(self):
         self.prepare()

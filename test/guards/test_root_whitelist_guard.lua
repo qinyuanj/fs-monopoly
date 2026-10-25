@@ -30,8 +30,8 @@ describe("TestRootWhitelistGuard", function()
   -- 走 .gitignore,不进白名单——放开它们即破此钉。
   it("test_uml_quality_config_whitelisted_but_not_its_local_outputs", function()
     luassert.is.same({}, guard.check({ "uml-quality.json" }))
-    luassert.is.same({ ".uml-viewer", "target", "uml", "uml.ps1" },
-      guard.check({ ".uml-viewer", "target", "uml", "uml.ps1" }))
+    luassert.is.same({ ".uml-viewer", "target", "uml" },
+      guard.check({ ".uml-viewer", "target", "uml" }))
   end)
 
   -- 维护者决定按上游 README 将 .metrics/(真实 uml crap|mutate 的度量)入库(#69):

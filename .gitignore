@@ -48,10 +48,9 @@ Thumbs.db
 # crapper/mutator 的度量 .metrics/(crap.edn、mutate/*.edn)按上游 README 入库,
 # 不在此忽略;只忽略覆盖率中间产物 target/coverage/(见 tools/specs/uml_quality.prompt)。
 /target/
-# get-uml-viewer 拷到仓根的 uml / uml.ps1 不钉 LUA_PATH,会从全局 luarocks tree
-# 解析出假绿;受支持的入口是 `lua5.4 tools/cli.lua uml`,这两份拷贝不入库。
+# get-uml-viewer 拷到仓根的 uml 不钉 LUA_PATH,会从全局 luarocks tree
+# 解析出假绿;受支持的入口是 `lua5.4 tools/cli.lua uml`,这份拷贝不入库。
 /uml
-/uml.ps1
 # `lua5.4 tools/cli.lua uml ir` 的生成物(ADR 0070 / #99):从 arch_policy 投影 +
 # docs/architecture.proposals.edn 重生,不入库;推演只改覆盖文件。IR 写到已忽略的 tmp/uml/。
 /policy.edn

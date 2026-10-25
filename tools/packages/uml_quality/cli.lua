@@ -349,7 +349,8 @@ function M.main(args, env)
   -- view 直接走上游启动器(无子命令名);ir 不接受额外参数,输出路径由本包钉死。
   local upstream = {}
   if op ~= "view" then upstream[1] = op end
-  if op == "ir" then upstream[#upstream + 1] = _IR_OUT end
+  -- 上游 ir 按位置收 [policy [output]];只给一个会被当成 policy,两个都显式传。
+  if op == "ir" then upstream[#upstream + 1] = "policy.edn"; upstream[#upstream + 1] = _IR_OUT end
   for index = 2, #args do upstream[#upstream + 1] = args[index] end
   local argv = _upstream_argv(root, upstream)
 
