@@ -113,10 +113,9 @@ local gift_codes = {
     { id = 101, code_hash = "71c8e4c4c86e62e8bf14834f0ca240572ec74b6181b8424f73228c51b2df4823", rewards = { 5005 }, expires_at = 1808297620, note = "批量购买补偿" },
     { id = 102, code_hash = "161b2f4699de03d6dcb2d9a9355f1e17840642f2e97f7fed4d06a469e1f91fc7", rewards = { 5005 }, expires_at = 1808297620, note = "批量购买补偿" },
     { id = 103, code_hash = "cc8469ee754dc907160bd55d78bf28ad8a66a3b6e03f47f822cbc98cb5abc5bd", rewards = { 5005 }, expires_at = 1792832446, note = "试玩测试临时码" },
-    { id = 104, code_hash = "2da81a6f91007fb197fc2d9a196aa39487a1e4ba374808973976eac43df7eb24", rewards = { 5005 }, expires_at = 1795490469, note = "#200 真机验收测试码(2026-10-25)" },
   },
-  -- 停用 id,永不再分配:1 = 旧明文测试码 TEST2026(#203 停用)。
-  retired_ids = { 1 },
+  -- 停用 id,永不再分配:1 = 旧明文测试码 TEST2026(#203 停用);104 = #200 真机验收测试码(验收后停用)。
+  retired_ids = { 1, 104 },
 }
 
 -- 兑换记录的 Str 玩家存档 key,存已兑换码 id 的逗号分隔列表。

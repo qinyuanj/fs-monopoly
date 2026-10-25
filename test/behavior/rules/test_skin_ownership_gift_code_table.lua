@@ -55,11 +55,12 @@ describe("TestSkinOwnershipGiftCodeTable", function()
   end)
 
   -- #203:测试码 TEST2026(id 1)已停用,码表里只剩哈希,明文不再命中。
-  it("test_default_code_table_retires_id_1_and_no_longer_accepts_test2026", function()
+  it("test_default_code_table_retires_the_used_test_codes", function()
     local gift_codes = require("src.config.content.gift_codes")
 
-    luassert.same({ 1 }, gift_codes.retired_ids, "id 1 should be registered as retired")
+    luassert.same({ 1, 104 }, gift_codes.retired_ids, "test code ids 1 and 104 should be registered as retired")
     luassert.is_nil(gift_code_table.default().find("TEST2026"), "the retired plaintext test code should not match")
+    luassert.is_nil(gift_code_table.default().find("R65K-RSZS-H49T"), "the retired #200 acceptance code should not match")
   end)
 
   it("test_lookup_ignores_case_hyphens_and_any_whitespace", function()
