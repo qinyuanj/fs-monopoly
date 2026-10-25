@@ -823,7 +823,7 @@ local function _test_gameplay_start_sets_current_game_before_priming_first_turn(
       target = require("src.ui.ports"),
       key = "build",
       value = function()
-        return {}
+        return { debug = {} }
       end,
     },
     {

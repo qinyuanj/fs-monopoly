@@ -16,7 +16,7 @@ local function apply_market_sold_out(game)
   assert(board_index ~= nil, "market_sold_out tile not on board: " .. tostring(_SOLD_OUT_TILE_ID))
   game:update_player_position(player, board_index)
 
-  inventory.clear(player)
+  player.inventory:clear()
   for _ = 1, _SOLD_OUT_ITEM_COUNT do
     local ok = inventory.give(player, _SOLD_OUT_ITEM_ID, { game = game })
     assert(ok == true, "market_sold_out fixture failed to grant item " .. tostring(_SOLD_OUT_ITEM_ID))

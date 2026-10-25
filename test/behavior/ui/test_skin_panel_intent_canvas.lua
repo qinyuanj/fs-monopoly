@@ -5,7 +5,6 @@ local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
 local view_command = require("src.ui.input.view_command")
-local presentation_ports = require("src.ui.ports")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local ui_events = require("src.ui.coord.ui_events")
 local skin_intents = require("src.ui.screens.skin_panel")
@@ -47,7 +46,7 @@ it("test_open_skin_panel_intent_switches_canvas_for_resolved_role", function()
   local state = {
     ui = _build_ui_state(),
     runtime_asset_context = { refs = { images = {} } },
-    view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
+    view_command_port = select(2, support.build_presentation_ports()),
   }
 
   _with_patches({
@@ -77,7 +76,7 @@ it("test_open_skin_panel_intent_broadcasts_when_actor_role_id_missing", function
   local state = {
     ui = _build_ui_state(),
     runtime_asset_context = { refs = { images = {} } },
-    view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
+    view_command_port = select(2, support.build_presentation_ports()),
   }
 
   _with_patches({

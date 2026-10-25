@@ -13,7 +13,6 @@ local dispatch = require("src.turn.actions.action_dispatcher")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
 local ui_view = require("src.ui.coord.ui_runtime")
 local host_roles = require("src.ui.seams.host_roles")
-local presentation_ports = require("src.ui.ports")
 
 describe("TestActionLog", function()
 
@@ -43,13 +42,14 @@ describe("TestActionLog", function()
       return { node }
     end
 
+    local turn_ports, view_command_port = P.build_presentation_ports()
     local state = {
       ui = ui_view.build_ui_state(),
       ui_model = { choice = nil },
       pending_choice_selected_option_id = nil,
       choice_visible_option_ids = nil,
-      gameplay_loop_ports = presentation_ports.build(),
-      view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
+      gameplay_loop_ports = turn_ports,
+      view_command_port = view_command_port,
     }
     local role = _build_role_with_events(101, {})
 
@@ -203,13 +203,14 @@ describe("TestActionLog", function()
         client_role = nil,
       } },
     }, function()
+      local turn_ports, view_command_port = P.build_presentation_ports()
       local state = {
         ui = ui_view.build_ui_state(),
         ui_model = {
           current_player_id = 2,
         },
-        gameplay_loop_ports = presentation_ports.build(),
-        view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
+        gameplay_loop_ports = turn_ports,
+        view_command_port = view_command_port,
       }
       canvas_event_router.bind(state, function()
         return {}

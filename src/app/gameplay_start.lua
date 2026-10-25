@@ -81,8 +81,10 @@ function M.start(state, current_game_ref)
   end
 
   state.turn_action_port = _build_turn_action_port()
-  state.gameplay_loop_ports = presentation_ports.build()
-  state.view_command_port = presentation_ports.build_view_command(state.gameplay_loop_ports)
+  local turn_ports = presentation_ports.build()
+  state.gameplay_loop_ports = turn_ports
+  -- toggle_action_log 复用同一份回合端口包里的 debug.sync_event_log（#209 / #206）。
+  state.view_command_port = presentation_ports.build_view_command(turn_ports.debug.sync_event_log)
   state.presentation_runtime = runtime_deps.build({ camera_sync = camera_sync })
   -- 新局开局前清滤波基线,防止跨局同 role_id 首帧被误去重(#454)。
   camera_sync.reset_baseline()

@@ -25,7 +25,7 @@ local function new_game(mode, item_id)
   control.initialize(p)
   if mode == "manual" then control.toggle_manual_delegation(p) end
   if mode == "afk" then control.enable_afk_delegation(p) end
-  inventory.clear(p)
+  p.inventory:clear()
   p.inventory:add({ id = item_id })
   p.inventory:add({ id = item_id })
   return g, p

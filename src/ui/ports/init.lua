@@ -23,10 +23,10 @@ end
 
 -- view_command 是 ui 自有端口，不进回合端口包（#209）：开局装配写到
 -- state.view_command_port，由 src/ui/input/view_command.lua 读取。
--- toggle_action_log 复用同一份回合端口包里的 debug.sync_event_log。
-function presentation_ports.build_view_command(turn_ports)
-  local debug = turn_ports and turn_ports.debug or nil
-  return view_command_ports.build({ sync_event_log = debug and debug.sync_event_log or nil })
+-- sync_event_log 由装配方（src/app/gameplay_start.lua）直接传入，打开行动日志时
+-- 用它立即同步；缺省（nil）时只切换可见性。
+function presentation_ports.build_view_command(sync_event_log)
+  return view_command_ports.build({ sync_event_log = sync_event_log })
 end
 
 return presentation_ports

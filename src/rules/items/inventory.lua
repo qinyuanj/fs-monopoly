@@ -74,10 +74,6 @@ function inventory.remove_nth_occupied(player, n)
   return inv:remove_by_index(slot)
 end
 
-function inventory.clear(player)
-  return _inv(player):clear()
-end
-
 function inventory.draw_random()
   local picked = weighted_draw.pick(items_cfg, 1, function(item)
     return item.weight or 0

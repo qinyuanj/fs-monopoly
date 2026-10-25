@@ -1,4 +1,4 @@
-local number_utils = require("src.foundation.number")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local next_turn_cooldown = 0.4
 
@@ -8,11 +8,14 @@ local default_ui_sync_ports = {
   end,
 }
 
+-- 回合层唯一的基础 clock 组（#206）：就是 foundation runtime_ports 的四个端口，
+-- 每次调用才解析 configure 装配的实现，未装配宿主时钟时都返回 0。
+-- state 没有回合端口时 context 用它兜底，turn/loop/ports 的基础 clock 组也复用它。
 local default_clock_ports = {
-  wall_now_seconds = function()
-    return 0
-  end,
-  wall_diff_seconds = number_utils.diff_or_zero,
+  wall_now_seconds = runtime_ports.wall_now_seconds,
+  wall_diff_seconds = runtime_ports.wall_diff_seconds,
+  cpu_now_seconds = runtime_ports.cpu_now_seconds,
+  cpu_diff_seconds = runtime_ports.cpu_diff_seconds,
 }
 
 local function _loop_ports(state)

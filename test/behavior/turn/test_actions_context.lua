@@ -6,8 +6,14 @@ local function _assert_eq(actual, expected, message)
 end
 local context = require("src.turn.actions.context")
 local defaults = require("src.turn.actions.defaults")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local support = require("test.support.shared_support")
 
 describe("TestActionsContext", function()
+
+after_each(function()
+  support.restore_runtime_services()
+end)
 
 it("test_uses_the_clock_port_diff_when_it_returns_a_numeric_value", function()
   local ctx = {
@@ -143,10 +149,28 @@ it("test_resolve_timestamp_now_uses_clock_value", function()
     "numeric clock result should be returned")
 end)
 
--- default_clock_ports 覆盖（杀掉 wall_now_seconds 默认值 0→1 幸存者）
+-- state 没有回合端口时，fallback clock 与回合层基础 clock 一致：委派 runtime_ports（#206）。
 
-it("test_default_clock_ports_wall_now_returns_zero", function()
-  _assert_eq(defaults.default_clock_ports.wall_now_seconds(), 0,
-    "default wall_now_seconds should return 0")
+it("test_fallback_clock_returns_zero_when_runtime_clock_unconfigured", function()
+  runtime_ports.reset_for_tests()
+  local ctx = context.resolve_dispatch_context({}, nil)
+  _assert_eq(context.resolve_timestamp_now(ctx), 0,
+    "fallback wall_now should be 0 without host clock")
+  _assert_eq(context.resolve_timestamp_diff_seconds(ctx, 9, 7), 0,
+    "fallback wall_diff should be 0 without host clock, not arithmetic")
+end)
+
+it("test_fallback_clock_delegates_to_runtime_ports_configured_clock", function()
+  runtime_ports.configure({
+    wall_now_seconds = function() return 42.0 end,
+    wall_diff_seconds = function(a, b) return (a - b) * 10 end,
+  })
+  local ctx = context.resolve_dispatch_context({}, nil)
+  _assert_eq(context.resolve_timestamp_now(ctx), 42.0,
+    "fallback wall_now should forward to the runtime port")
+  _assert_eq(context.resolve_timestamp_diff_seconds(ctx, 9, 7), 20,
+    "fallback wall_diff should forward to the runtime port")
+  _assert_eq(defaults.default_clock_ports.cpu_now_seconds, runtime_ports.cpu_now_seconds,
+    "fallback clock group should expose the runtime cpu clock too")
 end)
 end)

@@ -23,7 +23,6 @@ local property = require("test.support.property")
 local gameplay_loop = require("src.turn.loop.init")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local loop_ports = require("src.turn.loop.ports")
-local inventory = require("src.rules.items.inventory")
 local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -142,7 +141,7 @@ local function _install_focus_spies(trace)
 end
 
 local function _fill_random_inventory(player, rng)
-  inventory.clear(player)
+  player.inventory:clear()
   local n = rng:int(1, 5)
   local given = {}
   for _ = 1, n do

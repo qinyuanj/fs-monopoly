@@ -17,7 +17,6 @@ local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = P.with_patches
 local _bind_ui_runtime = P.bind_ui_runtime
 
-local presentation_ports = require("src.ui.ports")
 local view_command_dispatcher = require("src.ui.input.view_command")
 local intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local market_renderer = require("src.ui.screens.market")
@@ -44,7 +43,7 @@ local function _has_port_missing_warn(warns)
 end
 describe("TestMarketSelectPortDispatch", function()
 it("test_assembled_view_command_port_keeps_a_market_select_handler", function()
-  local view_command_port = presentation_ports.build_view_command(presentation_ports.build())
+  local _, view_command_port = P.build_presentation_ports()
   _assert_eq(type(view_command_port.dispatch), "function",
     "assembled view_command port must expose a dispatch function")
 

@@ -154,7 +154,7 @@ do
 
     it("test_clear_removes_all_items", function()
       local player = _make_player({ { id = "item_a" }, { id = "item_b" } })
-      inventory.clear(player)
+      player.inventory:clear()
       _assert_eq(inventory.count(player), 0, "clear should empty every slot")
       _assert_eq(inventory.items(player)[1], false, "cleared slots must be holes")
       _assert_eq(inventory.items(player)[5], false, "cleared slots must be holes through the tail")
@@ -162,7 +162,7 @@ do
 
     it("test_clear_empty_inventory_is_noop", function()
       local player = _make_player({})
-      inventory.clear(player)
+      player.inventory:clear()
       _assert_eq(inventory.count(player), 0, "clear on empty should remain empty")
     end)
 
@@ -204,7 +204,7 @@ do
       local player = _make_player({ { id = "a" }, { id = "b" } })
       -- Force pre-clear state to true so L79 'false' mutation is observable.
       player.inventory._suspend_on_change = true
-      inventory.clear(player)
+      player.inventory:clear()
       _assert_eq(player.inventory._suspend_on_change, false,
         "clear must leave _suspend_on_change=false at exit; mutation L79 would leave it true")
     end)
@@ -225,7 +225,7 @@ do
         end,
       })
       player.inventory = proxy
-      inventory.clear(player)
+      player.inventory:clear()
       _assert_eq(captured_during_write, true,
         "during items reset _suspend_on_change must be true; L77 mutation makes it false")
     end)

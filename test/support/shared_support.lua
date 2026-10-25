@@ -63,6 +63,19 @@ local function assert_tile_id_sequence(entries, expected_ids, msg)
   end
 end
 
+-- 与开局装配（src/app/gameplay_start.lua）同口径：view_command 端口复用回合端口包的
+-- debug.sync_event_log。测试注入的端口包可能没有 debug 组，此时不传同步函数。
+local function build_view_command_port(turn_ports)
+  local debug = turn_ports and turn_ports.debug or nil
+  return presentation_ports.build_view_command(debug and debug.sync_event_log or nil)
+end
+
+-- 一次装好回合端口包与 view_command 端口，返回 turn_ports, view_command_port。
+local function build_presentation_ports()
+  local turn_ports = presentation_ports.build()
+  return turn_ports, build_view_command_port(turn_ports)
+end
+
 local function ensure_ui_runtime_for_test(state)
   luassert.truthy(type(state) == "table", "missing state")
   local ui_runtime = state.ui_runtime
@@ -77,7 +90,7 @@ local function ensure_ui_runtime_for_test(state)
     state.gameplay_loop_ports = presentation_ports.build()
   end
   if type(state.view_command_port) ~= "table" then
-    state.view_command_port = presentation_ports.build_view_command(state.gameplay_loop_ports)
+    state.view_command_port = build_view_command_port(state.gameplay_loop_ports)
   end
   if type(state.board_scene) ~= "table" then
     state.board_scene = {
@@ -544,6 +557,7 @@ M.bind_ui_runtime = bind_ui_runtime
 M.prepare_board_scene = prepare_board_scene
 M.with_patches = with_patches
 M.build_ui_port = build_ui_port
+M.build_presentation_ports = build_presentation_ports
 M.visited_tile_ids = visited_tile_ids
 M.list_contains = list_contains
 M.open_choice = open_choice

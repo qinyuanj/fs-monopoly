@@ -1,5 +1,5 @@
 local gameplay_loop_ports = {}
-local runtime_ports = require("src.foundation.ports.runtime_ports")
+local turn_action_defaults = require("src.turn.actions.defaults")
 local ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local ports_merge = require("src.turn.loop.ports_merge")
@@ -99,24 +99,6 @@ local group_names = {
   "state",
   "output",
 }
--- 基础 clock 组委派 foundation runtime_ports（#210）：未装配宿主时钟时四个函数
--- 都返回 0。base_ports 在加载时只建一次，所以用闭包在调用时取 runtime_ports 字段。
-local function _base_clock_ports()
-  return {
-    wall_now_seconds = function()
-      return runtime_ports.wall_now_seconds()
-    end,
-    wall_diff_seconds = function(timestamp_1, timestamp_2)
-      return runtime_ports.wall_diff_seconds(timestamp_1, timestamp_2)
-    end,
-    cpu_now_seconds = function()
-      return runtime_ports.cpu_now_seconds()
-    end,
-    cpu_diff_seconds = function(timestamp_1, timestamp_2)
-      return runtime_ports.cpu_diff_seconds(timestamp_1, timestamp_2)
-    end,
-  }
-end
 local function _base_ui_sync_ports()
   return ui_sync_defaults.build_base_ui_sync_ports(_load_choice_timeout, _load_tick_ui_sync, _load_modal_timeout)
 end
@@ -135,7 +117,10 @@ local base_port_builders = {
       end,
     })
   end,
-  clock = _base_clock_ports,
+  -- 基础 clock 组复用 actions/defaults 的唯一定义（委派 runtime_ports，#210 / #206）。
+  clock = function()
+    return turn_action_defaults.default_clock_ports
+  end,
   state = function()
     return ports_merge.build_noop_group(port_groups.state)
   end,

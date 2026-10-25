@@ -15,7 +15,6 @@ local luassert = require("packages.test_runner.cache_loader").verified_module("l
   or assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local property = require("test.support.property")
-local inventory = require("src.rules.items.inventory")
 local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -256,7 +255,7 @@ local function _drive_one_step(g, rng, attempts)
 end
 
 local function _fill_random_inventory(player, rng)
-  inventory.clear(player)
+  player.inventory:clear()
   local n = rng:int(1, 5)
   local given = {}
   for _ = 1, n do

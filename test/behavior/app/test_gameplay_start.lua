@@ -88,7 +88,7 @@ local function _test_start_stores_tick_handle()
   _with_patches({
     { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
     { target = gameplay_loop, key = "set_game", value = function() end },
-    { target = presentation_ports, key = "build", value = function() return {} end },
+    { target = presentation_ports, key = "build", value = function() return { debug = {} } end },
     {
       target = frame_timer,
       key = "repeat_every",
@@ -116,7 +116,7 @@ local function _test_start_stop_start_replaces_tick_without_duplicate_callback()
   _with_patches({
     { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
     { target = gameplay_loop, key = "set_game", value = function() end },
-    { target = presentation_ports, key = "build", value = function() return {} end },
+    { target = presentation_ports, key = "build", value = function() return { debug = {} } end },
     {
       target = frame_timer,
       key = "repeat_every",
@@ -159,7 +159,7 @@ local function _test_start_assigns_turn_action_port_with_dispatch_and_block()
   _with_patches({
     { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
     { target = gameplay_loop, key = "set_game", value = function() end },
-    { target = presentation_ports, key = "build", value = function() return {} end },
+    { target = presentation_ports, key = "build", value = function() return { debug = {} } end },
   }, function()
     local state = { tick_handle = {} }
     local current_game_ref = { nil }
@@ -180,7 +180,7 @@ local function _test_start_assigns_presentation_runtime()
   _with_patches({
     { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
     { target = gameplay_loop, key = "set_game", value = function() end },
-    { target = presentation_ports, key = "build", value = function() return {} end },
+    { target = presentation_ports, key = "build", value = function() return { debug = {} } end },
   }, function()
     local state = { tick_handle = {} }
     local current_game_ref = { nil }
@@ -206,7 +206,7 @@ local function _test_tick_callback_reads_current_game_ref_correctly()
         capture.tick_values[#capture.tick_values + 1] = game
       end,
     },
-    { target = presentation_ports, key = "build", value = function() return {} end },
+    { target = presentation_ports, key = "build", value = function() return { debug = {} } end },
     {
       target = frame_timer,
       key = "repeat_every",
@@ -281,7 +281,7 @@ describe("skin restore on start", function()
     _with_patches({
       { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
       { target = gameplay_loop, key = "set_game", value = function() end },
-      { target = presentation_ports, key = "build", value = function() return {} end },
+      { target = presentation_ports, key = "build", value = function() return { debug = {} } end },
       { target = frame_timer, key = "repeat_every", value = function() return {} end },
       { target = leaderboard_settlement, key = "watch_game", value = function() return true end },
     }, function()

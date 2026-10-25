@@ -152,7 +152,7 @@ do
     it("test_context_counts_zero_matching_items_without_offset", function()
       local g = _new_game()
       local player = g.players[1]
-      inventory.clear(player)
+      player.inventory:clear()
       player.inventory:add({ id = item_ids.roadblock })
 
       _assert_eq(flow_context.count_item(player, item_ids.mine), 0, "absent item count")

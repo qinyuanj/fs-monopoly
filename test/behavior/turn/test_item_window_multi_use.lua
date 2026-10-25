@@ -44,7 +44,7 @@ local function _assert_window_survives_anim_item(phase, used_item_id, kept_item_
   local flow = { resumed = false }
   _wait_choice_engine(g, flow)
   local p = g:current_player()
-  inventory.clear(p)
+  p.inventory:clear()
   p.inventory:add({ id = used_item_id })
   p.inventory:add({ id = kept_item_id })
 
@@ -83,7 +83,7 @@ end
 it("test_real_turn_machine_keeps_the_item_window_open_across_consecutive_item_uses", function()
   local g = support.new_game()
   local p = g:current_player()
-  inventory.clear(p)
+  p.inventory:clear()
   p.inventory:add({ id = item_ids.mine })
   p.inventory:add({ id = item_ids.angel })
 
@@ -130,7 +130,7 @@ it("test_followup_item_as_the_last_card_clears_the_resolved_followup_choice", fu
     end,
   })
   local p = g:current_player()
-  inventory.clear(p)
+  p.inventory:clear()
   p.inventory:add({ id = item_ids.roadblock })
 
   local spec = item_phase.build_passive_choice_spec(g, p, "post_action", {
@@ -171,7 +171,7 @@ end)
 it("test_real_turn_machine_reopens_the_window_after_a_followup_item_completes", function()
   local g = support.new_game()
   local p = g:current_player()
-  inventory.clear(p)
+  p.inventory:clear()
   p.inventory:add({ id = item_ids.roadblock })
   p.inventory:add({ id = item_ids.mine })
 
@@ -223,7 +223,7 @@ it("test_post_action_window_reopens_after_a_followup_item_completes", function()
     end,
   })
   local p = g:current_player()
-  inventory.clear(p)
+  p.inventory:clear()
   p.inventory:add({ id = item_ids.roadblock })
   p.inventory:add({ id = item_ids.mine })
 
@@ -285,7 +285,7 @@ it("test_wait_choice_sub_chain_reopens_the_window_after_a_non_dice_item", functi
     end,
   })
   local p = g:current_player()
-  inventory.clear(p)
+  p.inventory:clear()
   p.inventory:add({ id = item_ids.mine })
   p.inventory:add({ id = item_ids.angel })
 

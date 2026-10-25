@@ -12,7 +12,7 @@ local move_followup = require("src.turn.phases.move_followup")
 local function new_strike(cash)
   local game = support.new_game()
   local user, target = game.players[1], game.players[2]
-  inventory.clear(user)
+  user.inventory:clear()
   game:set_player_cash(user, cash)
   game:set_player_cash(target, 20000)
   game:update_player_position(user, 4)

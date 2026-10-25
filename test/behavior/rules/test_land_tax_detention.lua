@@ -3,7 +3,6 @@ local luassert = require("luassert")
 -- luacheck: ignore 211
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
-local inventory = require("src.rules.items.inventory")
 local constants = require("src.config.content.constants")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local function _new_game()
@@ -41,7 +40,7 @@ describe("TestLandTaxDetention", function()
     local p = g:current_player()
     g:set_player_cash(p, 10000)
     g:set_player_status(p, "pending_tax_free", false)
-    inventory.clear(p)
+    p.inventory:clear()
 
     -- 地图必有税格(同文件 L83 同一 idiom):找不到当场红,不空转。
     local tax_idx = assert(g.board:find_first_by_type("tax"), "missing tax tile")

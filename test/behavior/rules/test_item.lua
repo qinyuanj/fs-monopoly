@@ -232,7 +232,7 @@ describe("TestItem", function()
   it("test_passive_spec_mixed_slots", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     local idx = 3
     local tile_ref = g.board:get_tile(idx)
     g:update_player_position(p, idx)
@@ -270,7 +270,7 @@ describe("TestItem", function()
   it("test_passive_spec_auto_skip_empty_inventory", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     local spec = item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -281,7 +281,7 @@ describe("TestItem", function()
   it("test_passive_spec_has_options_for_validator", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     p.inventory:add({ id = item_ids.remote_dice })
     local spec = item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
@@ -298,7 +298,7 @@ describe("TestItem", function()
   it("test_passive_handler_direct_execute", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     p.inventory:add({ id = item_ids.mine })
 
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
@@ -319,7 +319,7 @@ describe("TestItem", function()
   it("test_passive_handler_cancel_finishes_phase", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     p.inventory:add({ id = item_ids.mine })
 
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
@@ -341,7 +341,7 @@ describe("TestItem", function()
   it("test_passive_handler_marks_effect_group_after_use", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     p.inventory:add({ id = item_ids.dice_multiplier })
 
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_move", {
@@ -362,7 +362,7 @@ describe("TestItem", function()
   it("test_passive_handler_no_effect_group_on_cancel", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     p.inventory:add({ id = item_ids.remote_dice })
 
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
@@ -384,7 +384,7 @@ describe("TestItem", function()
   it("test_passive_handler_resolve_returns_table_when_reopened", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     p.inventory:add({ id = item_ids.mine })
     p.inventory:add({ id = item_ids.remote_dice })
 
@@ -406,7 +406,7 @@ describe("TestItem", function()
   it("test_passive_followup_completion_marks_effect_group", function()
     local g = _new_game()
     local p = g:current_player()
-    inventory.clear(p)
+    p.inventory:clear()
     p.inventory:add({ id = item_ids.remote_dice })
 
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {

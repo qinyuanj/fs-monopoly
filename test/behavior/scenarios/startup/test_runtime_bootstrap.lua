@@ -29,6 +29,7 @@ local function _common_start_patches(capture, clock)
       value = function()
         return {
           clock = clock,
+          debug = {},
         }
       end,
     },
@@ -181,6 +182,7 @@ local function _test_runtime_bootstrap_sets_game_before_priming_first_turn()
       value = function()
         return {
           clock = clock,
+          debug = {},
         }
       end,
     },
