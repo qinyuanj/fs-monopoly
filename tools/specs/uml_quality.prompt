@@ -67,4 +67,4 @@ Stock busted entry (`.busted`, #99):
 - The run does not pass through the in-repo parallel lanes: the whole behavior + contract set runs in one process (~100 s for `uml crap`).
 
 Known gaps:
-- Source mutation (`uml mutate`) has covered only part of the real tree: the 2026-10-15 full `--mutate-all` run was stopped after 44 of 570 `src/` files (~16 min per file, ~6 days for the whole tree). `src/` files without a `.metrics/mutate` snapshot have no mutation result yet.
+- Source mutation (`uml mutate`) scope excludes `src/ui/**` (ADR 0076); CRAP and dry still cover all of `src/`. A full run passes every other top-level `src/` directory explicitly: `lua5.4 tools/cli.lua uml mutate src/app src/computer src/config src/foundation src/host src/player src/rules src/state src/turn` (add new top-level directories here). Calling `uml mutate` without targets is rejected upstream and is not a full-run entry. Files in scope without a `.metrics/mutate` snapshot either have no mutation sites (data tables, port declarations) or have no mutation result yet.
