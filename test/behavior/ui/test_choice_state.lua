@@ -6,6 +6,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_ui = require("src.ui.render.support.runtime_ui")
 local control = require("src.player.control")
 local player_control_snapshot = require("src.turn.output.player_control_snapshot")
+local input_lock_phases = require("test.support.input_lock_phases")
 
 local function _make_player(id, opts)
   opts = opts or {}
@@ -115,6 +116,25 @@ it("test_does_not_expect_choice_ui_during_blocked_turn_phases", function()
   luassert.is.equal(false, gate.should_warn, "blocked phase should not warn about missing UI")
   luassert.is.equal(false, choice_ui_state.should_reconcile(game, state, _make_choice("target", 1)),
     "blocked phase should not reopen modal")
+end)
+
+-- #211:选择门控逐相位覆盖锁输入集合——锁定相位不期待选择屏,放行相位期待并要求补开。
+it("test_choice_ui_expectation_follows_every_input_lock_phase", function()
+  _with_client_and_seats(1, function()
+    local state = _make_state()
+    for _, phase in ipairs(input_lock_phases.locked) do
+      local gate = choice_ui_state.resolve_gate_state(_make_game({ phase = phase }), state, _make_choice("target", 1))
+      luassert.is_false(gate.expects_ui, phase .. " should lock input and not expect choice UI")
+      luassert.is_false(choice_ui_state.should_reconcile(_make_game({ phase = phase }), state, _make_choice("target", 1)),
+        phase .. " should not reopen the choice screen")
+    end
+    for _, phase in ipairs(input_lock_phases.unlocked) do
+      local gate = choice_ui_state.resolve_gate_state(_make_game({ phase = phase }), state, _make_choice("target", 1))
+      luassert.is_true(gate.expects_ui, phase .. " should allow input and expect choice UI")
+      luassert.is_true(choice_ui_state.should_reconcile(_make_game({ phase = phase }), state, _make_choice("target", 1)),
+        phase .. " should reopen the missing choice screen")
+    end
+  end)
 end)
 
 it("test_resolves_owner_automation_from_the_player_control_snapshot", function()

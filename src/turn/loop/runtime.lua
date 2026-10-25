@@ -1,27 +1,9 @@
 local runtime_state = require("src.state.runtime")
 local landing_visual_hold = require("src.state.visual_hold")
 local logger = require("src.foundation.log")
+local input_lock = require("src.state.input_lock")
 
 local runtime = {}
-
-local _INPUT_BLOCKED_PHASES = {
-  wait_move_anim = true,
-  wait_action_anim = true,
-  wait_landing_visual = true,
-  detained_wait = true,
-  inter_turn_wait = true,
-}
-
-function runtime.is_phase_input_blocked(phase)
-  return _INPUT_BLOCKED_PHASES[phase] == true
-end
-
--- 从 game 取当前回合相位判输入锁:回合推进是 turn 的事实,消费方(ui_sync 门控、
--- 按钮策略)经本谓词读同一份相位集合,不再各自复制表。缺 game/turn 视作不锁。
-function runtime.is_game_input_blocked(game)
-  local phase = game and game.turn and game.turn.phase or nil
-  return runtime.is_phase_input_blocked(phase)
-end
 
 local function _ui_sync_ports(ports)
   return ports and ports.ui_sync or nil
@@ -40,7 +22,7 @@ function runtime.sync_input_blocked(state, phase, ports)
   if not ui then
     return false
   end
-  local input_blocked = runtime.is_phase_input_blocked(phase)
+  local input_blocked = input_lock.is_phase_input_blocked(phase)
   if not ui_sync_ports.set_input_blocked(state, input_blocked) then
     return false
   end
