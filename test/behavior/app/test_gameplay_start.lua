@@ -268,17 +268,9 @@ describe("skin restore on start", function()
         archive[key] = value
         return true
       end,
-      resolve_role = function(role_id)
-        return {
-          get_ctrl_unit = function()
-            return {
-              set_model_by_creature_key = function()
-                model_roles[tostring(role_id)] = true
-                return true
-              end,
-            }
-          end,
-        }
+      set_role_model = function(role_id)
+        model_roles[tostring(role_id)] = true
+        return true
       end,
     })
     local fake_game = {

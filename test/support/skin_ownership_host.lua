@@ -1,8 +1,9 @@
--- 皮肤归属接口测试的宿主替身(#204):只替换现有 seam——runtime_ports(玩家存档
--- Int/Str、墙钟、角色解析与换模型)、付费购买 port、成就进度 port。
+-- 皮肤归属接口测试的宿主替身(#204 / #205):只替换现有 seam——runtime_ports(玩家
+-- 存档 Int/Str、墙钟、换模型端口)、付费购买 port、成就进度 port。
 -- 存档按 role|key 存值;opts.int_write_ok / str_write_ok = false 模拟宿主不报错但
 -- 值没落下;opts.str_unreadable 模拟 Str 读档降级为 nil;opts.enabled = false 模拟
--- 存档未开启;opts.now 为墙钟秒;opts.unit 替换角色控制单位(默认记录换模型调用)。
+-- 存档未开启;opts.now 为墙钟秒。换模型端口记录到 model_calls,默认成功;
+-- opts.set_model_ok / reset_model_ok = false 模拟端口报失败(宿主侧缺对象/方法或抛错)。
 -- 调用方 teardown 须调 shared_support.restore_runtime_services() 与
 -- achievement_progress_port.reset_for_tests() 装回基线。
 require("test.bootstrap").install_package_paths()
@@ -16,16 +17,16 @@ local function _store_key(role_id, key)
   return tostring(role_id) .. "|" .. tostring(key)
 end
 
--- 默认控制单位:记录 set_model_by_creature_key / reset_model 调用,均返回成功。
-function M.recording_unit(model_calls)
+-- 换模型端口替身:按调用顺序记录 { op, args },op 为 set_model / reset_model。
+local function _model_ports(opts, model_calls)
   return {
-    set_model_by_creature_key = function(...)
-      model_calls[#model_calls + 1] = { op = "set_model", args = { ... } }
-      return true
+    set_role_model = function(role_id, creature_key)
+      model_calls[#model_calls + 1] = { op = "set_model", role_id = role_id, args = { creature_key } }
+      return opts.set_model_ok ~= false
     end,
-    reset_model = function(...)
-      model_calls[#model_calls + 1] = { op = "reset_model", args = { ... } }
-      return true
+    reset_role_model = function(role_id)
+      model_calls[#model_calls + 1] = { op = "reset_model", role_id = role_id, args = {} }
+      return opts.reset_model_ok ~= false
     end,
   }
 end
@@ -69,21 +70,12 @@ function M.install(opts)
   end
   local reads = {}
   local model_calls = {}
-  local unit = opts.unit or M.recording_unit(model_calls)
   local ports = _archive_ports(opts, store, reads)
+  for name, port in pairs(_model_ports(opts, model_calls)) do
+    ports[name] = port
+  end
   ports.wall_now_seconds = function()
     return opts.now
-  end
-  ports.resolve_role = function(role_id)
-    if opts.missing_role then
-      return nil
-    end
-    return {
-      id = role_id,
-      get_ctrl_unit = function()
-        return unit
-      end,
-    }
   end
   runtime_ports.configure(ports)
   return {

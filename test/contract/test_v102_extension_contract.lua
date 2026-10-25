@@ -4,7 +4,7 @@ local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local skin_ownership = require("src.rules.skin_ownership")
 
--- 记录换模型调用的角色替身(宿主边界)。
+-- 记录换模型调用的角色解析替身(宿主边界)。
 local function _model_recorder(calls)
   return function(role_id)
     return {
@@ -18,6 +18,13 @@ local function _model_recorder(calls)
       end,
     }
   end
+end
+
+-- 换模型端口经真实 src/host/role_model 适配器落到角色替身上。
+local function _model_ports(calls, extra)
+  local ports = extra or {}
+  require("src.host.role_model").install(ports, _model_recorder(calls))
+  return ports
 end
 
 describe("TestV102ExtensionContract", function()
@@ -121,7 +128,7 @@ describe("TestV102ExtensionContract", function()
   local calls = {}
 
   host_install.install({ skip_context_install = true })
-  runtime_ports.configure({ resolve_role = _model_recorder(calls) })
+  runtime_ports.configure(_model_ports(calls))
   local state = { ui = {} }
   skin_panel.open(state, 9)
   skin_panel.handle_action(state, { type = "buy", slot_index = 3 }, 9)
@@ -166,15 +173,14 @@ describe("TestV102ExtensionContract", function()
   }, function()
     host_install.install({ skip_context_install = true })
     -- ADR 0074:存档可用才卖皮肤;宿主存档在 runtime_ports 边界替身。
-    runtime_ports.configure({
+    runtime_ports.configure(_model_ports({}, {
       archives_enabled = function() return true end,
-      resolve_role = _model_recorder({}),
       get_archive_int = function(_, key) return archive[key] or 0 end,
       set_archive_int = function(_, key, value)
         archive[key] = value
         return true
       end,
-    })
+    }))
     skin_panel.open(state, 9)
     skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
     luassert.truthy(captured ~= nil, "skin purchase should start paid purchase")
@@ -236,7 +242,7 @@ describe("TestV102ExtensionContract", function()
   local state = { ui = {} }
   local skin = skin_ownership.catalog()[1]
 
-  runtime_ports.configure({ resolve_role = _model_recorder(calls) })
+  runtime_ports.configure(_model_ports(calls))
   skin_ownership.grant(state, 11, skin.product_id)
   luassert.is.equal(true, skin_ownership.equip(state, 11, skin.product_id).equipped,
     "skin equip should report model change success")

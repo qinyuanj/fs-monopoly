@@ -32,6 +32,8 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 **取证结论修正（2026-09-03，#610，取代 #263 探针结论）**：宿主 `CampRole` 上**没有** `die`，`die` 在 `role.get_ctrl_unit()` 返回的单位（`LCharacter`）上；真实签名 `unit.die(dmg_unit?)`，单参可省、**不带 self**（冒号调用被宿主以 params count mismatch 拒收），且**无返回值**，成功只能以 `unit.is_die_status()` 由 false 翻 true 判定。#263 探针记录的 `role_type=table`、`role.die` 存在且返回真值，探到的是我们自己的合成 AI 角色适配器（Lua table，自带 `die` 并自行退役），不是宿主 Role；据此写下的「role 有 die、签名 `die(self, nil)`、成功按 truthy 返回值」对宿主 Role 三条全不成立，真人玩家破产时宿主 `die` 从未成功过。修复后 `src/host/role_die.lua` 按对象分两条路径：合成适配器仍按 truthy 返回值判定，宿主 Role 走控制单位并回读 `is_die_status`。**分派认 `is_synthetic_actor` 标志，不认 `die` 存在性**——后者正是 #263 误判的形状，宿主 Role 哪天长出 `die` 就会静默退回被证伪的判据；只有既无标志又无 `get_ctrl_unit` 的鸭子替身才回落到自带 `die`。
 
+**换模型取证（2026-10-25，#205）**：`role.get_ctrl_unit()`、`unit.set_model_by_creature_key(creature_key, include_custom_model, inherit_scale, inherit_capsule_size)`、`unit.reset_model()` 都不带 self，冒号调用会被宿主以 params count mismatch 拒收：宿主只记 ERROR、返回 nil，不抛异常。`set_model_by_creature_key` 的三个布尔宿主有默认值，本项目一律显式传 `true`。两个换模型方法都无返回值，宿主也不提供可读回的当前模型，所以**本条是「状态翻转」判据的例外**：成功只能以「调用未抛」判定，签名必须单次直调、不得试探。实现收在 `src/host/role_model.lua`，规则层只经 `runtime_ports.set_role_model` / `reset_role_model` 触达。模型是否真的切换，只能靠真机目视验收。
+
 出局后的棋子移除调同一个宿主入口 `GameAPI.destroy_unit`，使两类玩家一致（`LCharacter` 有 `destroy`、无 `set_visible`，隐藏路径尚无取证手段）。取句柄的路子两侧不同但同源：合成 AI 退役读 `registry.env.GameAPI`，真人侧经 `src/host/units.lua` 读全局 `GameAPI`，而 `host_install` 正是用全局 `GameAPI` 填的 `ctx.env`。移除失败**不推翻**端口成功：出局语义由 `is_die_status` 承担，移除只是表现层收尾，失败留一条 warn。真机验证待办：若销毁真人控制单位触发宿主重生或镜头异常，退到隐藏路径并重新取证。
 
 ## ADR 0054 — 单进程整房间，可见性与授权分离

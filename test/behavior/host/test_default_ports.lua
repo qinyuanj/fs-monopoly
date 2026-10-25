@@ -410,6 +410,21 @@ local function _ports_with_role(role, game_api)
   return default_ports.build({ current = function() return ctx end })
 end
 
+-- #205:换模型端口由默认端口装配,经同一角色解析落到控制单位上。
+local function _test_role_model_ports_reach_the_resolved_role_ctrl_unit()
+  local calls = {}
+  local unit = {
+    set_model_by_creature_key = function(...) calls[#calls + 1] = { "set", ... } end,
+    reset_model = function(...) calls[#calls + 1] = { "reset", ... } end,
+  }
+  local role = { get_roleid = function() return 9 end, get_ctrl_unit = function() return unit end }
+  local ports = _ports_with_role(role, {})
+
+  _assert_equal(ports.set_role_model(9, 77), true, "set_role_model should succeed on the resolved role")
+  _assert_equal(ports.reset_role_model(9), true, "reset_role_model should succeed on the resolved role")
+  luassert.same({ { "set", 77, true, true, true }, { "reset" } }, calls, "both ports reach the ctrl unit")
+end
+
 local function _test_archives_enabled_reflects_game_api_then_defaults_false()
   local ports = _ports_with_role(nil, { is_archives_enabled = function() return true end })
   _assert_equal(ports.archives_enabled(), true, "archives_enabled should follow GameAPI when present")
@@ -466,6 +481,7 @@ local function _test_set_archive_int_writes_int_archive_on_resolved_role()
   _assert_equal(ports.set_archive_int(404, 1002, 1), false, "set_archive_int should fail safely for an unresolved role")
 end
 
+it("test_role_model_ports_reach_the_resolved_role_ctrl_unit", _test_role_model_ports_reach_the_resolved_role_ctrl_unit)
 it("test_archives_enabled_reflects_game_api_then_defaults_false", _test_archives_enabled_reflects_game_api_then_defaults_false)
 it("test_get_archive_int_defaults_to_zero_for_non_numeric_archive", _test_get_archive_int_defaults_to_zero_for_non_numeric_archive)
 it("test_get_archive_int_reads_int_archive_from_resolved_role", _test_get_archive_int_reads_int_archive_from_resolved_role)

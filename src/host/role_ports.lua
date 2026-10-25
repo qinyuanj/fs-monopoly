@@ -2,6 +2,7 @@
 -- 合成角色适配器回退、单角色解析、失败标记与出局的宿主侧执行。
 local logger = require("src.foundation.log")
 local role_die = require("src.host.role_die")
+local role_model = require("src.host.role_model")
 
 local role_ports = {}
 
@@ -156,6 +157,11 @@ function role_ports.install(defaults, runtime_context)
   -- 出局的宿主侧执行(ADR 0046):宿主 Role 走控制单位、合成适配器走自带 die,
   -- 分支与判据收在 src/host/role_die,规则层只经端口触达。
   defaults.call_role_die = role_die.call_role_die
+
+  -- 换模型的宿主侧执行(#205):签名取证与成功判据收在 src/host/role_model。
+  role_model.install(defaults, function(player_id)
+    return _resolve_role(player_id, runtime_context)
+  end)
 end
 
 return role_ports

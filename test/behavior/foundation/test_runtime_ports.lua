@@ -126,6 +126,12 @@ describe("TestRuntimePorts", function()
     runtime_ports.reset_for_tests()
   end)
 
+  it("test_role_model_ports_fail_when_not_configured", function()
+    _before()
+    _assert_eq(runtime_ports.set_role_model(1, 42), false, "set_role_model should fail when not configured")
+    _assert_eq(runtime_ports.reset_role_model(1), false, "reset_role_model should fail when not configured")
+  end)
+
   it("test_resolve_camera_helper_returns_nil_when_not_configured", function()
     _before()
     _assert_eq(runtime_ports.resolve_camera_helper(), nil, "resolve_camera_helper should return nil when not configured")

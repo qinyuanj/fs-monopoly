@@ -400,7 +400,7 @@ describe("TestSkinOwnership", function()
     luassert.truthy(joined:find("gateway boom", 1, true) and joined:find("role_id=1", 1, true), joined)
   end)
 
-  it("test_completion_still_wears_and_reports_when_resolving_the_role_throws", function()
+  it("test_completion_still_wears_and_reports_when_the_model_port_throws", function()
     local host = host_double.install()
     local gateway = host_double.install_paid_gateway()
     local state = host_double.state()
@@ -408,7 +408,7 @@ describe("TestSkinOwnership", function()
 
     local warns = _with_warns(function()
       _patch({
-        { target = runtime_ports, key = "resolve_role", value = function() error("role boom") end },
+        { target = runtime_ports, key = "set_role_model", value = function() error("model boom") end },
       }, function()
         entry.on_purchase()
       end)
@@ -419,7 +419,7 @@ describe("TestSkinOwnership", function()
     _assert_eq(completed[1].equipped, false, "model change reported as failed")
     _assert_eq(skin_ownership.equipped(state, 1), NAILONG, "worn this session")
     _assert_eq(host.read(1, EQUIPPED_KEY), NAILONG, "equipped archived")
-    luassert.truthy(table.concat(warns, "\n"):find("role boom", 1, true), table.concat(warns, "\n"))
+    luassert.truthy(table.concat(warns, "\n"):find("model boom", 1, true), table.concat(warns, "\n"))
   end)
 
   it("test_purchase_rejects_missing_buyer_contexts_and_invalid_products", function()
@@ -467,7 +467,7 @@ describe("TestSkinOwnership", function()
   end)
 
   it("test_failed_model_change_still_wears_the_skin_but_reports_no_achievement", function()
-    local host = host_double.install({ unit = {} })
+    local host = host_double.install({ set_model_ok = false })
     local state = host_double.state()
     skin_ownership.grant(state, 1, NAILONG)
 
@@ -483,7 +483,7 @@ describe("TestSkinOwnership", function()
     _assert_eq(#achievements, 0, "no achievement without a model change")
   end)
 
-  it("test_unequip_still_clears_the_saved_skin_when_resolving_the_role_throws", function()
+  it("test_unequip_still_clears_the_saved_skin_when_the_model_port_throws", function()
     local host = host_double.install()
     local state = host_double.state()
     skin_ownership.grant(state, 1, NAILONG)
@@ -492,7 +492,7 @@ describe("TestSkinOwnership", function()
     local result
     local warns = _with_warns(function()
       _patch({
-        { target = runtime_ports, key = "resolve_role", value = function() error("role boom") end },
+        { target = runtime_ports, key = "reset_role_model", value = function() error("model boom") end },
       }, function()
         result = skin_ownership.unequip(state, 1)
       end)
@@ -501,7 +501,7 @@ describe("TestSkinOwnership", function()
     _assert_eq(result.accepted, true, "unequip accepted")
     _assert_eq(skin_ownership.equipped(state, 1), nil, "selection cleared")
     _assert_eq(host.read(1, EQUIPPED_KEY), 0, "saved skin cleared to 0")
-    luassert.truthy(table.concat(warns, "\n"):find("role boom", 1, true), table.concat(warns, "\n"))
+    luassert.truthy(table.concat(warns, "\n"):find("model boom", 1, true), table.concat(warns, "\n"))
   end)
 
   it("test_unequip_clears_saved_skin_and_resets_the_model", function()
@@ -518,21 +518,16 @@ describe("TestSkinOwnership", function()
     _assert_eq(_model_ops(host)[2], "reset_model:nil", "model reset through the host API")
   end)
 
-  it("test_unequip_falls_back_to_the_default_creature_without_reset_model", function()
-    local model_calls = {}
-    local host = host_double.install({
-      unit = {
-        set_model_by_creature_key = function(...)
-          model_calls[#model_calls + 1] = { ... }
-          return true
-        end,
-      },
-    })
+  it("test_unequip_falls_back_to_the_default_creature_when_reset_fails", function()
+    local host = host_double.install({ reset_model_ok = false })
     local state = host_double.state()
 
-    skin_ownership.unequip(state, 1)
+    _with_warns(function()
+      skin_ownership.unequip(state, 1)
+    end)
 
-    _assert_eq(model_calls[1][1], DEFAULT_CREATURE, "default creature applied")
+    luassert.same({ "reset_model:nil", "set_model:" .. DEFAULT_CREATURE }, _model_ops(host),
+      "default creature applied after the failed reset")
     _assert_eq(host.read(1, EQUIPPED_KEY), 0, "equipped archive cleared")
   end)
 

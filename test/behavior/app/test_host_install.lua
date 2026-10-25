@@ -37,7 +37,8 @@ local function _test_host_ports_lists_five_capability_slots_in_fixed_order()
   _assert_eq(require("src.ui.seams.host_scene_ui"), refired[5], "slot 5 is host_scene_ui")
 end
 
--- 记录换模型调用的角色替身(宿主边界);单位没有 reset_model,脱下走默认造型。
+-- 记录换模型调用的角色解析替身(宿主边界,经真实 src/host/role_model 适配器);
+-- 单位没有 reset_model,脱下走默认造型。
 local function _model_recorder(calls)
   return function(role_id)
     return {
@@ -413,7 +414,9 @@ local function _test_skip_context_install_wires_skin_panel_to_the_role_model()
   local calls = {}
 
   host_install.install({ skip_context_install = true })
-  runtime_ports.configure({ resolve_role = _model_recorder(calls) })
+  local ports = {}
+  require("src.host.role_model").install(ports, _model_recorder(calls))
+  runtime_ports.configure(ports)
   local state = { ui = {} }
   skin_panel.open(state, 9)
   skin_panel.handle_action(state, { type = "buy", slot_index = 3 }, 9)

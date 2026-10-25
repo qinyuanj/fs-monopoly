@@ -57,6 +57,12 @@ runtime_ports.is_synthetic_player = _make_port("is_synthetic_player", false)
 
 runtime_ports.call_role_die = _make_port("call_role_die", false)
 
+-- #205 换模型:按 player_id 换成 creature_key 对应模型 / 复位为宿主默认模型。
+-- 宿主无返回值也无可读回状态,真值只表示调用已发出且未抛;未配置端口按失败处理。
+runtime_ports.set_role_model = _make_port("set_role_model", false)
+
+runtime_ports.reset_role_model = _make_port("reset_role_model", false)
+
 runtime_ports.resolve_camera_helper = _make_port("resolve_camera_helper", nil)
 
 runtime_ports.emit_event = _make_port("emit_event", false)
