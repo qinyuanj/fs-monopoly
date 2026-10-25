@@ -1,0 +1,1 @@
+{:version 1 :tested-at "2026-10-25T15:32:10+08:00" :source "src/rules/items/config.lua" :namespace "rules.items.config" :outcomes {} :forms [{:id "defn-/_build_cfg_by_id" :kind "defn-" :file "src/rules/items/config.lua" :line 5 :end-line 11 :hash "f21ca5e434f72fbf40c4ab14f47edae1549971bff72709a57289ef9b5433bf8a" :killed 0 :survived 0 :uncovered 0 :sites 0}]}

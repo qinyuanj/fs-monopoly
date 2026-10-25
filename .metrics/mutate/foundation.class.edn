@@ -1,0 +1,1 @@
+{:version 1 :tested-at "2026-10-25T15:32:04+08:00" :source "src/foundation/class.lua" :namespace "foundation.class" :outcomes {} :forms [{:id "defn-/Class" :kind "defn-" :file "src/foundation/class.lua" :line 12 :end-line 27 :hash "03b131d37f4749032e82a6a4dc22ba07f57b97661a3042c3ffbf6b74a9c496c3" :killed 0 :survived 0 :uncovered 0 :sites 0}]}

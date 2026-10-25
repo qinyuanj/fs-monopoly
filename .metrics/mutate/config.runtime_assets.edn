@@ -1,0 +1,1 @@
+{:version 1 :tested-at "2026-10-25T15:32:03+08:00" :source "src/config/runtime_assets.lua" :namespace "config.runtime_assets" :outcomes {} :forms [{:id "defn-/_copy_exports" :kind "defn-" :file "src/config/runtime_assets.lua" :line 9 :end-line 13 :hash "e469a608580c2fc925c4725d801a651bad90f752b00461b1dc4caa7b00bab55f" :killed 0 :survived 0 :uncovered 0 :sites 0}]}
