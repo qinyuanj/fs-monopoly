@@ -178,11 +178,36 @@ it("test_deleted_and_non_function_required_ports_fall_back", function()
   check.equal(invalidated, gameplay_loop_ports.resolve_for_state(state))
 end)
 
-it("test_extra_keys_and_unknown_groups_survive_and_invalidate_state_reads", function()
-  local unknown = { dispatch = function() return "before" end }
-  local state = { gameplay_loop_ports = { debug = {}, view_command = unknown } }
+it("test_resolve_returns_exactly_the_seven_declared_groups_and_keeps_caller_groups", function()
+  -- #209：回合端口包只承载回合契约声明的 7 组，不再寄存 ui 自有分组。
+  local close_choice_modal = function() return "caller" end
+  local ports = gameplay_loop_ports.resolve({
+    modal = { close_choice_modal = close_choice_modal },
+    view_command = { dispatch = function() return true end },
+    stray_group = { resolve_role_by_id = function() return nil end },
+  })
+  local names = {}
+  for name in pairs(ports) do names[#names + 1] = name end
+  table.sort(names)
+  check.same({ "anim", "clock", "debug", "modal", "output", "state", "ui_sync" }, names)
+  check.equal(close_choice_modal, ports.modal.close_choice_modal)
+end)
+
+it("test_state_reads_drop_undeclared_groups_once_resolved", function()
+  local state = { gameplay_loop_ports = { debug = {}, view_command = { dispatch = function() end } } }
   local first = gameplay_loop_ports.resolve_for_state(state)
-  check.equal(unknown, first.view_command)
+  check.is_nil(first.view_command)
+  check.equal(first, state.gameplay_loop_ports)
+  first.stray_group = { role_id = 42 }
+  local reresolved = gameplay_loop_ports.resolve_for_state(state)
+  check.is_not.equal(first, reresolved)
+  check.is_nil(reresolved.stray_group)
+  check.equal(reresolved, gameplay_loop_ports.resolve_for_state(state))
+end)
+
+it("test_extra_keys_survive_and_invalidate_state_reads", function()
+  local state = { gameplay_loop_ports = { debug = {} } }
+  local first = gameplay_loop_ports.resolve_for_state(state)
   first.debug.extra = false
   local added = gameplay_loop_ports.resolve_for_state(state)
   check.is_not.equal(first, added)
@@ -191,17 +216,7 @@ it("test_extra_keys_and_unknown_groups_survive_and_invalidate_state_reads", func
   local deleted = gameplay_loop_ports.resolve_for_state(state)
   check.is_not.equal(added, deleted)
   check.is_nil(deleted.debug.extra)
-  unknown.dispatch = function() return "after" end
-  local changed = gameplay_loop_ports.resolve_for_state(state)
-  check.is_not.equal(deleted, changed)
-  check.equal("after", changed.view_command.dispatch())
-  changed.actor_context = { role_id = 42 }
-  local added_group = gameplay_loop_ports.resolve_for_state(state)
-  check.equal(42, added_group.actor_context.role_id)
-  added_group.view_command = nil
-  local removed_group = gameplay_loop_ports.resolve_for_state(state)
-  check.is_nil(removed_group.view_command)
-  check.equal(removed_group, gameplay_loop_ports.resolve_for_state(state))
+  check.equal(deleted, gameplay_loop_ports.resolve_for_state(state))
 end)
 
 it("test_invalid_gate_mutation_throws_until_repaired_without_committing", function()

@@ -1,4 +1,4 @@
-local board_utils = require("src.rules.land.board_utils")
+local property_value = require("src.rules.commerce.property_value")
 local land_events = require("src.rules.land.events")
 local achievement_hooks = require("src.rules.land.achievement_hooks")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -35,7 +35,7 @@ function land_rules.execute_strong_card(game, player_id, tile_id)
   local owner = _resolve_owner(game, st.owner_id)
   assert(owner ~= nil, "missing owner")
 
-  local total_value = board_utils.total_invested(tile, st.level)
+  local total_value = property_value.total_invested(tile, st.level)
   if game:player_cash(player) < total_value then
     return { ok = false, reason = "insufficient_balance" }
   end

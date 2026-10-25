@@ -12,10 +12,6 @@ end
 
 pricing.max_level = _max_level
 
-local function _purchase_price(tile)
-  return tile.price
-end
-
 local function _level_indexed(tile, field, level)
   local arr = tile[field]
   if type(arr) ~= "table" then
@@ -34,18 +30,6 @@ function pricing.rent_for_level(tile, level)
     return math.floor((tile.price * (2 ^ normalized_level)) * 0.5)
   end
   return _level_indexed(tile, "rents", level)
-end
-
-function pricing.total_invested(tile, level)
-  local total = _purchase_price(tile)
-  local costs = tile.upgrade_costs
-  if type(costs) ~= "table" then
-    return total
-  end
-  for i = 1, level do
-    total = total + (costs[i] or 0)
-  end
-  return total
 end
 
 return pricing

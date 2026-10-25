@@ -6,7 +6,7 @@ local main_view = require("src.ui.coord.ui_runtime")
 local view_model = require("src.ui.view")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
 local player_control_snapshot = require("src.turn.output.player_control_snapshot")
-local loop_runtime = require("src.turn.loop.runtime")
+local input_lock = require("src.state.input_lock")
 local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
 local modal_state = require("src.ui.state.modal")
 local role_id_utils = require("src.foundation.identity")
@@ -101,7 +101,7 @@ local function _should_open_choice_modal(game, state, next_model, dirty)
   if not _has_choice(next_model) then
     return false
   end
-  if loop_runtime.is_game_input_blocked(game) then
+  if input_lock.is_game_input_blocked(game) then
     return false
   end
   local route_key = choice_ui_state.resolve_route_key(next_model.choice)

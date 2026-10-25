@@ -12,6 +12,7 @@ local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
 local support = require("test.support.shared_support")
 local _with_shared_patches = support.with_patches
 local _build_choice_modal_state = support.build_choice_modal_state
+local input_lock_phases = require("test.support.input_lock_phases")
 
 local function _with_patches(patches, fn)
   local old = {}
@@ -223,6 +224,36 @@ it("test_opens_inline_choices_only_outside_input_blocked_phases", function()
       "input-blocked phase should leave the public selection untouched")
     luassert.is.same(false, state.ui.choice_active, "input-blocked phase should not activate a choice screen")
     luassert.is_nil(state.ui.active_choice_screen_key, "input-blocked phase should not activate a modal route")
+  end)
+end)
+
+-- #211:开屏门控逐相位覆盖锁输入集合——锁定相位不接管内联选择,放行相位接管。
+it("test_inline_choice_open_follows_every_input_lock_phase", function()
+  local state, _, query_nodes = _build_choice_modal_state()
+
+  _with_shared_patches({
+    { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
+    { target = landing_visual_hold, key = "should_defer", value = function() return false end },
+    { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
+    { target = view_model, key = "update", value = function()
+      return { panel = {}, choice = { id = "inline", route_key = "base_inline" } }
+    end },
+    { target = main_view, key = "render", value = function() end },
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    for _, phase in ipairs(input_lock_phases.locked) do
+      _seed_choice_selection(state, "stale")
+      model_sync.refresh_from_dirty(_game(phase), state, { any = true }, _common())
+      luassert.is.same("stale", state.ui_runtime.pending_choice_selected_option_id,
+        phase .. " should lock input and leave the inline choice closed")
+    end
+    for _, phase in ipairs(input_lock_phases.unlocked) do
+      _seed_choice_selection(state, "stale")
+      model_sync.refresh_from_dirty(_game(phase), state, { any = true }, _common())
+      luassert.is_nil(state.ui_runtime.pending_choice_selected_option_id,
+        phase .. " should allow input and open the inline choice")
+    end
   end)
 end)
 

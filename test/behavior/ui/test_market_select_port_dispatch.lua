@@ -5,11 +5,11 @@ local luassert = require("luassert")
 -- Field symptom (deploy log, 2026-07-11): every black-market item tap logged
 --   [warn] view_command port missing, intent dropped: market_select
 -- and the selection never registered. Mechanism: the assembled
--- state.gameplay_loop_ports.view_command resolved nil at dispatch time, so
+-- view_command port resolved nil at dispatch time, so
 -- view_command_dispatcher dropped the intent.
 --
 -- The existing two_tap_flatten_e2e Scenario D leans on the bind_ui_runtime
--- helper, which always injects a full presentation_ports.build() table — so it
+-- helper, which always injects fully assembled presentation ports — so it
 -- cannot catch view_command being dropped from the assembled ports, nor does it
 -- assert the "port missing" warn stays silent. These specs pin both directly.
 local P = require("test.support.shared_support")
@@ -43,10 +43,9 @@ local function _has_port_missing_warn(warns)
   return false
 end
 describe("TestMarketSelectPortDispatch", function()
-it("test_assembled_presentation_ports_keep_a_market_select_view_command_handler", function()
-  local ports = presentation_ports.build()
-  luassert.truthy(ports.view_command ~= nil, "presentation_ports.build() must expose view_command")
-  _assert_eq(type(ports.view_command.dispatch), "function",
+it("test_assembled_view_command_port_keeps_a_market_select_handler", function()
+  local view_command_port = presentation_ports.build_view_command(presentation_ports.build())
+  _assert_eq(type(view_command_port.dispatch), "function",
     "assembled view_command port must expose a dispatch function")
 
   local selected = nil
@@ -54,7 +53,7 @@ it("test_assembled_presentation_ports_keep_a_market_select_view_command_handler"
     { target = market_renderer, key = "select_market_option",
       value = function(_, option_id) selected = option_id end },
   }, function()
-    local handled = ports.view_command.dispatch({}, { type = "market_select", option_id = 2001 })
+    local handled = view_command_port.dispatch({}, { type = "market_select", option_id = 2001 })
     _assert_eq(handled, true, "view_command port must report market_select as handled")
   end)
 
@@ -83,7 +82,7 @@ it("test_market_select_through_intent_dispatcher_reaches_the_port_without_a_miss
     ui = { input_blocked = false },
     game = {},
   }
-  -- bind_ui_runtime injects a real gameplay_loop_ports = presentation_ports.build().
+  -- bind_ui_runtime injects real presentation ports and state.view_command_port.
   _bind_ui_runtime(state)
 
   _with_patches({
@@ -102,29 +101,36 @@ it("test_market_select_through_intent_dispatcher_reaches_the_port_without_a_miss
   _assert_eq(selected, 2001,
     "market_select dispatched through intent_dispatcher must reach the port handler")
   _assert_eq(_has_port_missing_warn(warns), false,
-    "a properly wired gameplay_loop_ports must not drop market_select as 'port missing'")
+    "a properly wired view_command port must not drop market_select as 'port missing'")
 end)
 
-it("test_view_command_survives_the_turn_loop_ports_resolve_that_overwrites_state_gameplay_loop_ports", function()
-  -- Field symptom round 2 (deploy log, 2026-07-12): the assembled ports DO
-  -- carry view_command, but the first tick funnels them through
-  -- gameplay_loop_ports.resolve (src/turn/loop/init.lua) and writes the
-  -- resolved table back onto state.gameplay_loop_ports. resolve() rebuilt
-  -- only the declared turn-loop groups, silently dropping the UI-side
-  -- view_command / actor_context groups — so every later market_select tap
-  -- hit the 'port missing' warn. Paging kept working because it routes via
-  -- game_handler, not the view_command port.
+it("test_view_command_assembled_at_game_start_survives_the_tick_time_turn_ports_resolve", function()
+  -- Field symptom round 2 (deploy log, 2026-07-12): the first tick funnels
+  -- state.gameplay_loop_ports through gameplay_loop_ports.resolve
+  -- (src/turn/loop/init.lua) and writes the resolved table back. When
+  -- view_command lived inside that bundle, a resolve that kept only declared
+  -- turn groups made every later market_select tap hit 'port missing'.
+  -- #209: view_command is held by the ui-owned state.view_command_port
+  -- written at game start, so the turn ports resolve can no longer drop it.
+  local gameplay_start = require("src.app.gameplay_start")
+  local gameplay_loop = require("src.turn.loop")
   local loop_ports = require("src.turn.loop.ports")
+  local frame_timer = require("src.host.frame_timer")
   local warns, warn_patch = _capture_warns()
   local selected = nil
+  local state = {}
+  local fake_game = { turn = { turn_count = 1, phase = "moving" } }
 
-  local resolved = loop_ports.resolve(presentation_ports.build())
-  luassert.truthy(resolved.view_command ~= nil,
-    "loop ports resolve must pass the view_command group through")
-  luassert.truthy(resolved.actor_context ~= nil,
-    "loop ports resolve must pass the actor_context group through")
+  _with_patches({
+    { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
+    { target = gameplay_loop, key = "set_game", value = function() end },
+    { target = frame_timer, key = "repeat_every", value = function() return { id = "tick" } end },
+  }, function()
+    gameplay_start.start(state, { nil })
+  end)
+  loop_ports.resolve_for_state(state)
+  loop_ports.resolve_for_state(state)
 
-  local state = { gameplay_loop_ports = resolved }
   _with_patches({
     warn_patch,
     { target = market_renderer, key = "select_market_option",
@@ -137,9 +143,9 @@ it("test_view_command_survives_the_turn_loop_ports_resolve_that_overwrites_state
   end)
 
   _assert_eq(selected, 2001,
-    "resolved gameplay_loop_ports must keep routing market_select to select_market_option")
+    "the game-start view_command port must keep routing market_select to select_market_option")
   _assert_eq(_has_port_missing_warn(warns), false,
-    "the tick-time resolve must not strip view_command from state.gameplay_loop_ports")
+    "the tick-time turn ports resolve must not unwire view_command")
 end)
 
 it("test_view_command_dispatcher_warns_and_drops_market_select_when_the_port_is_unwired", function()
@@ -150,7 +156,7 @@ it("test_view_command_dispatcher_warns_and_drops_market_select_when_the_port_is_
 
   _with_patches({ warn_patch }, function()
     dropped = view_command_dispatcher.dispatch(
-      { gameplay_loop_ports = {} },
+      {},
       { type = "market_select", option_id = 2001 }
     )
   end)

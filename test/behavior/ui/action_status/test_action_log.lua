@@ -49,6 +49,7 @@ describe("TestActionLog", function()
       pending_choice_selected_option_id = nil,
       choice_visible_option_ids = nil,
       gameplay_loop_ports = presentation_ports.build(),
+      view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
     }
     local role = _build_role_with_events(101, {})
 
@@ -208,6 +209,7 @@ describe("TestActionLog", function()
           current_player_id = 2,
         },
         gameplay_loop_ports = presentation_ports.build(),
+        view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
       }
       canvas_event_router.bind(state, function()
         return {}

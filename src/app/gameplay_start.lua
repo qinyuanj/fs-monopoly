@@ -25,10 +25,6 @@ local function _ensure_tick_loop(state, current_game_ref)
   end
 end
 
-local function _build_gameplay_loop_ports()
-  return presentation_ports.build()
-end
-
 local function _build_turn_action_port()
   return {
     dispatch_action = function(game, state, action, opts)
@@ -85,7 +81,8 @@ function M.start(state, current_game_ref)
   end
 
   state.turn_action_port = _build_turn_action_port()
-  state.gameplay_loop_ports = _build_gameplay_loop_ports()
+  state.gameplay_loop_ports = presentation_ports.build()
+  state.view_command_port = presentation_ports.build_view_command(state.gameplay_loop_ports)
   state.presentation_runtime = runtime_deps.build({ camera_sync = camera_sync })
   -- 新局开局前清滤波基线,防止跨局同 role_id 首帧被误去重(#454)。
   camera_sync.reset_baseline()

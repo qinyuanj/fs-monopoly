@@ -3,7 +3,7 @@ require("test.bootstrap").install_package_paths()
 local luassert = assert
 -- Mutation-pinning specs for src/ui/input/view_command.lua, plus the
 -- before-game terminal branch of src/ui/input/intent_dispatcher.lua.
--- The dispatcher is a thin adapter: panel_interrupt gate → ports.view_command.
+-- The dispatcher is a thin adapter: panel_interrupt gate → state.view_command_port.
 -- Per [[feedback_mutation_spec_state_inline]]: state shape kept inline, no
 -- shared helpers — nil vs explicit fields are the discrimination contract.
 
@@ -33,9 +33,7 @@ end
 
 local function _ports_state(dispatch_fn)
   return {
-    gameplay_loop_ports = {
-      view_command = { dispatch = dispatch_fn },
-    },
+    view_command_port = { dispatch = dispatch_fn },
   }
 end
 
@@ -167,20 +165,20 @@ it("test_warns_with_the_intent_type_and_returns_false_when_state_carries_no_port
   luassert.truthy(found, "warn must carry intent.type 'popup_confirm' for diagnostics")
 end)
 
-it("test_warns_and_returns_false_when_ports_table_lacks_view_command", function()
+it("test_warns_and_returns_false_when_view_command_sits_only_in_the_turn_ports_bundle", function()
+  -- #209：view_command 只从 ui 自有的 state.view_command_port 读取，回合端口包里的同名组不算接线。
+  local stray = { view_command = { dispatch = function() return true end } }
   local result
   local warn_calls = _with_warn_capture(function()
-    result = view_command.dispatch({ gameplay_loop_ports = {} }, { type = "market_select" })
+    result = view_command.dispatch({ gameplay_loop_ports = stray }, { type = "market_select" })
   end)
-  luassert.truthy(result == false, "ports without view_command must return false; got " .. tostring(result))
+  luassert.truthy(result == false, "turn ports view_command must not be dispatched; got " .. tostring(result))
   luassert.truthy(#warn_calls == 1, "expected exactly one warn; got " .. #warn_calls)
 end)
 
 it("test_warns_and_returns_false_when_port_dispatch_is_not_a_function", function()
   local state = {
-    gameplay_loop_ports = {
-      view_command = { dispatch = "not_callable" },
-    },
+    view_command_port = { dispatch = "not_callable" },
   }
   local result
   local warn_calls = _with_warn_capture(function()

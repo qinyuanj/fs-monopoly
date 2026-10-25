@@ -19,11 +19,11 @@ end
 
 -- ===== 迁自 test/property/test_asset_total.lua（#190, 测试极简化决策：property 车道退场，性质并入 behavior）=====
 local property = require("test.support.property")
-local pricing = require("src.rules.land.pricing")
+local property_value = require("src.rules.commerce.property_value")
 
 -- Build a random holding: a player with some cash and a set of owned land
 -- tiles, each carrying a purchase price, a random upgrade-cost ladder, and a
--- level that may exceed the ladder length (so pricing's clamp is exercised).
+-- level that may exceed the ladder length (so the ladder bound is exercised).
 -- The fake game exposes only what asset_total touches: the cash balance and a
 -- board lookup keyed by tile id.
 local function _gen_holding(rng)
@@ -68,7 +68,7 @@ end
 -- Independent oracle for one tile's invested value, using the same level
 -- resolution (tile.level) that asset_total reads through tile.get_state.
 local function _invested(tile)
-  return pricing.total_invested(tile, tile.level)
+  return property_value.total_invested(tile, tile.level)
 end
 
 describe("TestAssetTotal", function()
