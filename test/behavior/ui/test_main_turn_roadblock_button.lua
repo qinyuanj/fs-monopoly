@@ -20,7 +20,7 @@ end
 local compose_game = require("src.app.compose_game")
 local default_ports = require("src.turn.output.default_ports")
 local movement_events = require("src.rules.movement_events")
-local loop_runtime = require("src.turn.loop.runtime")
+local input_lock = require("src.state.input_lock")
 local panel_controls = require("src.ui.render.widgets.panel_controls")
 local base_nodes = require("src.ui.schema.base")
 local map_cfg = require("src.config.content.default_map")
@@ -88,8 +88,8 @@ it("test_a_roadblock_hit_queues_a_roadblock_trigger_action_anim", function()
 end)
 
 it("test_the_action_anim_phase_is_an_input_blocked_phase", function()
-  _assert_eq(loop_runtime.is_phase_input_blocked("wait_action_anim"), true,
-    "路障触发动画播放期间输入应被锁住(输入锁相位集真源在 turn.loop.runtime)")
+  _assert_eq(input_lock.is_phase_input_blocked("wait_action_anim"), true,
+    "路障触发动画播放期间输入应被锁住(输入锁相位集真源在 state.input_lock)")
 end)
 
 it("test_hides_all_three_buttons_while_the_roadblock_trigger_animation_plays", function()

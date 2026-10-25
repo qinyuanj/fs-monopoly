@@ -2,7 +2,7 @@ local choice_route_policy = require("src.config.choice.route_policy")
 local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
 local choice_owner = require("src.ui.ports.ui_sync.choice_owner")
 local player_control_snapshot = require("src.turn.output.player_control_snapshot")
-local loop_runtime = require("src.turn.loop.runtime")
+local input_lock = require("src.state.input_lock")
 
 local choice_ui_state = {}
 
@@ -34,7 +34,7 @@ end
 
 -- 是否期待 UI 参与:非内联路由、非输入阻塞、owner 是本进程服务的席位且非电脑执行。
 local function _expects_ui(route_key, game, served_owner, owner_computer_controlled)
-  return route_key ~= "base_inline" and not loop_runtime.is_game_input_blocked(game) and served_owner and not owner_computer_controlled
+  return route_key ~= "base_inline" and not input_lock.is_game_input_blocked(game) and served_owner and not owner_computer_controlled
 end
 
 local function _resolve_owner_state(game, choice, route_key)
