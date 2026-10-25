@@ -6,10 +6,10 @@ local event_log_ports = require("src.ui.ports.event_log")
 local state_ports = require("src.ui.ports.state")
 local clock_ports = require("src.ui.ports.clock")
 local view_command_ports = require("src.ui.ports.view_command")
-local actor_context_ports = require("src.ui.ports.actor_context")
 
 local presentation_ports = {}
 
+-- 回合端口包：只含回合层声明的分组（契约见 src/turn/loop/ports.lua）。
 function presentation_ports.build()
   local debug = event_log_ports.build()
   return {
@@ -19,10 +19,15 @@ function presentation_ports.build()
     debug = debug,
     clock = clock_ports.build(),
     state = state_ports.build(),
-    view_command = view_command_ports.build({ sync_event_log = debug.sync_event_log }),
-    actor_context = actor_context_ports.build(),
   }
 end
 
-return presentation_ports
+-- view_command 是 ui 自有端口，不进回合端口包（#209）：开局装配写到
+-- state.view_command_port，由 src/ui/input/view_command.lua 读取。
+-- toggle_action_log 复用同一份回合端口包里的 debug.sync_event_log。
+function presentation_ports.build_view_command(turn_ports)
+  local debug = turn_ports and turn_ports.debug or nil
+  return view_command_ports.build({ sync_event_log = debug and debug.sync_event_log or nil })
+end
 
+return presentation_ports

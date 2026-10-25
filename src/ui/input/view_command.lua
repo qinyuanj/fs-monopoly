@@ -15,9 +15,10 @@ local function _blocks_panel_entry(state, intent)
   return panel_interrupt.block_entry(state, panel_id, intent.actor_role_id) == true
 end
 
+-- view_command 端口由 ui 自有字段持有（#209），开局装配写入；不经回合端口包，
+-- 回合层 tick 时 resolve 回写 gameplay_loop_ports 不会让它失联。
 local function _view_command_port(state)
-  local ports = state and state.gameplay_loop_ports or nil
-  return ports and ports.view_command or nil
+  return state and state.view_command_port or nil
 end
 
 local function _resolve_port(state)

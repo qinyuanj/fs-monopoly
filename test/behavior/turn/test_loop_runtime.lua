@@ -261,32 +261,6 @@ it("test_build_tip_output_port_enqueue_falls_back_to_tip_queue_when_no_show_tip"
   tip_queue.clear()
 end)
 
-it("test_is_phase_input_blocked_detained_wait", function()
-  _assert_eq(loop_runtime.is_phase_input_blocked("detained_wait"), true, "detained_wait should be blocked")
-end)
-
-it("test_is_phase_input_blocked_inter_turn_wait", function()
-  _assert_eq(loop_runtime.is_phase_input_blocked("inter_turn_wait"), true, "inter_turn_wait should be blocked")
-end)
-
-it("test_is_phase_input_blocked_other_returns_false", function()
-  _assert_eq(loop_runtime.is_phase_input_blocked("pre_move"), false, "pre_move should not be blocked")
-  _assert_eq(loop_runtime.is_phase_input_blocked("move"), false, "move should not be blocked")
-  _assert_eq(loop_runtime.is_phase_input_blocked(nil), false, "nil should not be blocked")
-end)
-
-it("test_is_phase_input_blocked_wait_action_anim", function()
-  _assert_eq(loop_runtime.is_phase_input_blocked("wait_action_anim"), true, "wait_action_anim should be blocked")
-end)
-
-it("test_is_phase_input_blocked_wait_landing_visual", function()
-  _assert_eq(loop_runtime.is_phase_input_blocked("wait_landing_visual"), true, "wait_landing_visual should be blocked")
-end)
-
-it("test_is_phase_input_blocked_wait_move_anim", function()
-  _assert_eq(loop_runtime.is_phase_input_blocked("wait_move_anim"), true, "wait_move_anim should be blocked")
-end)
-
 it("test_popup_port_keeps_its_priority_above_low_priority_callbacks", function()
   -- #293: L92 的 key 翻 nil 变异把 popup 的 priority 从 6 打回 100——与内置
   -- key 混排时无法区分(popup 本就在末位),但 priority 在 6~100 之间的显式

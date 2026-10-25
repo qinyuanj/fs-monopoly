@@ -143,20 +143,8 @@ local function _resolve_base_ports()
 end
 local base_ports = _resolve_base_ports()
 
--- override 里不属于 turn-loop 声明组的顶层组（如 UI 侧 view_command /
--- actor_context）原样透传：resolve 结果会覆写回 state.gameplay_loop_ports，
--- 丢掉它们会让 view-command 派发在 tick 之后永久失联。
-local function _passthrough_unknown_groups(resolved, grouped_override)
-  if not grouped_override then
-    return
-  end
-  for group_name, group in pairs(grouped_override) do
-    if resolved[group_name] == nil then
-      resolved[group_name] = group
-    end
-  end
-end
-
+-- 解析结果只含 group_names 声明的 7 组（#209）：ui 自有的 view_command 由
+-- ui 自己的 state 字段持有，不经回合端口包寄存；override 里的未声明组丢弃。
 local function _build_resolved_ports(grouped_override)
   local resolved = {}
   for _, group_name in ipairs(group_names) do
@@ -165,7 +153,6 @@ local function _build_resolved_ports(grouped_override)
     resolved[group_name] = ports_merge.copy_group_ports(base_group, override_group, port_groups[group_name])
   end
   ui_sync_defaults.fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
-  _passthrough_unknown_groups(resolved, grouped_override)
   return resolved
 end
 
@@ -188,7 +175,7 @@ function gameplay_loop_ports.resolve(override_ports)
 end
 
 -- 比较记录只保留当前版本。根引用、组引用和组内键值分别比较，
--- 包括额外键与未知组；稳定读取只扫描，不建立临时签名或闭包。
+-- 包括额外键与写回后新增的未声明组；稳定读取只扫描，不建立临时签名或闭包。
 local function _same_entries(current, recorded)
   for key, value in pairs(recorded) do
     if current[key] ~= value then return false end

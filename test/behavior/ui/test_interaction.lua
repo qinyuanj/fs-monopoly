@@ -158,9 +158,11 @@ local function _toggle_log_patches(opts, extra)
 end
 
 local function _toggle_log_state(fields)
+  local loop_ports = presentation_ports.build()
   local state = {
     ui = ui_view.build_ui_state(),
-    gameplay_loop_ports = presentation_ports.build(),
+    gameplay_loop_ports = loop_ports,
+    view_command_port = presentation_ports.build_view_command(loop_ports),
   }
   for key, value in pairs(fields or {}) do
     state[key] = value
@@ -175,11 +177,13 @@ end
 it("test_ui_intent_dispatcher_routes_market_select_and_popup_confirm_to_view_side", function()
   local selected_option = nil
   local closed = 0
+  local loop_ports = presentation_ports.build()
   local state = {
     ui = {
       input_blocked = false,
     },
-    gameplay_loop_ports = presentation_ports.build(),
+    gameplay_loop_ports = loop_ports,
+    view_command_port = presentation_ports.build_view_command(loop_ports),
   }
   local game = {}
 

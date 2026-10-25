@@ -76,6 +76,9 @@ local function ensure_ui_runtime_for_test(state)
   if type(state.gameplay_loop_ports) ~= "table" then
     state.gameplay_loop_ports = presentation_ports.build()
   end
+  if type(state.view_command_port) ~= "table" then
+    state.view_command_port = presentation_ports.build_view_command(state.gameplay_loop_ports)
+  end
   if type(state.board_scene) ~= "table" then
     state.board_scene = {
       tiles = {},
