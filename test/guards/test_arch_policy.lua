@@ -27,13 +27,14 @@ local LEGAL_MODULES = {
   "src.rules.bootstrap",
   "src.state.game",
   "src.turn.loop",
+  "src.turn.output.player_control_snapshot",
   "src.ui.panel",
 }
 
 local LEGAL_EDGES = {
   { from = "src.app.init", to = "src.ui.panel" },
   { from = "src.app.init", to = "src.rules.bootstrap" },
-  { from = "src.ui.panel", to = "src.turn.loop" },
+  { from = "src.ui.panel", to = "src.turn.output.player_control_snapshot" },
   { from = "src.ui.panel", to = "src.foundation.number" },
   { from = "src.turn.loop", to = "src.player.actions.balance" },
   { from = "src.turn.loop", to = "src.rules.bootstrap" },
@@ -127,6 +128,14 @@ it("test_ui_state_must_not_depend_on_ui_coord", function()
   })
   luassert.is.equal("forbidden_dependency", violation.kind)
   luassert.is.equal("ui_state_no_coord", violation.rule)
+end)
+
+it("test_ui_must_not_depend_on_turn_loop", function()
+  local violation = _only({ "src.ui.ports.ui_sync.model", "src.turn.loop.runtime" }, {
+    { from = "src.ui.ports.ui_sync.model", to = "src.turn.loop.runtime" },
+  })
+  luassert.is.equal("forbidden_dependency", violation.kind)
+  luassert.is.equal("ui_no_turn_loop", violation.rule)
 end)
 
 it("test_unclassified_module_is_reported", function()

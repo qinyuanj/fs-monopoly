@@ -172,6 +172,17 @@
       "to": [
         "^src%.ui%.coord%..+"
       ]
+    },
+    {
+      "name": "ui_no_turn_loop",
+      "description": "ui must not depend on the turn loop, which calls into ui (turn -> ui runtime direction); the input-lock predicate lives in src.state.input_lock (#206 C / #211). Layer order allows ui(3)->turn(4) as a legal downward edge, so this ban is NOT covered by the layer gate",
+      "from": [
+        "^src%.ui%..+"
+      ],
+      "to": [
+        "^src%.turn%.loop$",
+        "^src%.turn%.loop%..+"
+      ]
     }
   ],
   "allowed_cycles": [],

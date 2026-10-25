@@ -33,4 +33,17 @@ describe("TestArchConfigRules", function()
     luassert.is.same({ "^src%.ui%.coord%..+" }, rule.to,
       "ui_state_no_coord 的 to 必须覆盖整个 src.ui.coord 子树")
   end)
+
+  -- 回合循环运行时以 turn → ui 方向调用 ui;层序允许 ui(3) 依赖 turn(4),所以
+  -- ui 反过来 require 回合循环会形成隐性双向边而层门禁不拦(#206 C / #211)。
+  -- 锁输入谓词已下沉到 src.state.input_lock,ui 应向内依赖它。
+  it("test_ui_must_not_depend_on_turn_loop", function()
+    local rule = _rule("ui_no_turn_loop")
+    luassert.truthy(rule ~= nil,
+      "arch policy 必须声明 ui_no_turn_loop 规则,否则 ui 重新 require 回合循环无人拦截")
+    luassert.is.same({ "^src%.ui%..+" }, rule.from,
+      "ui_no_turn_loop 的 from 必须覆盖整个 src.ui 子树")
+    luassert.is.same({ "^src%.turn%.loop$", "^src%.turn%.loop%..+" }, rule.to,
+      "ui_no_turn_loop 的 to 必须覆盖 src.turn.loop 及其子树")
+  end)
 end)

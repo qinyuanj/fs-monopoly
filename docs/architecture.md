@@ -15,7 +15,7 @@ L7 state | config
 
 物理目录名、逻辑层名和 arch 组件名保持一致。可执行边界唯一配置是 [`../tools/packages/arch_policy/policy.json`](../tools/packages/arch_policy/policy.json)，由 `test/guards/lib/arch_policy_guard.lua` 执行；本文解释职责判断。
 
-门禁保留七层依赖方向、foundation 禁反向依赖整型层、未分类模块、每个命名空间视图的投影环，以及 UI 禁直接依赖 player/computer/rules、schema 纯度、ui.state 禁反向依赖 ui.coord。层号越大越内层，依赖只能指向同层或更内层。投影环把后代模块折叠成直接子节点再判定，不能只检查模块图；`allowed_cycles` 按 owning view、参与者集合和理由显式登记。
+门禁保留七层依赖方向、foundation 禁反向依赖整型层、未分类模块、每个命名空间视图的投影环，以及 UI 禁直接依赖 player/computer/rules、UI 禁依赖回合循环 `turn.loop`（回合循环调用 ui，锁输入谓词在 `state.input_lock`）、schema 纯度、ui.state 禁反向依赖 ui.coord。层号越大越内层，依赖只能指向同层或更内层。投影环把后代模块折叠成直接子节点再判定，不能只检查模块图；`allowed_cycles` 按 owning view、参与者集合和理由显式登记。
 
 `packages.arch_policy.project_uml_policy(policy)` 产生 uml-viewer 消费的 EDN；`lua5.4 tools/cli.lua uml ir` 把它与入库的 `docs/architecture.proposals.edn`（只含 `:proposals` / `:omit`）合并，写到仓根 `policy.edn`（gitignore，`:out` 为 `tmp/uml/monopoly.edn`），不要另存一份可手改配置（ADR 0070）。`:levels` 使用内层优先顺序（foundation、state/config、rules、player/computer、turn、ui、host、app），与门禁声明层互逆。使用 uml-viewer 公共 IR 主入口 `uml-viewer.main.ir-generator <policy.edn> <out.edn>`；#93 接管安装与 CRAP/变异的用户命令 `lua5.4 tools/cli.lua uml <check|crap|mutate>`，#99 加上 `ir` 与 `view`（契约见 `tools/specs/uml_quality.prompt`）。IR 只表达图和层方向，禁向规则、未分类和投影环仍由本项目 guard 执行。
 

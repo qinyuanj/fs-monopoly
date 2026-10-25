@@ -17,7 +17,7 @@ describe("TestArchPolicyProjection", function()
 
 it("test_policy_carries_every_existing_rule", function()
   luassert.is.equal(10, #POLICY.component_rules)
-  luassert.is.equal(5, #POLICY.forbidden_dependency_rules)
+  luassert.is.equal(6, #POLICY.forbidden_dependency_rules)
   luassert.is.equal(2, #POLICY.abstract_rules)
   luassert.is.same({ "src" }, POLICY.source_roots)
   local names = {}
@@ -30,6 +30,7 @@ it("test_policy_carries_every_existing_rule", function()
     "ui_no_rules",
     "ui_schema_pure",
     "ui_state_no_coord",
+    "ui_no_turn_loop",
   }) do
     luassert.is_true(names[name], "policy 丢失禁向规则: " .. name)
   end
