@@ -4,12 +4,12 @@
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local support = require("test.support.shared_support")
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.elimination.bankruptcy")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
 local event_feed = require("src.rules.ports.event_feed")
-local inventory = require("src.rules.items.inventory")
-local life_loss = require("src.rules.endgame.life_loss")
+local life_loss = require("src.rules.elimination.life_loss")
+local inventory_class = require("src.player.actions.inventory")
 local monopoly_event = require("src.foundation.events")
 local event_kinds = require("src.config.gameplay.event_kinds")
 
@@ -25,6 +25,7 @@ local function _make_player(opts)
     name = opts.name or "破产者",
     properties = opts.properties or {},
     eliminated = opts.eliminated or nil,
+    inventory = opts.inventory or inventory_class:new({ max_slots = 2 }),
   }
 end
 
@@ -67,7 +68,6 @@ local function _run_eliminate(game, player, opts, extra_patches)
     { target = bankruptcy_feedback_port, key = "on_tiles_cleared", value = function(_, p, ids)
       feedback[#feedback + 1] = { player = p, tile_ids = ids }
     end },
-    { target = inventory, key = "clear", value = function() end },
     { target = runtime_ports, key = "resolve_role", value = function() return nil end },
     { target = runtime_ports, key = "mark_role_lose", value = function() end },
     { target = life_loss, key = "try_call_life_die", value = function() end },
@@ -82,6 +82,21 @@ local function _run_eliminate(game, player, opts, extra_patches)
 end
 
 describe("TestEndgameBankruptcySurvivor", function()
+it("test_淘汰清空道具槽：槽位数不变、每槽置空", function()
+  local game = _make_game({})
+  local inv = inventory_class:new({ max_slots = 3 })
+  inv:add({ id = "a" })
+  inv:add({ id = "b" })
+  local player = _make_player({ inventory = inv })
+  _run_eliminate(game, player)
+  local items = player.inventory.items
+  _assert_eq(#items, 3, "slot count follows max_slots")
+  _assert_eq(items[1], false, "slot 1 cleared")
+  _assert_eq(items[2], false, "slot 2 cleared")
+  _assert_eq(items[3], false, "slot 3 cleared")
+  _assert_eq(player.inventory._suspend_on_change, false, "change notifications resume after clearing")
+end)
+
 it("test_popup_port 直连分支：破产弹窗载荷逐字段穿透", function()
   local pushed = {}
   local port = { push_popup = function(_, payload) pushed[#pushed + 1] = payload end }

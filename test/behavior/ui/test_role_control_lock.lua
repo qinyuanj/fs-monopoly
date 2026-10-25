@@ -8,7 +8,7 @@ local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
 local role_control_lock_policy = require("src.ui.input.role_control_lock")
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.elimination.bankruptcy")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local default_ports = require("src.host.default_ports")
 

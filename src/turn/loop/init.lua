@@ -44,10 +44,6 @@ local _auto_play_defaults = {
   pick_roadblock_target = _noop,
 }
 
-local _bankruptcy_defaults = {
-  eliminate = _noop,
-}
-
 local function _fill_defaults(port, defaults)
   for name, fallback in pairs(defaults) do
     if type(port[name]) ~= "function" then
@@ -61,10 +57,6 @@ local function _ensure_fallback_ports(game)
     game.auto_play_port = {}
   end
   _fill_defaults(game.auto_play_port, _auto_play_defaults)
-  if type(game.bankruptcy_port) ~= "table" then
-    game.bankruptcy_port = {}
-  end
-  _fill_defaults(game.bankruptcy_port, _bankruptcy_defaults)
 end
 
 local function _ensure_runtime_ports(game)

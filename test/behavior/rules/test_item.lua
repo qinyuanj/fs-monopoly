@@ -897,7 +897,6 @@ describe("TestItem", function()
     local handlers = {}
     local events = {}
     local anims = {}
-    local bankruptcy_calls = {}
     local common = {
       dependencies = function()
         return {
@@ -934,54 +933,15 @@ describe("TestItem", function()
         end
         return delta
       end,
-      handle_bankruptcy_if_non_positive = function(game, target_player, reason)
-        if game:player_cash(target_player) <= 0 then
-          target_player.eliminated = true
-          bankruptcy_calls[#bankruptcy_calls + 1] = { player_id = target_player.id, reason = reason }
-        end
-      end,
     }
     cash_handlers.register(handlers, common)
 
-    local balances = {
-      [1] = 1000,
-      [2] = 50,
-      [3] = 300,
-    }
-    local game = {
-      players = {
-        { id = 1, name = "P1", eliminated = false },
-        { id = 2, name = "P2", eliminated = false },
-        { id = 3, name = "P3", eliminated = false },
-      },
-      player_has_deity = function(_, player, deity)
-        return deity == "rich" and player.id == 1
-      end,
-      player_is_in_mountain = function(_, player)
-        return player.id == 3
-      end,
-      player_cash = function(_, player)
-        return balances[player.id]
-      end,
-      set_player_cash = function(_, player, amount)
-        balances[player.id] = amount
-      end,
-      transfer_player_cash = function(_, payer, receiver, amount, opts)
-        local moved = amount
-        if opts and opts.allow_partial then
-          moved = math.min(amount, balances[payer.id])
-        end
-        balances[payer.id] = balances[payer.id] - moved
-        balances[receiver.id] = balances[receiver.id] + moved
-        return balances[payer.id], balances[receiver.id], moved
-      end,
-      bankruptcy_port = {
-        eliminate = function(_, player, opts)
-          player.eliminated = true
-          bankruptcy_calls[#bankruptcy_calls + 1] = { player_id = player.id, reason = opts and opts.reason }
-        end,
-      },
-    }
+    -- #208:用真实 game,破产走真实淘汰实现，不再 stub 破产端口。
+    local game = support.new_game({ players = { "P1", "P2", "P3" }, map = default_map })
+    game:set_player_cash(game.players[1], 1000)
+    game:set_player_cash(game.players[2], 50)
+    game:set_player_cash(game.players[3], 300)
+    game:set_player_deity(game.players[1], "rich")
 
     handlers.collect_from_others(game, game.players[1], {
       amount = 100,
@@ -993,8 +953,6 @@ describe("TestItem", function()
     _assert_eq(game.players[2].eliminated, true, "broke payer should be marked eliminated")
     _assert_eq(game:player_cash(game.players[3]), 100, "solvent payer should pay full doubled fee")
     _assert_eq(game.players[3].eliminated, false, "solvent payer should not be eliminated")
-    _assert_eq(#bankruptcy_calls, 1, "exactly one bankruptcy should fire")
-    _assert_eq(bankruptcy_calls[1].player_id, 2, "bankruptcy should target the broke payer")
     _assert_eq(#anims, 1, "cash receive animation should collapse into one summary collection anim")
     _assert_eq(anims[1].amount, 250, "summary receive animation should use the total collected amount")
     _assert_eq(#events, 1, "collect_from_others should emit one summary event")

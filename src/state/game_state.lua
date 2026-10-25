@@ -19,7 +19,6 @@ _install_mixin(game, game_state_turn, "turn")
 
 function game:init(opts)
   self.auto_play_port = opts and opts.auto_play_port or self.auto_play_port
-  self.bankruptcy_port = opts and opts.bankruptcy_port or self.bankruptcy_port
 end
 
 function game:advance_turn()

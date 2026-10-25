@@ -75,14 +75,7 @@ function inventory.remove_nth_occupied(player, n)
 end
 
 function inventory.clear(player)
-  local inv = _inv(player)
-  inv._suspend_on_change = true
-  local items = {}
-  for i = 1, inv.max_slots or #inv.items do
-    items[i] = false
-  end
-  inv.items = items
-  inv._suspend_on_change = false
+  return _inv(player):clear()
 end
 
 function inventory.draw_random()

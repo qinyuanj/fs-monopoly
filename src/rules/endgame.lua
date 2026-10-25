@@ -3,7 +3,7 @@ local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local monopoly_event = require("src.foundation.events")
 local asset_total = require("src.rules.land.asset_total")
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.elimination.bankruptcy")
 local timing = require("src.config.gameplay.timing")
 
 local M = {}

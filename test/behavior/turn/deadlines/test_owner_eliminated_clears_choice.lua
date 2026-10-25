@@ -12,7 +12,7 @@ end
 local support = require("test.support.shared_support")
 local tick_choice_timeout = require("test.support.choice_timeout")
 local ChoiceTimeout = require("src.turn.waits.choice_timeout")
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.elimination.bankruptcy")
 local logger = require("src.foundation.log")
 local config_reset = require("test.support.config_reset")
 

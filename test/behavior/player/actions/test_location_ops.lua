@@ -189,12 +189,10 @@ describe("TestLocationOps", function()
       statuses = {},
       effects = {},
       publishes = {},
-      eliminates = nil,
       feedback = nil,
     }
     local achievement_progress = require("src.rules.ports.achievement_progress")
     local event_feed = require("src.rules.ports.event_feed")
-    local bankruptcy_port = require("src.rules.ports.bankruptcy")
     local monopoly_event = require("src.foundation.events")
     local state = _base_state({
       set_player_status = function(_, player, key, value)
@@ -208,9 +206,6 @@ describe("TestLocationOps", function()
       end },
       { target = event_feed, key = "publish", value = function(_, payload)
         capture.publishes[#capture.publishes + 1] = payload
-      end },
-      { target = bankruptcy_port, key = "eliminate", value = function(_, player, opts)
-        capture.eliminates = { player = player, opts = opts }
       end },
       {
         target = monopoly_event,
@@ -226,13 +221,13 @@ describe("TestLocationOps", function()
   end
 
   it("test_hospital_effect_publishes_fee_stay_and_feedback_with_full_payload", function()
-    local capture = _apply_with_capture(nil, "hospital", 100)
+    local capture, state = _apply_with_capture(nil, "hospital", 100)
 
     luassert.truthy(capture.effects[1] == "hospital", "hospital should report its effect kind")
     luassert.truthy(capture.publishes[1] ~= nil, "medical fee publish should exist")
     luassert.truthy(capture.publishes[1].tip == true, "medical fee publish should tip")
     luassert.truthy(capture.publishes[2].tip == true, "hospital stay publish should tip")
-    luassert.truthy(capture.eliminates == nil, "a solvent player must not be eliminated")
+    luassert.truthy(state.players[1].eliminated == false, "a solvent player must not be eliminated")
 
     local feedback = capture.feedback
     luassert.truthy(feedback ~= nil, "hospital should emit status feedback")
@@ -244,12 +239,22 @@ describe("TestLocationOps", function()
   end)
 
   it("test_hospital_effect_eliminates_when_cash_drops_to_zero_but_not_at_one", function()
-    local broke = _apply_with_capture(nil, "hospital", 0)
-    luassert.truthy(broke.eliminates ~= nil, "zero cash after the fee should eliminate")
+    -- #208:断言真实淘汰结果，不再 stub 破产转发端口。
+    local fee = require("src.config.content.constants").hospital_fee
+    local game = support.new_game({ players = { "P1", "P2", "P3" }, install_ui_port = false })
+    local broke, solvent = game.players[1], game.players[2]
+    game:set_player_cash(broke, fee)
+    game:set_player_cash(solvent, fee + 1)
 
-    local solvent = _apply_with_capture(nil, "hospital", 1)
-    luassert.truthy(solvent.eliminates == nil, "one cash after the fee must not eliminate")
-    luassert.truthy(solvent.feedback ~= nil, "a surviving player should still get hospital feedback")
+    game:player_apply_location_effect(broke, "hospital")
+    game:player_apply_location_effect(solvent, "hospital")
+
+    luassert.truthy(broke.eliminated == true, "zero cash after the fee should eliminate")
+    luassert.truthy(game:player_cash(broke) == 0, "the eliminated patient ends at zero cash")
+    luassert.truthy(solvent.eliminated == false, "one cash after the fee must not eliminate")
+    luassert.truthy(game:player_cash(solvent) == 1, "the surviving patient keeps one cash")
+    luassert.truthy(solvent.status.stay_turns ~= nil and solvent.status.stay_turns > 0,
+      "a surviving player should still be held in hospital")
   end)
 
   it("test_mountain_effect_publishes_stay_and_feedback_with_full_payload", function()

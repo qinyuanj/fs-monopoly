@@ -1,13 +1,14 @@
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local bankruptcy = require("src.rules.endgame")
+local inventory_class = require("src.player.actions.inventory")
 
 local function _make_player(name, deity)
   return {
     id = 1,
     name = name,
     status = { deity = deity },
-    inventory = { items = {}, _suspend_on_change = false },
+    inventory = inventory_class:new({ max_slots = 2 }),
     eliminated = false,
     properties = {},
   }
