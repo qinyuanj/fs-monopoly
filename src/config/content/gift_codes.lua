@@ -11,7 +11,6 @@
 -- 加载期校验与哈希口径见皮肤归属模块的 src.rules.skin_ownership.gift_code_table。
 local gift_codes = {
   codes = {
-    { id = 2, code_hash = "602f521bc1c37fe7b2c7447cfe8b743fac9f5a4cf7630ff3b7ac9227d93e623b", rewards = { 5005 }, expires_at = 1808295571, note = "#200 真机验收测试码(取代停用的 id 1 TEST2026)" },
     { id = 3, code_hash = "c21abe4c2ef544f17f7fc687a1f1e907cc21ec2b85281a2865f22c78f76f9cf1", rewards = { 5005 }, expires_at = 1808297618, note = "批量购买补偿" },
     { id = 4, code_hash = "084c128542441618ed35544b41f89e85964f21fa6c9413af234b74312c977fc4", rewards = { 5005 }, expires_at = 1808297618, note = "批量购买补偿" },
     { id = 5, code_hash = "8859c99b237f7e0a48c93d7f08a3807b95f31de3fd2cff3a443ffc2eea4827f4", rewards = { 5005 }, expires_at = 1808297618, note = "批量购买补偿" },
@@ -112,10 +111,9 @@ local gift_codes = {
     { id = 100, code_hash = "5552e7ea1385991aca60e189b49aaa0311095a289bac949726e53b3a53f0617a", rewards = { 5005 }, expires_at = 1808297620, note = "批量购买补偿" },
     { id = 101, code_hash = "71c8e4c4c86e62e8bf14834f0ca240572ec74b6181b8424f73228c51b2df4823", rewards = { 5005 }, expires_at = 1808297620, note = "批量购买补偿" },
     { id = 102, code_hash = "161b2f4699de03d6dcb2d9a9355f1e17840642f2e97f7fed4d06a469e1f91fc7", rewards = { 5005 }, expires_at = 1808297620, note = "批量购买补偿" },
-    { id = 103, code_hash = "cc8469ee754dc907160bd55d78bf28ad8a66a3b6e03f47f822cbc98cb5abc5bd", rewards = { 5005 }, expires_at = 1792832446, note = "试玩测试临时码" },
   },
-  -- 停用 id,永不再分配:1 = 旧明文测试码 TEST2026(#203 停用);104 = #200 真机验收测试码(验收后停用)。
-  retired_ids = { 1, 104 },
+  -- 停用 id,永不再分配:1 = 旧明文测试码 TEST2026(#203 停用);2 / 103 / 104 = #200 验收与试玩测试码(验收后停用)。
+  retired_ids = { 1, 2, 103, 104 },
 }
 
 -- 兑换记录的 Str 玩家存档 key,存已兑换码 id 的逗号分隔列表。

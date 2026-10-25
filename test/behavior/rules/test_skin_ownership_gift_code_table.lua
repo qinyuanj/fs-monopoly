@@ -58,7 +58,7 @@ describe("TestSkinOwnershipGiftCodeTable", function()
   it("test_default_code_table_retires_the_used_test_codes", function()
     local gift_codes = require("src.config.content.gift_codes")
 
-    luassert.same({ 1, 104 }, gift_codes.retired_ids, "test code ids 1 and 104 should be registered as retired")
+    luassert.same({ 1, 2, 103, 104 }, gift_codes.retired_ids, "test code ids should be registered as retired")
     luassert.is_nil(gift_code_table.default().find("TEST2026"), "the retired plaintext test code should not match")
     luassert.is_nil(gift_code_table.default().find("R65K-RSZS-H49T"), "the retired #200 acceptance code should not match")
   end)
