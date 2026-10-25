@@ -383,17 +383,6 @@ it("test_preserves_an_already_present_port_function", function()
     "an existing function field is not overwritten by the default")
 end)
 
-it("test_preserves_an_already_table_bankruptcy_port_and_its_functions", function()
-  -- kills _ensure_fallback_ports' `type(...) ~= "table"` string-to-nil on the
-  -- bankruptcy guard: an existing table must be kept, not rebuilt.
-  local custom = function() return "kept" end
-  local game = { auto_play_port = {}, bankruptcy_port = { eliminate = custom } }
-  local ref = game.bankruptcy_port
-  _ensure(game)
-  _assert_eq(game.bankruptcy_port, ref, "an existing bankruptcy_port table is not rebuilt")
-  _assert_eq(game.bankruptcy_port.eliminate, custom, "an existing eliminate function is preserved")
-end)
-
 it("test_preserves_an_intent_output_port_that_is_already_a_table", function()
   -- The other direction of the L64 `~= "table"` guard: an existing port table
   -- must not be rebuilt.
@@ -435,13 +424,6 @@ it("test_replaces_a_non_table_auto_play_port_with_a_fresh_defaulted_table", func
   _ensure(game)
   _assert_eq(type(game.auto_play_port), "table", "a non-table auto_play_port becomes a table")
   _assert_eq(type(game.auto_play_port.choose_action), "function", "the fresh table is defaulted")
-end)
-
-it("test_replaces_a_non_table_bankruptcy_port_with_a_fresh_defaulted_table", function()
-  local game = { auto_play_port = {}, bankruptcy_port = 42 }
-  _ensure(game)
-  _assert_eq(type(game.bankruptcy_port), "table", "a non-table bankruptcy_port becomes a table")
-  _assert_eq(type(game.bankruptcy_port.eliminate), "function", "the bankruptcy table is defaulted")
 end)
 
 it("test_reports_the_games_turn_count_and_stays_nil_safe_without_a_turn", function()

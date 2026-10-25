@@ -3,9 +3,8 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
 local event_feed = require("src.rules.ports.event_feed")
-local inventory = require("src.rules.items.inventory")
 local monopoly_event = require("src.foundation.events")
-local life_loss = require("src.rules.endgame.life_loss")
+local life_loss = require("src.rules.elimination.life_loss")
 
 local bankruptcy = {}
 
@@ -87,8 +86,14 @@ local function _clear_owned_tiles(game, player, owned_tile_ids, owned_tiles, nam
   end
 end
 
+-- 淘汰清空道具槽：直调玩家 Inventory 对象方法，不经 rules.items——那个命名空间
+-- 依赖 rules.commerce,而 commerce 直调本模块，经它会在 rules 视图投影出环(#208)。
+local function _clear_inventory(player)
+  assert(player.inventory, "missing player.inventory"):clear()
+end
+
 local function _mark_player_eliminated(game, player, opts)
-  inventory.clear(player)
+  _clear_inventory(player)
   game:clear_player_deity(player)
 
   game:set_player_eliminated(player, true)

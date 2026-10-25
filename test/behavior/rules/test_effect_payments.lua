@@ -1,6 +1,6 @@
 -- effect_payments 直测:租金/税收执行器的 can_apply 判定与 apply 三路
 -- (强卡 intent / 免费卡直执 / 现金兜底 + 税同类)。集成 spec 覆盖零星路径
--- (变异清扫 #259 survivor 真缺口闭合);land_actions / inventory / board_utils /
+-- (变异清扫 #259 survivor 真缺口闭合);land_actions / inventory / property_value /
 -- choice_specs / event feed 口全桩,只留被测模块本体。
 require("test.bootstrap").install_package_paths()
 local luassert = assert
@@ -10,7 +10,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local land_actions = require("src.rules.land.actions")
 local land_choice_specs = require("src.rules.land.choice_specs")
 local inventory = require("src.rules.items.inventory")
-local board_utils = require("src.rules.land.board_utils")
+local property_value = require("src.rules.commerce.property_value")
 local event_feed = require("src.rules.ports.event_feed")
 local effect_payments = require("src.rules.land.effect_payments")
 
@@ -50,7 +50,7 @@ do
         end
         return { id = 2 }, opts.tile_state or { owner_id = 2, level = 1 }
       end },
-      { target = board_utils, key = "total_invested", value = function()
+      { target = property_value, key = "total_invested", value = function()
         return opts.total_value or 500
       end },
       { target = inventory, key = "find_index", value = function(_, item_id)

@@ -41,6 +41,18 @@ function inventory:init(opts)
   self._on_change = function(_) end
 end
 
+-- 清空全部槽位(槽位数不变、每槽置 false)。清空期间暂停变更通知，
+-- 整体替换 items 表，避免逐槽触发 _on_change。
+function inventory:clear()
+  self._suspend_on_change = true
+  local items = {}
+  for i = 1, self.max_slots or #self.items do
+    items[i] = false
+  end
+  self.items = items
+  self._suspend_on_change = false
+end
+
 function inventory:count()
   local n = 0
   for _ in _each_occupied(self.items, self.max_slots) do

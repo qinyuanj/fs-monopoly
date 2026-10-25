@@ -1,7 +1,7 @@
 local monopoly_event = require("src.foundation.events")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
-local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local bankruptcy = require("src.rules.elimination.bankruptcy")
 
 local land_events = {}
 local emit = monopoly_event.emit
@@ -62,7 +62,7 @@ function land_events.apply(game, result)
   _emit_land_event(game, result, payload)
 
   if result.bankrupt_reason then
-    bankruptcy_port.eliminate(game, payload.player, { reason = result.bankrupt_reason })
+    bankruptcy.eliminate(game, payload.player, { reason = result.bankrupt_reason })
   end
 end
 

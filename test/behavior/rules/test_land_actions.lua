@@ -173,7 +173,7 @@ local function _strong_card_setup(g)
   g:set_player_property(owner, tile_ref.id, true)
   g:update_player_position(buyer, idx)
   inventory.give(buyer, item_ids.strong, { game = g })
-  return buyer, owner, tile_ref, require("src.rules.land.board_utils").total_invested(tile_ref, 1)
+  return buyer, owner, tile_ref, require("src.rules.commerce.property_value").total_invested(tile_ref, 1)
 end
 
 describe("TestLandActions", function()

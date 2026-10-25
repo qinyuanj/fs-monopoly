@@ -66,10 +66,6 @@ local function _resolve_rent_response_tile(game, player)
   return _land_tile(_board_of(game), _player_position(player))
 end
 
-local function _rent_total_invested(tile_ref, state)
-  return property_value.total_invested(tile_ref, state and state.level or 0)
-end
-
 local function _resolve_rent_response_context(game, player)
   local tile_ref = _resolve_rent_response_tile(game, player)
   if tile_ref == nil then
@@ -81,7 +77,7 @@ local function _resolve_rent_response_context(game, player)
     player_id = player and player.id or nil,
     owner = owner,
     state = state,
-    total_value = _rent_total_invested(tile_ref, state),
+    total_value = property_value.total_invested(tile_ref, state and state.level),
   }
 end
 

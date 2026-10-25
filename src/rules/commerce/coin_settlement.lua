@@ -3,7 +3,7 @@
 -- 全部收敛于此。deity ×2 定价规则按域各异,留在 adapter;
 -- 本模块只拥有结算机制:余额钳制、partial 封顶、非正判定、淘汰时机、收款遥测。
 local achievement_progress = require("src.rules.ports.achievement_progress") -- luacheck: ignore (Task 2 transfer 使用)
-local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local bankruptcy = require("src.rules.elimination.bankruptcy")
 
 local coin_settlement = {}
 
@@ -23,7 +23,7 @@ local function _settle_bankruptcy(game, payer, opts)
   end
   local reason = _resolve_reason(opts.reason, payer)
   if not opts.defer_bankruptcy then
-    bankruptcy_port.eliminate(game, payer, { reason = reason })
+    bankruptcy.eliminate(game, payer, { reason = reason })
   end
   return true, reason
 end

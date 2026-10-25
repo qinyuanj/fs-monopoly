@@ -1,6 +1,5 @@
 local agent = require("src.computer.agent")
 local control = require("src.player.control")
-local bankruptcy = require("src.rules.endgame")
 
 local default_ports = {}
 
@@ -31,17 +30,8 @@ local function _build_auto_play_port()
   }
 end
 
-local function _build_bankruptcy_port()
-  return {
-    eliminate = function(game, player, opts)
-      return bankruptcy.eliminate(game, player, opts)
-    end,
-  }
-end
-
 local function _install_defaults(target)
   target.auto_play_port = _build_missing_port(target.auto_play_port, _build_auto_play_port)
-  target.bankruptcy_port = _build_missing_port(target.bankruptcy_port, _build_bankruptcy_port)
   return target
 end
 

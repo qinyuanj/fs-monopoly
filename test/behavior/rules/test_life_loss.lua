@@ -3,7 +3,7 @@
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local support = require("test.support.shared_support")
-local life_loss = require("src.rules.endgame.life_loss")
+local life_loss = require("src.rules.elimination.life_loss")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 describe("TestLifeLoss", function()

@@ -1,4 +1,4 @@
-local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local bankruptcy = require("src.rules.elimination.bankruptcy")
 local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
@@ -69,7 +69,7 @@ function location_ops.player_apply_hospital_effects(self, player)
     tip = true,
   })
   if self:player_cash(player) <= 0 then
-    bankruptcy_port.eliminate(self, player, { reason = player.name .. " 支付医药费后破产" })
+    bankruptcy.eliminate(self, player, { reason = player.name .. " 支付医药费后破产" })
     return
   end
   _emit_status_feedback(self, player, "hospital", "hospital_shock")
