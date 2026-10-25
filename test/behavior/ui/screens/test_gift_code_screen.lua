@@ -165,7 +165,7 @@ local function _input_node(world)
 end
 
 local function _new_state()
-  return { ui = {}, gameplay_loop_ports = { view_command = view_command_ports.build() } }
+  return { ui = {}, view_command_port = view_command_ports.build() }
 end
 
 local function _click(state, world, node_name, role_id)

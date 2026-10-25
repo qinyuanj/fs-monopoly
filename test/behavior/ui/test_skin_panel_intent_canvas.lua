@@ -47,7 +47,7 @@ it("test_open_skin_panel_intent_switches_canvas_for_resolved_role", function()
   local state = {
     ui = _build_ui_state(),
     runtime_asset_context = { refs = { images = {} } },
-    gameplay_loop_ports = presentation_ports.build(),
+    view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
   }
 
   _with_patches({
@@ -77,7 +77,7 @@ it("test_open_skin_panel_intent_broadcasts_when_actor_role_id_missing", function
   local state = {
     ui = _build_ui_state(),
     runtime_asset_context = { refs = { images = {} } },
-    gameplay_loop_ports = presentation_ports.build(),
+    view_command_port = presentation_ports.build_view_command(presentation_ports.build()),
   }
 
   _with_patches({

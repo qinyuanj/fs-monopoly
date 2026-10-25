@@ -18,13 +18,11 @@ end)
 it("test_dispatch_delegates_to_ports_view_command_when_available", function()
   local captured = nil
   local state = {
-    gameplay_loop_ports = {
-      view_command = {
-        dispatch = function(_, intent)
-          captured = intent
-          return true
-        end,
-      },
+    view_command_port = {
+      dispatch = function(_, intent)
+        captured = intent
+        return true
+      end,
     },
   }
   local intent = { type = "some_action" }
@@ -35,10 +33,8 @@ end)
 
 it("test_dispatch_returns_false_when_ports_dispatch_returns_non_true", function()
   local state = {
-    gameplay_loop_ports = {
-      view_command = {
-        dispatch = function() return false end,
-      },
+    view_command_port = {
+      dispatch = function() return false end,
     },
   }
   local result = view_command.dispatch(state, { type = "x" })
@@ -47,10 +43,8 @@ end)
 
 it("test_dispatch_returns_false_when_ports_dispatch_returns_nil", function()
   local state = {
-    gameplay_loop_ports = {
-      view_command = {
-        dispatch = function() return nil end,
-      },
+    view_command_port = {
+      dispatch = function() return nil end,
     },
   }
   local result = view_command.dispatch(state, { type = "x" })
