@@ -86,9 +86,10 @@ describe("TestUsecaseBoundary", function()
   local default_ports = gameplay_loop_ports.resolve(nil)
   local default_clock = default_ports.clock
   luassert.is.equal(0, default_clock.wall_now_seconds(), "default wall clock should be environment-agnostic zero fallback")
-  luassert.is.equal(2, default_clock.wall_diff_seconds(9, 7), "default wall diff should stay arithmetic fallback")
+  -- #210：基础 clock 委派 runtime_ports，未装配宿主时钟时 diff 也返回 0（不再算术兜底）。
+  luassert.is.equal(0, default_clock.wall_diff_seconds(9, 7), "default wall diff should follow unconfigured runtime port zero")
   luassert.is.equal(0, default_clock.cpu_now_seconds(), "default cpu clock should be environment-agnostic zero fallback")
-  luassert.is.equal(2, default_clock.cpu_diff_seconds(9, 7), "default cpu diff should remain arithmetic")
+  luassert.is.equal(0, default_clock.cpu_diff_seconds(9, 7), "default cpu diff should follow unconfigured runtime port zero")
 
   runtime_ports.configure({
     wall_now_seconds = function() return 42 end,

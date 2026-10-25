@@ -1,14 +1,11 @@
 local gameplay_loop_ports = {}
-local number_utils = require("src.foundation.number")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local ports_merge = require("src.turn.loop.ports_merge")
 local _choice_timeout = nil
 local _tick_ui_sync = nil
 local _modal_timeout = nil
-local _zero = function()
-  return 0
-end
 local function _load_choice_timeout()
   if _choice_timeout then
     return _choice_timeout
@@ -102,7 +99,24 @@ local group_names = {
   "state",
   "output",
 }
-local _clock_diff = number_utils.diff_or_zero
+-- 基础 clock 组委派 foundation runtime_ports（#210）：未装配宿主时钟时四个函数
+-- 都返回 0。base_ports 在加载时只建一次，所以用闭包在调用时取 runtime_ports 字段。
+local function _base_clock_ports()
+  return {
+    wall_now_seconds = function()
+      return runtime_ports.wall_now_seconds()
+    end,
+    wall_diff_seconds = function(timestamp_1, timestamp_2)
+      return runtime_ports.wall_diff_seconds(timestamp_1, timestamp_2)
+    end,
+    cpu_now_seconds = function()
+      return runtime_ports.cpu_now_seconds()
+    end,
+    cpu_diff_seconds = function(timestamp_1, timestamp_2)
+      return runtime_ports.cpu_diff_seconds(timestamp_1, timestamp_2)
+    end,
+  }
+end
 local function _base_ui_sync_ports()
   return ui_sync_defaults.build_base_ui_sync_ports(_load_choice_timeout, _load_tick_ui_sync, _load_modal_timeout)
 end
@@ -121,14 +135,7 @@ local base_port_builders = {
       end,
     })
   end,
-  clock = function()
-    return {
-      wall_now_seconds = _zero,
-      wall_diff_seconds = _clock_diff,
-      cpu_now_seconds = _zero,
-      cpu_diff_seconds = _clock_diff,
-    }
-  end,
+  clock = _base_clock_ports,
   state = function()
     return ports_merge.build_noop_group(port_groups.state)
   end,

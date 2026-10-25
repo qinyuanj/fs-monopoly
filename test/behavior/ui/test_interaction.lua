@@ -1163,6 +1163,27 @@ it("test_choice_ui_state_gate_honors_room_seated_owner_only", function()
   _assert_eq(seated.expects_ui, true, "seated owner should still open shared confirm UI")
 end)
 
+-- #210：展示端口装配不提供 clock 分组；回合时钟由回合层基础 clock 委派
+-- foundation runtime_ports，装配后的回合端口照常拿到宿主时钟。
+it("test_presentation_ports_leave_clock_to_turn_base_runtime_clock", function()
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
+  local gameplay_loop_ports = require("src.turn.loop.ports")
+  local ui_ports = presentation_ports.build()
+  _assert_eq(ui_ports.clock, nil, "presentation ports should not provide a clock group")
+
+  local resolved = gameplay_loop_ports.resolve(ui_ports)
+  runtime_ports.configure({
+    wall_now_seconds = function() return 12.5 end,
+    wall_diff_seconds = function() return 0.25 end,
+  })
+  local ok, err = pcall(function()
+    _assert_eq(resolved.clock.wall_now_seconds(), 12.5, "turn clock should read the runtime wall clock")
+    _assert_eq(resolved.clock.wall_diff_seconds(3, 1), 0.25, "turn clock diff should use the runtime wall diff")
+  end)
+  support.restore_runtime_services()
+  assert(ok, err)
+end)
+
 it("test_view_command_ports_toggle_action_log_tolerates_missing_ui_and_actor", function()
   local view_command_ports = require("src.ui.ports.view_command")
   local ports = view_command_ports.build()

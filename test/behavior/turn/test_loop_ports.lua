@@ -1,6 +1,8 @@
 local check = require("luassert")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local _config_reset = require("test.support.config_reset")
+local support = require("test.support.shared_support")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local function _assert_eq(a, b, msg)
   check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
@@ -12,6 +14,10 @@ before_each(function()
   _config_reset.reset_all()
 end)
 
+after_each(function()
+  support.restore_runtime_services()
+end)
+
 it("test_base_anim_ports_are_no_op_when_invoked", function()
   local ports = gameplay_loop_ports.resolve(nil)
   _assert_eq(ports.anim.play_move_anim(), nil, "play_move_anim noop returns nil")
@@ -20,14 +26,29 @@ it("test_base_anim_ports_are_no_op_when_invoked", function()
   _assert_eq(ports.anim.sync_status_3d(), nil, "sync_status_3d noop returns nil")
 end)
 
-it("test_base_clock_ports_return_zero_for_now_and_zero_for_diff_with_nil_args", function()
+-- #210：基础 clock 组委派 foundation runtime_ports，调用时取值；
+-- 未装配宿主时钟（headless）四个函数都返回 0，有数值参数的 diff 也是 0。
+it("test_base_clock_ports_return_zero_when_runtime_clock_unconfigured", function()
+  runtime_ports.reset_for_tests()
   local ports = gameplay_loop_ports.resolve(nil)
   _assert_eq(ports.clock.wall_now_seconds(), 0, "wall_now_seconds returns 0")
   _assert_eq(ports.clock.cpu_now_seconds(), 0, "cpu_now_seconds returns 0")
-  _assert_eq(ports.clock.wall_diff_seconds(nil, 1.0), 0, "wall_diff with nil first arg returns 0")
-  _assert_eq(ports.clock.cpu_diff_seconds(2.0, nil), 0, "cpu_diff with nil second arg returns 0")
-  _assert_eq(ports.clock.wall_diff_seconds(5.0, 3.0), 2.0, "wall_diff with both numeric args returns difference")
-  _assert_eq(ports.clock.cpu_diff_seconds(10.0, 1.5), 8.5, "cpu_diff with both numeric args returns difference")
+  _assert_eq(ports.clock.wall_diff_seconds(5.0, 3.0), 0, "wall_diff returns 0 without host clock")
+  _assert_eq(ports.clock.cpu_diff_seconds(10.0, 1.5), 0, "cpu_diff returns 0 without host clock")
+end)
+
+it("test_base_clock_ports_delegate_to_runtime_ports_configured_after_resolve", function()
+  local ports = gameplay_loop_ports.resolve(nil)
+  runtime_ports.configure({
+    wall_now_seconds = function() return 42.0 end,
+    wall_diff_seconds = function(a, b) return (a - b) * 10 end,
+    cpu_now_seconds = function() return 1.5 end,
+    cpu_diff_seconds = function(a, b) return (a - b) * 100 end,
+  })
+  _assert_eq(ports.clock.wall_now_seconds(), 42.0, "wall_now_seconds forwards to runtime port")
+  _assert_eq(ports.clock.wall_diff_seconds(9.0, 7.0), 20.0, "wall_diff forwards args to runtime port")
+  _assert_eq(ports.clock.cpu_now_seconds(), 1.5, "cpu_now_seconds forwards to runtime port")
+  _assert_eq(ports.clock.cpu_diff_seconds(9.0, 7.0), 200.0, "cpu_diff forwards args to runtime port")
 end)
 
 it("test_base_debug_ports_are_no_op_except_resolve_event_log_enabled_returns_false", function()

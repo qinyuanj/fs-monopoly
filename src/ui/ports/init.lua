@@ -4,12 +4,12 @@ local anim_ports = require("src.ui.ports.anim")
 local ui_sync_ports = require("src.ui.ports.ui_sync")
 local event_log_ports = require("src.ui.ports.event_log")
 local state_ports = require("src.ui.ports.state")
-local clock_ports = require("src.ui.ports.clock")
 local view_command_ports = require("src.ui.ports.view_command")
 
 local presentation_ports = {}
 
 -- 回合端口包：只含回合层声明的分组（契约见 src/turn/loop/ports.lua）。
+-- 不提供 clock：回合层基础 clock 直接委派 foundation runtime_ports（#210）。
 function presentation_ports.build()
   local debug = event_log_ports.build()
   return {
@@ -17,7 +17,6 @@ function presentation_ports.build()
     anim = anim_ports.build(),
     ui_sync = ui_sync_ports.build(common),
     debug = debug,
-    clock = clock_ports.build(),
     state = state_ports.build(),
   }
 end
