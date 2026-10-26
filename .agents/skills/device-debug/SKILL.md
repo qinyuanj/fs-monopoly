@@ -51,7 +51,7 @@ cd /mnt/c/Users/<user>/.eggitor/cli
 
 日志按文件读，不需要清缓冲；每次取证用唯一标记（`DEBUG-xxxx`）配 `log grep`，旧日志不会混进来。`exec` 报错以非零退出码返回并附堆栈。
 
-`docs search` 默认文档集可能被自动判成帧同步（fs-manual）；本项目是 SE 地图，显式写 `--docset manual` 或 `game-api`。文档条目多数没有来源 URL，结论要以真机探针复核。
+本项目是帧同步（FS）地图，`docs search` 显式写 `--docset fs-manual`（使用说明）或 `fs-component`（组件）；`manual` 是 SE（状态同步 / 世界版）手册，其 `game:GetService(...)` 体系不适用；`game-api` 是否适用先以真机探针核实。文档条目多数没有来源 URL，结论要以真机探针复核。
 
 ### 两种状态，两套 API
 

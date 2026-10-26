@@ -128,14 +128,14 @@ it("ir writes policy.edn from the projection and passes the upstream exit code t
   local code, policy, calls, _, out_dir = _run_ir(root, nil, 7)
   check.equal(7, code)
   check.truthy(policy:find(":levels [[:foundation]", 1, true))
-  check.truthy(policy:find(':out "tmp/uml/monopoly.edn"', 1, true))
+  check.truthy(policy:find(':out "tmp/uml/fs-monopoly.edn"', 1, true))
   check.truthy(policy:find(":proposals []", 1, true))
   check.truthy(policy:find(":omit []", 1, true))
   check.is_true(out_dir)
   check.equal("ir", calls.op)
   check.equal(1, #calls.launch)
   check.same({ "python3", "-I", "-B", calls.launch[1].root .. "/.uml-viewer/uml-viewer/scripts/uml_posix.py",
-    "command", calls.launch[1].root, "ir", "policy.edn", "tmp/uml/monopoly.edn" }, calls.launch[1].argv)
+    "command", calls.launch[1].root, "ir", "policy.edn", "tmp/uml/fs-monopoly.edn" }, calls.launch[1].argv)
 end)
 
 -- 推演只写覆盖文件;每次重生都必须把它带回 policy.edn,不被投影冲掉。

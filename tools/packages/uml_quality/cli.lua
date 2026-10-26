@@ -16,7 +16,7 @@
 --
 -- ir / view(#99 / ADR 0070):
 --   ir   从 arch_policy 投影 + docs/architecture.proposals.edn 生成仓根 policy.edn
---        (gitignore),再经 POSIX 入口的 ir 子命令调上游 ir-generator 写 tmp/uml/monopoly.edn。
+--        (gitignore),再经 POSIX 入口的 ir 子命令调上游 ir-generator 写 tmp/uml/fs-monopoly.edn。
 --   view 在钉死 LUA_PATH/LUA_CPATH 的环境里调上游启动器,herdr 由上游从 PATH 选
 --        (>= 0.9.3 最高版);环境沿启动链下传到 companion,父进程与全局环境不变。
 -- env.preflight / env.launch 可注入替身(测试用);缺省走真实预检与 sh 启动。
@@ -32,7 +32,7 @@ local path_lib = require("foundation.path")
 
 local _TOOLS = { check = { "crapper", "mutator" }, crap = { "crapper" }, mutate = { "mutator" }, ir = {}, view = {} }
 
-local _IR_OUT = "tmp/uml/monopoly.edn"
+local _IR_OUT = "tmp/uml/fs-monopoly.edn"
 
 -- 上游 POSIX 命令模块。检出默认是邻接的 .uml-viewer/uml-viewer(安装器 clone);
 -- UML_VIEWER_TOOL_ROOT 指到兄弟仓开发树时用那一份(上游自己的开发覆写面)。

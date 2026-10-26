@@ -19,10 +19,10 @@ CLI contract:
 
 `ir` contract (#99 / ADR 0070):
 - Takes no extra arguments (exit 2 otherwise).
-- Projects `arch_policy.project_uml_policy` from `tools/packages/arch_policy/policy.json`, then merges `:proposals` and `:omit` from the versioned override `docs/architecture.proposals.edn` (`packages.uml_quality.proposals`), and sets `:out "tmp/uml/monopoly.edn"`. The merge never writes back to `docs/architecture.md` or the guards.
+- Projects `arch_policy.project_uml_policy` from `tools/packages/arch_policy/policy.json`, then merges `:proposals` and `:omit` from the versioned override `docs/architecture.proposals.edn` (`packages.uml_quality.proposals`), and sets `:out "tmp/uml/fs-monopoly.edn"`. The merge never writes back to `docs/architecture.md` or the guards.
 - Override shape: one top-level map with only `:proposals` and `:omit`, each a vector, copied verbatim. A missing, empty or comment-only file means `[]` for both. Malformed EDN, any other key, a duplicate key or a non-vector value exits 1 with a `docs/architecture.proposals.edn (line N): ...` message. In that case `policy.edn` is not written and nothing is started.
 - Preflight: Python 3.11+, the uml-viewer checkout, and no repo-root `examples/`. Upstream `ir` prefers `examples/*.policy.edn` over `policy.edn`, so an `examples/` directory could shadow the generated file. A preflight failure exits 1 and writes nothing.
-- Then it writes the repo-root `policy.edn` (ignored by git) and runs the POSIX entry with `ir policy.edn tmp/uml/monopoly.edn`. Upstream `ir` takes `[policy [output]]` positionally, so both are passed explicitly; a lone argument would be read as the policy and the output would fall back to `examples/uml-viewer.edn`. The exit code is passed through unchanged.
+- Then it writes the repo-root `policy.edn` (ignored by git) and runs the POSIX entry with `ir policy.edn tmp/uml/fs-monopoly.edn`. Upstream `ir` takes `[policy [output]]` positionally, so both are passed explicitly; a lone argument would be read as the policy and the output would fall back to `examples/uml-viewer.edn`. The exit code is passed through unchanged.
 
 `view` contract (#99 / ADR 0070):
 - Preflight: the same Lua checks as `check` (native `lua5.4`, controlled Lua environment, module probe), Python 3.11+, the uml-viewer checkout with `uml-quality.json`, and Herdr. Upstream selects the highest `herdr` on `PATH` whose `herdr --version` is `herdr X.Y.Z` >= 0.9.3 with protocol 22. The preflight applies the same version rule to every `PATH` candidate and requires at least one. The protocol check stays upstream's. Nothing is downloaded or upgraded.
@@ -54,7 +54,7 @@ Python environment (crapper / mutator):
 Outputs and version control:
 - crapper writes `.metrics/crap.edn` and `target/coverage/lua/lcov.info`; mutator writes `.metrics/mutate/*.edn`.
 - Following the upstream README, `.metrics/` is versioned: metrics produced by real `lua5.4 tools/cli.lua uml crap|mutate` runs are committed. Never hand-write or fabricate metric files. `.metrics/` is a whitelisted root entry (`test/guards/lib/root_whitelist_guard.lua`).
-- `ir` outputs stay out of version control. The repo-root `policy.edn` is listed in `.gitignore` and not whitelisted by the root guard. `tmp/uml/monopoly.edn` sits under the ignored `tmp/`. The override `docs/architecture.proposals.edn` is versioned and allowlisted by the docs guard.
+- `ir` outputs stay out of version control. The repo-root `policy.edn` is listed in `.gitignore` and not whitelisted by the root guard. `tmp/uml/fs-monopoly.edn` sits under the ignored `tmp/`. The override `docs/architecture.proposals.edn` is versioned and allowlisted by the docs guard.
 - `target/` (coverage intermediates) stays ignored, like `.uml-viewer/` and `uml-viewer-log.txt` (installer-maintained block at the end of `.gitignore`).
 
 Stock busted entry (`.busted`, #99):

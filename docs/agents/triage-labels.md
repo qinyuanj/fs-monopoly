@@ -10,4 +10,4 @@
 | `ready-for-human` | `ready-for-human` | 需要人工实现 |
 | `wontfix` | `wontfix` | 不予处理 |
 
-技能提到角色时（如「打上 AFK-ready 标签」），用上表右侧的标签字符串。用标签前先 `gh label list --repo qinyuanj/monopoly --json name` 核对实例里已存在的名称。
+技能提到角色时（如「打上 AFK-ready 标签」），用上表右侧的标签字符串。用标签前先 `gh label list --repo qinyuanj/fs-monopoly --json name` 核对实例里已存在的名称。

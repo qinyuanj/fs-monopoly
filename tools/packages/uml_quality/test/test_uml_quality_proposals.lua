@@ -8,14 +8,14 @@ local check = require("luassert")
 local proposals = require("packages.uml_quality.proposals")
 
 local PROJECTED = '{:title "UML"\n :lang :lua\n :levels [[:foundation] [:app]]\n :foreign []}\n'
-local OUT = "tmp/uml/monopoly.edn"
+local OUT = "tmp/uml/fs-monopoly.edn"
 
 describe("uml ir proposals override", function()
 
 it("treats a missing override file as no proposals and no omit", function()
   local text = assert(proposals.merge(PROJECTED, nil, OUT))
   check.truthy(text:find(':levels [[:foundation] [:app]]', 1, true))
-  check.truthy(text:find(':out "tmp/uml/monopoly.edn"', 1, true))
+  check.truthy(text:find(':out "tmp/uml/fs-monopoly.edn"', 1, true))
   check.truthy(text:find(":proposals []", 1, true))
   check.truthy(text:find(":omit []", 1, true))
 end)
