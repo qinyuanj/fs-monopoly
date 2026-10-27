@@ -4,6 +4,7 @@
 -- 与串行路径的契约逐字节一致:同一条命令串在串行里经 foundation.proc 执行,
 -- 在这里经 lane 脚本里的 `sh` 执行;argv 表两处都由 shell.build_command 拼装,
 -- 因此子进程看到的 arg[0] 与串行相同(不再需要 Windows 时代的 where.exe 解析)。
+local boundary = require("foundation.platform_boundary")
 local env = require("foundation.env")
 local fs = require("foundation.fs")
 local path = require("foundation.path")
@@ -47,7 +48,9 @@ local function _wait_all(pending, seconds)
   return result.code == 0, result.code
 end
 
--- 进程组收容:launcher 以 setsid 起在新会话里,组 id 就是它自己的 pid。
+-- 进程组收容:launcher 起在自己的进程组里,组 id 就是它自己的 pid。Linux 用
+-- setsid 起新会话;macOS 没有 setsid 命令,改由 `set -m` 的作业控制给后台作业
+-- 单独建组(组 id 同样是 launcher 的 pid)。
 -- 收容只按组发一次 SIGKILL:launcher 自己也在组里,于是不会出现「收容后父进程
 -- 继续写完成状态」的竞态;未发布完成状态即意味着整棵 lane 树被停掉。
 local function _kill_group(pid_file)
@@ -94,8 +97,16 @@ local function _launch(entry, timeout)
     "",
   }, "\n"))
   if not launcher_ok then return nil, launcher_err end
-  local started = os.execute("setsid sh " .. shell.shell_quote(entry.dir .. "/launcher.sh")
-    .. " > " .. shell.shell_quote(entry.dir .. "/owner.log") .. " 2>&1 &")
+  local launcher = shell.shell_quote(entry.dir .. "/launcher.sh")
+  local owner_log = shell.shell_quote(entry.dir .. "/owner.log")
+  local start_command
+  if boundary.host_platform() == boundary.MACOS then
+    start_command = "sh -c " .. shell.shell_quote("set -m; sh \"$1\" > \"$2\" 2>&1 &")
+      .. " sh " .. launcher .. " " .. owner_log
+  else
+    start_command = "setsid sh " .. launcher .. " > " .. owner_log .. " 2>&1 &"
+  end
+  local started = os.execute(start_command)
   if not shell.exit_status(started) then return nil, "failed to start lane owner" end
   return true
 end

@@ -153,6 +153,8 @@ CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的�
 ## ADR 0073 — 开发与工具链保证面迁到 WSL Ubuntu
 
 > **第 6 条中的 CI 部分已撤销（2026-10-22，维护者决定）。** 本仓不再跑 CI，`.github/` 已删除；`.githooks/pre-push` 保留为可选本地拦截。其余条款不变。
+>
+> **保证面增补 macOS（2026-10-27，维护者决定）。** macOS 与 WSL Ubuntu 24.04 同属开发与工具链保证面。第 1 条：`host_platform()` 增加 `macos`（`/System/Library/CoreServices/SystemVersion.plist` 可读），`supported_platform()` 接受 `linux` 与 `macos`，其余 POSIX 仍是 `posix`、不在保证面内。第 2 条：macOS 没有 `setsid` 命令，`parallel_lanes` 在 macOS 上以 `set -m` 作业控制让 launcher 自成进程组，组 id 与看门狗收容语义不变。第 3 条：macOS 上 `lua5.4` 由机器 Lua 5.4 提供（可为指向 5.4 解释器的同名链接）。ADR 0072 的 `luarocks.loader` 规则放宽为「不可解析，或解析在受控 tree 内」：luarocks 自装进 tree 时，loader 只会接回 `rocks_trees`，即受控 tree 本身。第 4 条：`deploy` 仍要求 WSL 互操作，macOS 上缺 `cmd.exe` / `wslpath` 照常退 3。第 5 条：邻接 uml-viewer 自身的 macOS 交付见其 ADR 0007 增补。
 
 开发与工具链的保证面从原生 Windows 改为 **WSL Ubuntu 24.04 单一平台**（#191）；原生 Windows 只是部署目标，不承诺 macOS，也不保留原生 Windows 开发的双轨支持。取代 ADR 0066 与 ADR 0071。
 

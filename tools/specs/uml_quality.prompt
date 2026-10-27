@@ -1,6 +1,6 @@
 # uml quality entry Tool Spec (#93)
 
-Purpose: WSL Ubuntu invocation surface for the adjacent uml-viewer quality dispatch (ADR 0068 / ADR 0073). CRAP and mutation run through uml-viewer's standard tools (crapper / mutator Lua paths); this repository owns only the scope config, the pinned Lua environment and the preflight.
+Purpose: WSL Ubuntu / macOS invocation surface for the adjacent uml-viewer quality dispatch (ADR 0068 / ADR 0073). CRAP and mutation run through uml-viewer's standard tools (crapper / mutator Lua paths); this repository owns only the scope config, the pinned Lua environment and the preflight.
 
 Upstream (adjacent checkout, ignored by git): `.uml-viewer/uml-viewer/scripts/uml_posix.py`, `.uml-viewer/crapper`, `.uml-viewer/mutator`, installed by uml-viewer's `get-uml-viewer`. `UML_VIEWER_TOOL_ROOT` selects a development checkout instead of the installed copy. These repositories are read-only from this project.
 Project wrapper: `lua5.4 tools/cli.lua uml <check|crap|mutate|ir|view> [args]` (package `tools/packages/uml_quality/`).
@@ -30,7 +30,7 @@ CLI contract:
 - Preflight: the same Lua checks as `check` (native `lua5.4`, controlled Lua environment, module probe), Python 3.11+, the uml-viewer checkout with `uml-quality.json`, and Herdr. Upstream selects the highest `herdr` on `PATH` whose `herdr --version` is `herdr X.Y.Z` >= 0.9.3 with protocol 22. The preflight applies the same version rule to every `PATH` candidate and requires at least one. The protocol check stays upstream's. Nothing is downloaded or upgraded.
 - A preflight failure exits 1 with `FAIL` lines and does not start the upstream launcher. It leaves `.uml-viewer/quality-result.json` alone.
 - Then a pinned sh script runs the POSIX entry with `<root> [args]` (args forwarded, e.g. `--restart`). The script carries the same pinned Lua environment as `crap` / `mutate` (`runtime.pinned_env`). The inherited `PATH` keeps its order, so upstream's Herdr selection sees the user's installs unchanged. The variables are set only inside the child sh script, so the parent process, the global Herdr and Lua setup and the read-only upstream checkout are unchanged. Upstream creates a fresh Herdr server per launch, and the environment flows down to the companion and its shells. The exit code is passed through unchanged.
-- Window, companion, CRAP colouring and Herdr cleanup are verified manually on WSL Ubuntu by the maintainer. They are not covered by the automated suite.
+- Window, companion, CRAP colouring and Herdr cleanup are verified manually on WSL Ubuntu and macOS by the maintainer. They are not covered by the automated suite.
 
 Dispatch precedence (owned by uml-viewer `scripts/uml_posix.py`, recorded here): `operations` > `standardTools` > Clojure alias. The alias route is taken only when `deps.edn` exists and no `standardTools` is declared; with neither, the standard tools run with installed defaults. `uml-quality.json` declares `standardTools` only:
 - `sourceRoots: ["src"]`: the whole `src/` tree is business code, the same scope as the retired crap4lua lane.
@@ -42,7 +42,7 @@ Pinned Lua environment (the false-green guard):
 - A user tree outside the resolved set also carries busted / luacov / luacov-reporter-lcov, and the user `LUA_PATH` may point at it. A child that inherits it would "work" even when the packages come from a tree outside this repo's version rules.
 - The controlled Lua environment is resolved once by `foundation.lua_env` through `luarocks config rocks_trees`; versions must satisfy busted `>=2.3.0,<3`, luassert `>=1.9.0,<2`, luacov `>=0.17.0,<1`, luacov-reporter-lcov `>=0.2,<1`, luacheck `>=1.2.0,<2`. The repo only verifies; it never installs or writes a tree.
 - The child launch script sets `LUA_PATH(_5_4)` = repo root + every controlled tree's `share/lua/5.4` (`?.lua` and `?/init.lua`), `LUA_CPATH(_5_4)` = every controlled tree's `lib/lua/5.4` (`?.so`), empty `LUA_INIT(_5_4)`, and puts the `lua5.4` directory first on `PATH` (crapper resolves the interpreter from `PATH`).
-- There is no `;;` default path. `luarocks.loader` must stay unresolvable, otherwise it would re-attach trees outside the resolved set.
+- There is no `;;` default path. `luarocks.loader` must stay unresolvable or resolve inside one of the controlled trees (luarocks installed into its own tree): the controlled trees are `rocks_trees` itself, so such a loader re-attaches nothing else. A loader outside them would re-attach trees outside the resolved set and fails.
 - The preflight runs `probe_lua_modules.lua` under that environment. Every required module (`busted.runner`, `luassert`, `luacov.runner`, `luacov.reporter.lcov`) and every file loaded while requiring them, C modules included, must resolve inside one of the controlled trees.
 - Missing packages or out-of-range versions are a real preflight failure (exit 1) with the installer command printed; there is no mirror, no copy from another tree and no write to any tree.
 

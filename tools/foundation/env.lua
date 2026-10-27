@@ -3,7 +3,7 @@
 -- 与 path.lua 划清界限——那边是纯路径演算,这边要读环境变量、起子进程、建目录。
 -- 与 proc.lua 划清界限——那边是"跑一条命令拿结果",这边只是"问环境是什么样"。
 --
--- WSL Ubuntu 单平台(ADR 0073):临时目录取 TMPDIR,缺省 /tmp。注意别把
+-- WSL Ubuntu 与 macOS(ADR 0073):临时目录取 TMPDIR,缺省 /tmp。注意别把
 -- 「工具链跑在哪个 OS」与「部署目标是哪个 OS」搞混:Eggy 宿主仍在 Windows 端,
 -- 那条路径活在 tools/packages/ops/deploy.lua 里,与本文件无关。
 local path_lib = require("foundation.path")

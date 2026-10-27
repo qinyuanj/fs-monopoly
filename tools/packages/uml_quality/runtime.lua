@@ -82,10 +82,15 @@ function M.module_verdict(name, resolved, roots)
 end
 
 -- crapper/mutator 在 Lua 子进程里 pcall(require, "luarocks.loader");能解析到时
--- loader 会按用户 luarocks 配置接回全局 tree,所以它必须不可见。
-function M.loader_verdict(resolved)
+-- loader 会按 luarocks 配置接回 rocks_trees。受控 tree 就是 rocks_trees 本身,
+-- 所以 loader 只许不可见(WSL:luarocks 装在 /usr/share),或就装在受控 tree 里
+-- (luarocks 自装进 tree,如 macOS);tree 外的 loader 仍会接回越界 tree。
+function M.loader_verdict(resolved, roots)
   if resolved == nil or resolved == "" then
     return { ok = true, message = "luarocks.loader: not resolvable (global trees stay unreachable)" }
+  end
+  if lua_env.is_inside(resolved, roots) then
+    return { ok = true, message = "luarocks.loader: inside controlled tree " .. _normalize(resolved) .. " (re-attaches only rocks_trees)" }
   end
   return { ok = false, message = "luarocks.loader: resolvable at " .. resolved .. "; global trees would leak in" }
 end
@@ -101,7 +106,7 @@ function M.probe_verdicts(output, roots)
     if kind == "resolve" or kind == "load" then
       verdict = M.module_verdict(fields[2], fields[3], roots)
     elseif kind == "loader" then
-      verdict = M.loader_verdict(fields[2])
+      verdict = M.loader_verdict(fields[2], roots)
     elseif kind == "error" then
       verdict = { ok = false, message = tostring(fields[2]) .. ": require failed: " .. tostring(fields[3]) }
     end

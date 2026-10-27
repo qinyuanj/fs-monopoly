@@ -56,9 +56,14 @@ it("project root resolves current repository", function()
   check.same(env.current_dir(), deploy.resolve_project_root())
 end)
 
+-- 家目录桩成固定值:真实解析要起 cmd.exe,macOS 上没有 WSL 互操作面(ADR 0073 增补)。
 it("default target retains the Windows deploy location", function()
-  local home = deploy.resolve_home_dir():gsub("/$", "")
-  check.same(home .. "/Desktop/dev/eggy/LuaSource_大富翁", deploy.resolve_default_target_path("win"))
+  local original = deploy.resolve_home_dir
+  deploy.resolve_home_dir = function() return "/mnt/c/Users/玩家/" end
+  local ok, target = pcall(deploy.resolve_default_target_path, "win")
+  deploy.resolve_home_dir = original
+  check.is_true(ok, target)
+  check.same("/mnt/c/Users/玩家/Desktop/dev/eggy/LuaSource_大富翁", target)
 end)
 
 it("project root resolves from other working directory", function()
