@@ -11,7 +11,7 @@ local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 
--- #92:层边界门禁吃 `tools/packages/arch_policy/policy.json` 这一份 policy。
+-- #214:guard 经公开加载链消费 levels.edn 与 policy.json 的编译结果。
 -- 真实仓库恒为绿(没有违规就是没有),所以合法与违规两侧一律用合成图喂给
 -- guard 自己的判定接缝 check_graph,证明规则真的会拦。
 local POLICY = assert(arch_policy.load(arch_policy.DEFAULT_POLICY_PATH))
@@ -68,6 +68,18 @@ it("test_declared_layers_match_the_registry", function()
   luassert.is.equal(7, arch_policy.declared_layer(POLICY, "src.config.game"))
   luassert.is.equal("substrate", arch_policy.declared_layer(POLICY, "src.foundation.number"))
   luassert.is_nil(arch_policy.declared_layer(POLICY, "src.mystery.thing"))
+end)
+
+it("test_uncompiled_policy_is_invalid_instead_of_allowing_layerless_edges", function()
+  local raw = assert(require("foundation.json_reader").decode(
+    assert(require("foundation.fs").read_raw(arch_policy.DEFAULT_POLICY_PATH))))
+  local result = arch_policy.check(raw, {
+    modules = { "src.rules.bootstrap", "src.app.init" },
+    edges = { { from = "src.rules.bootstrap", to = "src.app.init" } },
+  })
+  luassert.is_false(result.ok)
+  luassert.is.equal(1, #result.violations)
+  luassert.is.equal("invalid_policy", result.violations[1].kind)
 end)
 
 it("test_legal_graph_passes", function()

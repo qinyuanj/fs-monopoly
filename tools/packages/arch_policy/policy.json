@@ -22,7 +22,6 @@
     {
       "name": "app",
       "component": "app",
-      "layer": 1,
       "match": [
         "^src%.entry$",
         "^src%.entry%..+",
@@ -33,7 +32,6 @@
     {
       "name": "host",
       "component": "host",
-      "layer": 2,
       "match": [
         "^src%.host$",
         "^src%.host%..+"
@@ -42,7 +40,6 @@
     {
       "name": "ui",
       "component": "ui",
-      "layer": 3,
       "match": [
         "^src%.ui$",
         "^src%.ui%..+"
@@ -51,7 +48,6 @@
     {
       "name": "turn",
       "component": "turn",
-      "layer": 4,
       "match": [
         "^src%.turn$",
         "^src%.turn%..+"
@@ -60,7 +56,6 @@
     {
       "name": "player",
       "component": "player",
-      "layer": 5,
       "match": [
         "^src%.player$",
         "^src%.player%..+"
@@ -69,7 +64,6 @@
     {
       "name": "computer",
       "component": "computer",
-      "layer": 5,
       "match": [
         "^src%.computer$",
         "^src%.computer%..+"
@@ -78,7 +72,6 @@
     {
       "name": "rules",
       "component": "rules",
-      "layer": 6,
       "match": [
         "^src%.rules$",
         "^src%.rules%..+"
@@ -87,7 +80,6 @@
     {
       "name": "state",
       "component": "state",
-      "layer": 7,
       "match": [
         "^src%.state$",
         "^src%.state%..+"
@@ -96,7 +88,6 @@
     {
       "name": "config",
       "component": "config",
-      "layer": 7,
       "match": [
         "^src%.config$",
         "^src%.config%..+"

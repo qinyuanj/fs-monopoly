@@ -3,7 +3,7 @@ require("test.bootstrap").install_package_paths()
 local arch_policy = require("packages.arch_policy")
 local policy_scan = require("packages.arch_policy.scan")
 
--- 层边界门禁(#92):执行 `tools/packages/arch_policy/policy.json` 这一份 policy,
+-- 层边界门禁(#92 / #214):公开加载链编译 policy.json 与 levels.edn 后执行,
 -- 是 slim 里唯一的层边界门禁(旧外部分析器与其投影已于 #94 退场)。
 local M = {}
 
@@ -21,6 +21,10 @@ local function _describe(violation)
   end
   if violation.kind == "unclassified_module" then
     return "arch_policy_guard: unclassified_module " .. tostring(violation.module_id)
+  end
+  if violation.kind == "invalid_policy" then
+    return "arch_policy_guard: invalid_policy " .. tostring(violation.component)
+      .. ": " .. tostring(violation.message)
   end
   if violation.kind == "projection_cycle" then
     return "arch_policy_guard: projection_cycle " .. tostring(violation.cycle)

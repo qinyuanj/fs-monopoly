@@ -1,5 +1,5 @@
 ; uml-viewer 推演覆盖文件(ADR 0070 / #99)。`lua tools/cli.lua uml ir` 把这里的
 ; :proposals 与 :omit 合并进生成的仓根 policy.edn;只许这两个键,值为 vector。
-; 层序与归属不在这里改:那是 docs/architecture.md 与 guard 的事。
+; 层序与归属不在这里改:分别归 arch_policy/levels.edn 与组件策略。
 {:proposals []
  :omit []}

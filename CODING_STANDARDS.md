@@ -10,7 +10,7 @@
 
 ## 分层与依赖
 
-- 模块职责和放置规则见 [`docs/architecture.md`](docs/architecture.md)。依赖约束以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 的可执行规则为准（slim 的 guards 车道即层门禁）。
+- 模块职责和放置规则见 [`docs/architecture.md`](docs/architecture.md)。层序与同层分组以 `tools/packages/arch_policy/levels.edn` 为唯一真源；模块匹配、substrate、额外禁向规则和环豁免以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 的可执行规则为准（slim 的 guards 车道即层门禁）。
 - `foundation` 是唯一 substrate，只含无玩法语义的通用能力，不依赖七层；`host` 是 L2 宿主适配层。
 - `state` 与 `config` 不依赖上层；装配、mixin 安装和跨边界接线放在 `src/app`。
 - 业务规则不接触 UI 节点或 Eggy API；宿主能力经 port 进入内层。

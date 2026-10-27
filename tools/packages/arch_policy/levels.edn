@@ -1,0 +1,9 @@
+; 架构层序与同层分组唯一真源（#214 / ADR 0077）。组序由内向外。
+{:levels [[:foundation]
+          [:config :state]
+          [:rules]
+          [:computer :player]
+          [:turn]
+          [:ui]
+          [:host]
+          [:app]]}

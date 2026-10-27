@@ -4,7 +4,7 @@ local luassert = assert
 
 local arch_policy = require("packages.arch_policy")
 
--- 本仓自己的 arch 规则表断言(#596;#94 起改读唯一真源 policy.json)。
+-- 本仓自己的 arch 规则表断言(#596;#214 起由加载链合并层配置与其余规则)。
 --
 -- 为什么需要它:arch_policy_guard 只在「policy 里声明了某条规则」时才会报违例。
 -- 规则本身被删掉、改名或缩小 from/to 时,门禁照样全绿——不是因为架构守住了,

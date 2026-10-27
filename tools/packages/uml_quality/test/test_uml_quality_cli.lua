@@ -82,15 +82,17 @@ it("rejects missing mutation evidence even when upstream reports success", funct
   check.truthy(output:find("mutation", 1, true))
 end)
 
--- ir / view(#99 / ADR 0070):上游启动器用替身 launch 记录 argv 与子进程环境;
--- ir 的生成面从临时仓根读 policy.json 与覆盖文件,写出 policy.edn。
+-- ir / view(#99 / #214):上游启动器用替身 launch 记录 argv 与子进程环境;
+-- ir 从临时仓根的两份架构配置与覆盖文件生成 policy.edn。
 local POLICY_JSON = "tools/packages/arch_policy/policy.json"
+local LEVELS_EDN = "tools/packages/arch_policy/levels.edn"
 local OVERRIDE = "docs/architecture.proposals.edn"
 
-local function _temp_root(override)
+local function _temp_root(override, levels_text)
   local root = env_lib.make_temp_path("uml_quality_ir", "")
   fs.ensure_parent_dir(root .. "/" .. POLICY_JSON)
   fs.write_file(root .. "/" .. POLICY_JSON, assert(fs.read_raw(POLICY_JSON)))
+  fs.write_file(root .. "/" .. LEVELS_EDN, levels_text or assert(fs.read_raw(LEVELS_EDN)))
   if override ~= nil then
     fs.ensure_parent_dir(root .. "/" .. OVERRIDE)
     fs.write_file(root .. "/" .. OVERRIDE, override)
@@ -118,20 +120,22 @@ local function _run_ir(root, calls_state, code)
   hooks.repo_root = root
   local exit_code, output = _quiet(function() return cli.main({ "ir" }, hooks) end)
   local policy = fs.read_raw(root .. "/policy.edn")
+  local levels_after = fs.read_raw(root .. "/" .. LEVELS_EDN)
   local out_dir = fs.is_dir(root .. "/tmp/uml")
   fs.remove_path(root)
-  return exit_code, policy, calls, output, out_dir
+  return exit_code, policy, calls, output, out_dir, levels_after
 end
 
 it("ir writes policy.edn from the projection and passes the upstream exit code through", function()
   local root = _temp_root(nil)
-  local code, policy, calls, _, out_dir = _run_ir(root, nil, 7)
+  local code, policy, calls, _, out_dir, levels_after = _run_ir(root, nil, 7)
   check.equal(7, code)
   check.truthy(policy:find(":levels [[:foundation]", 1, true))
   check.truthy(policy:find(':out "tmp/uml/fs-monopoly.edn"', 1, true))
   check.truthy(policy:find(":proposals []", 1, true))
   check.truthy(policy:find(":omit []", 1, true))
   check.is_true(out_dir)
+  check.equal(assert(fs.read_raw(LEVELS_EDN)), levels_after, "ir 不得回写手层配置")
   check.equal("ir", calls.op)
   check.equal(1, #calls.launch)
   check.same({ "python3", "-I", "-B", calls.launch[1].root .. "/.uml-viewer/uml-viewer/scripts/uml_posix.py",
@@ -164,6 +168,16 @@ it("ir rejects an invalid or over-wide override file without writing policy.edn"
     check.truthy(output:find(OVERRIDE, 1, true), override)
     check.truthy(output:find("policy.edn was not written", 1, true), override)
   end
+end)
+
+it("ir rejects invalid levels without writing policy.edn or starting upstream", function()
+  local code, policy, calls, output = _run_ir(_temp_root(nil, "{:levels [[:app]]}"))
+  check.equal(1, code)
+  check.is_nil(policy)
+  check.equal(0, calls.preflight)
+  check.equal(0, #calls.launch)
+  check.truthy(output:find(LEVELS_EDN .. " (line ", 1, true))
+  check.truthy(output:find("policy.edn was not written", 1, true))
 end)
 
 it("ir writes nothing and starts nothing when the preflight fails", function()

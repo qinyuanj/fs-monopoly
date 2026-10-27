@@ -10,7 +10,7 @@
 |---|---|
 | 修改 `src/**` 或 `test/**` | [`CODING_STANDARDS.md`](CODING_STANDARDS.md)，再读目标模块与对应测试 |
 | 领域词汇、对象命名或产品概念 | [`GLOSSARY.md`](GLOSSARY.md) |
-| 模块归属、依赖方向或层边界 | [`docs/architecture.md`](docs/architecture.md)，再以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 为执行真源（slim 的 guards 车道即层门禁） |
+| 模块归属、依赖方向或层边界 | [`docs/architecture.md`](docs/architecture.md) 的职责说明，再以 `tools/packages/arch_policy/levels.edn`（层序与同层分组唯一真源）、`tools/packages/arch_policy/policy.json`（其余规则）与 `test/guards/` 为执行真源（slim 的 guards 车道即层门禁） |
 | 决策理由、已批准例外或 ADR | [`docs/decisions.md`](docs/decisions.md) |
 | 工单登记、台账或 triage | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)、[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | 术语登记或领域模型维护 | [`docs/agents/domain.md`](docs/agents/domain.md) |
@@ -41,8 +41,8 @@ uml-viewer 质量入口（ADR 0068 / #93）：`lua5.4 tools/cli.lua uml check` �
 uml-viewer companion 边界（ADR 0070 / #99）：
 
 - 仓根 `./uml` 只在 `lua5.4 tools/cli.lua uml view` 拉起的 companion 内可用（环境已钉死并沿启动链下传）；其他场合仍按上一段不作入口。
-- companion 不改仓根 `policy.edn`（`uml ir` 的生成物）。层序或归属不对，改 `docs/architecture.md` 与 guard；推演写 `docs/architecture.proposals.edn`（只含 `:proposals` / `:omit`），再跑 `uml ir` 重生。
-- companion 只改 `docs/architecture.proposals.edn` 与 `src/`；不碰 git 远端、不关单。
+- companion 不改仓根 `policy.edn`（`uml ir` 的生成物）。维护者改层序或同层分组时编辑 `tools/packages/arch_policy/levels.edn`，改归属或其他边界时编辑组件策略与 guard；推演只写 `docs/architecture.proposals.edn`（只含 `:proposals` / `:omit`），再跑 `uml ir` 重生。
+- companion 只改 `docs/architecture.proposals.edn` 与 `src/`；不得修改 `levels.edn` 或组件策略，不碰 git 远端、不关单。
 
 ## 平台保证边界（#96 / ADR 0073）
 

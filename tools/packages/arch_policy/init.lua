@@ -1,13 +1,10 @@
--- packages/arch_policy —— 层边界的唯一 policy 真源(工单 #92)。
+-- packages/arch_policy —— 架构边界的公开加载与检查链(工单 #92 / #214)。
 --
--- 为什么存在:层边界此前有两处可独立漂移的配置——旧外部架构工具的
--- config.json,和散落在 `test/guards/` 里的规则断言。本模块把边界收敛成
--- 一份数据(`policy.json`),并让两件事消费同一份(旧工具与其投影 #94 退场):
+-- 层序与同层分组只由 levels.edn 声明;policy.json 保留模块匹配、substrate、
+-- 禁向依赖与环豁免。load 将两份配置编译成内存策略,guard 与 UML 投影都消费它:
 --   1. `test/guards/lib/arch_policy_guard.lua` 执行门禁(层方向/环/未分类/
 --      禁向边),不依赖外部 rock 的分析器;
---   2. `project_uml_policy` 投影出 uml-viewer 侧 policy(EDN),架构图的层序
---      与门禁同源,不构成第二真源,由 `test/guards/test_arch_policy_projection.lua`
---      钉住。
+--   2. `project_uml_policy` 直接投影编译后的层组,不反向猜测数字层号。
 --
 -- 规则语义与 ADR 0001/0002、ADR 0039 D2 一致:L1 最高、数字越大层越低;
 -- foundation 是 substrate(谁都能依赖它,它不依赖任何整型层)。环检测契约保留:
@@ -17,6 +14,7 @@ local json_reader = require("foundation.json_reader")
 local M = {}
 
 M.DEFAULT_POLICY_PATH = "tools/packages/arch_policy/policy.json"
+M.DEFAULT_LEVELS_PATH = "tools/packages/arch_policy/levels.edn"
 
 local function _matches_any(module_id, patterns)
   for _, pattern in ipairs(patterns or {}) do
@@ -139,6 +137,18 @@ end
 -- 图形态:{ modules = {"src.app", ...}, edges = {{from=, to=}, ...} }
 -- 只判定两张表都在 modules 里的边;外部 require 不进图。
 function M.check(policy, graph)
+  for _, rule in ipairs(policy.component_rules or {}) do
+    local layer = rule.layer
+    if rule.substrate ~= true and (type(layer) ~= "number" or layer < 1 or layer % 1 ~= 0) then
+      local violation = {
+        kind = "invalid_policy",
+        component = rule.component or rule.name,
+        message = "ordinary component has no compiled positive integer layer",
+      }
+      return { ok = false, violations = { violation }, all_violations = { violation } }
+    end
+  end
+
   local modules = graph.modules or {}
   local known = {}
   for _, module_id in ipairs(modules) do
@@ -270,40 +280,10 @@ local function _edn_string(value)
   return "\"" .. escaped .. "\""
 end
 
--- uml-viewer 的 :levels 是「越靠前越内层」的 rank 表:substrate 排最前(rank 0),
--- 其余按层号从大到小(从最内层到最外层)。同层按名字升序,输出确定。
+-- 组序即 levels.edn 的内层优先顺序;加载器已验证完整性,投影不再按层号重排。
 function M.uml_level_groups(policy)
-  local ranked = {}
-  local substrate = {}
-  for _, rule in ipairs(policy.component_rules or {}) do
-    local entry = { name = rule.component or rule.name, layer = rule.layer }
-    if rule.substrate == true then
-      substrate[#substrate + 1] = entry
-    else
-      ranked[#ranked + 1] = entry
-    end
-  end
-  table.sort(substrate, function(a, b) return a.name < b.name end)
-  table.sort(ranked, function(a, b)
-    if a.layer ~= b.layer then return a.layer > b.layer end
-    return a.name < b.name
-  end)
-
-  local groups = {}
-  for _, entry in ipairs(substrate) do
-    groups[#groups + 1] = { entry.name }
-  end
-  local index = 1
-  while index <= #ranked do
-    local layer = ranked[index].layer
-    local group = {}
-    while index <= #ranked and ranked[index].layer == layer do
-      group[#group + 1] = ranked[index].name
-      index = index + 1
-    end
-    groups[#groups + 1] = group
-  end
-  return groups
+  assert(type(policy.level_groups) == "table", "arch policy has no compiled level groups")
+  return policy.level_groups
 end
 
 function M.project_uml_policy(policy)
@@ -327,7 +307,67 @@ function M.project_uml_policy(policy)
   }, "\n")
 end
 
-function M.load(path)
+local function _levels_error(path, line, message)
+  return string.format("invalid arch levels %s (line %d): %s", tostring(path), line or 1, message)
+end
+
+local function _compile_levels(policy, groups, lines, levels_path)
+  if type(policy) ~= "table" or type(policy.component_rules) ~= "table" then
+    return nil, "invalid arch policy: component_rules must be an array"
+  end
+  local components = {}
+  for _, rule in ipairs(policy.component_rules) do
+    local name = type(rule) == "table" and rule.component or nil
+    if type(name) ~= "string" or name == "" then
+      return nil, "invalid arch policy: every component rule needs a component name"
+    end
+    if components[name] ~= nil then
+      return nil, "invalid arch policy: duplicate component " .. name
+    end
+    if rule.layer ~= nil then
+      return nil, "invalid arch policy: numeric layer moved to " .. tostring(M.DEFAULT_LEVELS_PATH)
+    end
+    components[name] = rule
+  end
+
+  local seen = {}
+  for group_index, group in ipairs(groups) do
+    local substrate_in_group = false
+    for _, name in ipairs(group) do
+      local rule = components[name]
+      if rule == nil then
+        return nil, _levels_error(levels_path, lines[name], "unknown component :" .. name)
+      end
+      seen[name] = true
+      substrate_in_group = substrate_in_group or rule.substrate == true
+      if rule.substrate == true and group_index ~= 1 then
+        return nil, _levels_error(levels_path, lines[name], "substrate must be in the innermost group")
+      end
+    end
+    for _, name in ipairs(group) do
+      if substrate_in_group and components[name].substrate ~= true then
+        return nil, _levels_error(levels_path, lines[name], "substrate cannot share a group with ordinary components")
+      end
+    end
+  end
+  for name in pairs(components) do
+    if not seen[name] then
+      return nil, _levels_error(levels_path, 1, "missing component :" .. name)
+    end
+  end
+
+  for group_index, group in ipairs(groups) do
+    for _, name in ipairs(group) do
+      if components[name].substrate ~= true then
+        components[name].layer = #groups - group_index + 1
+      end
+    end
+  end
+  policy.level_groups = groups
+  return policy
+end
+
+function M.load(path, levels_path)
   local fs_lib = require("foundation.fs")
   local raw = fs_lib.read_file(path)
   if raw == nil then
@@ -337,7 +377,18 @@ function M.load(path)
   if not ok then
     return nil, "cannot decode arch policy " .. tostring(path) .. ": " .. tostring(policy)
   end
-  return policy
+
+  if levels_path == nil then
+    local parent = require("foundation.path").parent_dir(path)
+    levels_path = (parent or ".") .. "/levels.edn"
+  end
+  local levels_raw = fs_lib.read_file(levels_path)
+  if levels_raw == nil then
+    return nil, _levels_error(levels_path, 1, "cannot read arch levels")
+  end
+  local groups, lines, read_err = require("packages.arch_policy.levels").read(levels_raw, levels_path)
+  if groups == nil then return nil, read_err end
+  return _compile_levels(policy, groups, lines, levels_path)
 end
 
 return M

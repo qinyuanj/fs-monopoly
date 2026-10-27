@@ -99,7 +99,7 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 ## ADR 0068 — 质量控制全量交接到 uml-viewer
 
-CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异走 crapper / mutator 的 Lua 路径，架构面走 policy 与 IR。`docs/architecture.md` 与 `test/guards/` 是「人能读懂、机器能拦」的层边界执行真源，policy 是同一份边界在 uml-viewer 侧的表达式，不构成第二真源。
+CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异走 crapper / mutator 的 Lua 路径，架构面走 policy 与 IR。`docs/architecture.md` 解释职责，`arch_policy/levels.edn`、`arch_policy/policy.json` 与 `test/guards/` 构成层边界执行真源；仓根 `policy.edn` 只是同一份边界在 uml-viewer 侧的投影，不构成第二真源（层序来源由 ADR 0077 窄化修订）。
 
 理由：uml-viewer 已承担「非 Clojure 的 CRAP 与变异」，具备 Lua 扫描与 WSL Ubuntu 复验记录（ADR 0073）；本仓沿用同一实现与架构边界，避免维护两套会漂移的真源。
 
@@ -119,7 +119,7 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 接入 uml-viewer 的图窗与 companion 时，两件事按本仓口径而非上游默认处理：
 
-1. **policy 是生成物，推演另存**。仓根 `policy.edn` 由 `lua5.4 tools/cli.lua uml ir` 从 `arch_policy.project_uml_policy` 投影生成、不入库；上游 policy 中唯一需要人手维护的 `:proposals` 与 `:omit` 存于入库的 `docs/architecture.proposals.edn`，生成时合并。companion 不得直接改写 `policy.edn`：层序或归属不对，改 `docs/architecture.md` 与 guard；推演只写覆盖文件，再经 `uml ir` 重生。
+1. **policy 是生成物，推演另存**。仓根 `policy.edn` 由 `lua5.4 tools/cli.lua uml ir` 从 `arch_policy.project_uml_policy` 投影生成、不入库；上游 policy 中唯一需要人手维护的 `:proposals` 与 `:omit` 存于入库的 `docs/architecture.proposals.edn`，生成时合并。companion 不得直接改写 `policy.edn`：维护者按 ADR 0077 修改层配置或组件策略与 guard；推演只写覆盖文件，再经 `uml ir` 重生。**ADR 0077 只修订层序与同层分组的来源，其余生成式 policy、proposals 分离与 companion 限制不变。**
 2. **companion 继承钉死的环境**。图窗只经 `lua5.4 tools/cli.lua uml view` 启动，它在调用上游启动器前钉死 `LUA_PATH` / `LUA_CPATH`；Herdr 由上游从继承的 PATH 中选取（>= 0.9.3、protocol 22 的最高版），本仓不钉版本、不改 PATH 次序。上游每次全新启动都为本项目新建 Herdr server，环境沿启动链原样下传到 companion 及其子 shell，`--restart` 与崩溃恢复复用同一 server；因此仓根 `./uml` 在该 companion 内可用，在其他场合仍按 ADR 0068 不作入口。
 
 理由：上游 policy 是单个 EDN 文件、不支持引用，companion 的系统提示要求它「写或更新 policy」——照做即生成与 `docs/architecture.md` 并行漂移的第二真源；而每次重生又会冲掉 `:proposals`，所以只把推演拆出。上游提示词硬编码 `./uml crap|mutate|ir`，仅靠 AGENTS.md 让 companion 改用 `lua5.4 tools/cli.lua uml` 会与系统提示冲突、遵从不可预期；在入口处钉环境让上游命令本身变对。上游 `c714f83` 起 Herdr 由精确 0.9.3 放宽为 PATH 上 >= 0.9.3 的最高版，此前「0.9.3 局部置前」的做法会与用户已装的新版并存而让上游选取失败，故撤除；预检只按同口径确认 PATH 上至少有一个达标版本，不改全局 Herdr，也不改只读的上游检出。companion 以 `--dangerously-skip-permissions` 运行，维护者接受，并以 AGENTS.md 限定其边界：只改覆盖文件与 `src/`，不动 git 远端、不关单。
@@ -207,3 +207,13 @@ CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的�
 3. **其余层不按目录排除**。`host` 适配层照常变异；无变异点的配置数据表与端口声明不显式排除，按「无变异点」记录。
 
 理由：UI 层代码主要是布局、文案与显隐，测试不断言视觉结果，存活变异多数只改变表现，难以转成可执行的测试缺口；而 `src/ui/` 约占 `src/` 文件数的 40%，是全量变异的最大开销。`coord`、`schema`、`state` 等子目录看似纯逻辑，实际依赖 UI 渲染与宿主角色上下文，按子目录拆分的边界不稳。代价：UI 层没有变异证据，只有 CRAP 的复杂度与行覆盖；确有纯逻辑的 UI 模块时可单独点名执行，但不进全量口径。
+
+## ADR 0077 — 层序与同层分组迁入原生 UML levels 配置
+
+`tools/packages/arch_policy/levels.edn` 是层序与同层分组的唯一权威，顶层只含 `:levels`，组序由内向外，同组组件同层。`tools/packages/arch_policy/policy.json` 删除数字 `layer`，继续声明模块匹配、substrate、扫描范围、模块前缀、额外禁向依赖、环豁免与外部模块。`docs/architecture.md` 只保留职责和边界理由，不再充当层序真源。
+
+`packages.arch_policy.load` 同时读取两份配置并编译内存策略：非 substrate 的层号由组序与总组数推导，保持数字越大越内层；guard 与 `project_uml_policy` 必须走这条加载链。组件缺失、重复、未知，substrate 不在最内层或与普通组件混组，以及层配置缺失、malformed 或含多余内容都 fail-closed。受限纯 Lua reader 只接受本配置所需 EDN，带出来源与行号，不引入 rock，也不让 slim guard 依赖 uml-viewer 的 Rust/Python 环境。
+
+只迁移层序与同层分组，是因为 `:levels` 无法表达模块匹配、substrate、额外禁向和环豁免；强行全量搬迁会削弱 guard 或制造第二套语义。初始投影保持 app L1、host L2、ui L3、turn L4、player/computer L5、rules L6、state/config L7，foundation 仍为 substrate，扫描仍只覆盖 `src/`。
+
+本条仅取代 ADR 0070 中「层序由架构文档与 guard 维护」的约定。仓根 `policy.edn` 仍是 ignored 生成物，proposals/omit 仍分离，环境钉死与 companion 写面不变；companion 不得修改层配置或组件策略。这与 ADR 0068 的「UML policy 是投影而非第二真源」一致。
