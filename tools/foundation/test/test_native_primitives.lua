@@ -28,6 +28,10 @@ it("stale inherited PWD does not override the real working directory", function(
   local root = env.make_temp_path("stale_pwd", "")
   local ok, err = xpcall(function()
     check.truthy(fs.ensure_dir(root))
+    -- 期望值取物理路径:macOS 的 TMPDIR 在 /var -> /private/var 软链下。
+    local physical = proc.run_command("cd " .. require("foundation.shell").shell_quote(root) .. " && pwd -P")
+    check.truthy(physical.ok, physical.output)
+    root = (physical.output:gsub("%s+$", ""))
     local script = root .. "/probe.lua"
     check.truthy(fs.write_file(script, [[
 local root = "]] .. env.current_dir() .. [["

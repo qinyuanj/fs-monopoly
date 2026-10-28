@@ -1,6 +1,6 @@
 -- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0073)。
 --
--- 当前开发与工具链保证面是 WSL Ubuntu(ADR 0073),声明表为空:没有「本平台
+-- 当前开发与工具链保证面是 WSL Ubuntu 与 macOS(ADR 0073),声明表为空:没有「本平台
 -- 不支持」的能力需要登记。
 -- 保留不可用/显式跳过的通用演算,工具不可用诊断也复用渲染器。
 --
@@ -24,6 +24,7 @@ local boundary = {}
 boundary.WINDOWS = "windows"
 boundary.POSIX = "posix"
 boundary.LINUX = "linux"
+boundary.MACOS = "macos"
 
 -- 状态词会出现在诊断文本里(可机读)与测试断言里,不要改字面量。
 boundary.UNAVAILABLE = "unavailable"
@@ -41,28 +42,38 @@ boundary.SKIPPED_EXIT_CODE = 0
 -- 声明的平台专用能力表。reason 是取证过的机制,不是泛泛的「不支持」。
 local _DECLARED = {}
 
--- 保证面:Linux(WSL Ubuntu 开发机与 ubuntu-24.04 CI,ADR 0073)。原生 Windows 只是部署目标。
-local _SUPPORTED = boundary.LINUX
+-- 保证面:Linux(WSL Ubuntu 开发机与 ubuntu-24.04 CI)与 macOS(ADR 0073)。
+-- 原生 Windows 只是部署目标。
+local _SUPPORTED = { [boundary.LINUX] = true, [boundary.MACOS] = true }
+
+local function _readable(file)
+  local handle = io.open(file, "r")
+  if handle == nil then return false end
+  handle:close()
+  return true
+end
 
 -- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/");
--- POSIX 侧以 /proc/version 是否可读区分 Linux 与其他 POSIX(如 macOS)。
+-- POSIX 侧以 /proc/version 是否可读区分 Linux,以 SystemVersion.plist 区分 macOS,
+-- 其余 POSIX 归 posix。
 -- 不看 WSL_DISTRO_NAME:ubuntu-24.04 CI 不是 WSL,但与开发机同属保证面(#191 故事 9)。
 -- 只用标准库读文件,不起进程。
 function boundary.host_platform()
   if package.config:sub(1, 1) ~= "/" then
     return boundary.WINDOWS
   end
-  local handle = io.open("/proc/version", "r")
-  if handle ~= nil then
-    handle:close()
+  if _readable("/proc/version") then
     return boundary.LINUX
+  end
+  if _readable("/System/Library/CoreServices/SystemVersion.plist") then
+    return boundary.MACOS
   end
   return boundary.POSIX
 end
 
 -- 保证面判定:当前宿主是否在 ADR 0073 的保证面内。
 function boundary.supported_platform(platform)
-  return (platform or boundary.host_platform()) == _SUPPORTED
+  return _SUPPORTED[platform or boundary.host_platform()] == true
 end
 
 -- 已声明能力 id 清单(排序,供未登记 id 的报错文案与文档对账)。

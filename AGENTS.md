@@ -46,14 +46,14 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 
 ## 平台保证边界（#96 / ADR 0073）
 
-WSL Ubuntu 24.04 是唯一受支持的开发平台；原生 Windows 只是部署目标，不承诺 macOS（ADR 0073 取代 ADR 0066 / 0071）。`dry` 由邻接 `.uml-viewer/dryer` 承接并真实扫描（#148；检出与 venv 按契约手动准备，缺失退 3，有效结果须候选文件数 > 0 且新写出入库的 `.metrics/dry.edn`）。
+WSL Ubuntu 24.04 与 macOS 是受支持的开发平台；原生 Windows 只是部署目标（ADR 0073 取代 ADR 0066 / 0071，2026-10-27 增补 macOS）。`dry` 由邻接 `.uml-viewer/dryer` 承接并真实扫描（#148；检出与 venv 按契约手动准备，缺失退 3，有效结果须候选文件数 > 0 且新写出入库的 `.metrics/dry.edn`）。
 
-- `tools/foundation/platform_boundary.lua` 保留平台声明与显式跳过的通用协议；保证面判定是 `supported_platform()`（`evaluate` 也经它判定），当前为 Linux（WSL 开发机与 ubuntu-24.04 CI）。不可用（退 3）/ 显式跳过（退 0，`status=skipped`）/ 真实失败（退 1 或用法错误退 2）互相区分，跳过不计通过。
+- `tools/foundation/platform_boundary.lua` 保留平台声明与显式跳过的通用协议；保证面判定是 `supported_platform()`（`evaluate` 也经它判定），当前为 Linux（WSL 开发机）与 macOS。不可用（退 3）/ 显式跳过（退 0，`status=skipped`）/ 真实失败（退 1 或用法错误退 2）互相区分，跳过不计通过。
 - 默认硬门禁不包含完整 dry 软车道；tooling 中相关探针实际执行。契约见 `tools/specs/dryer.prompt`。
 - 测试与质量工具的 Lua 依赖只从**受控 Lua 环境**（`luarocks config rocks_trees` 解析的机器 tree，版本口径见 ADR 0072）装载。本仓只核对、不写入、不在项目内自举安装；缺失或版本越界是真实失败（退 1）并打印安装命令。工具/平台显式不可用（#96 / #112）沿用同一「不可用」：`spec-lane`、`behavior_parallel` 等入口退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查环境再重跑，不要当测试回归排查。分类真源是 `tools/foundation/tool_availability.lua`。
 
 ## 操作边界
 
 - 运行 `editor-cli` 的 `play start` / `play stop`（或 `EditorAPI.run_game` / `stop_game`）、模拟输入，或改动部署目录前，先说明并等待用户明确同意。
-- 开发环境只支持 WSL Ubuntu 24.04（ADR 0073）：Lua 5.4 与 LuaRocks 5.4 tree，入口显式写 `lua5.4`；新自动化脚本默认 bash，`cmd.exe` 只作为部署时取 `%USERPROFILE%` 的互操作面。Eggy 宿主位于 Windows 端，部署入口是 `lua5.4 tools/cli.lua deploy`（写入 `/mnt/c/...`，缺 `cmd.exe` / `wslpath` 退 3）。
+- 开发环境支持 WSL Ubuntu 24.04 与 macOS（ADR 0073）：Lua 5.4 与 LuaRocks 5.4 tree，入口显式写 `lua5.4`；新自动化脚本默认 bash，`cmd.exe` 只作为部署时取 `%USERPROFILE%` 的互操作面。Eggy 宿主位于 Windows 端，部署入口是 `lua5.4 tools/cli.lua deploy`（写入 `/mnt/c/...`，缺 `cmd.exe` / `wslpath` 退 3，macOS 上即如此）。
 - `EggyAPI.lua` 与 `EggyEditorAPI.lua` 保持第三方边界，不把它们当作当前宿主契约。

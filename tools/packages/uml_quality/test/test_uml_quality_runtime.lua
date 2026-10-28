@@ -86,10 +86,12 @@ it("rejects a missing module", function()
   check.truthy(verdict.message:find("not found", 1, true))
 end)
 
--- luarocks.loader 若可解析,会按用户 luarocks 配置把全局 tree 接回来;它必须不可见。
-it("requires the luarocks loader to stay unresolvable", function()
-  check.is_true(runtime.loader_verdict(nil).ok)
-  check.is_false(runtime.loader_verdict("/luarocks/bin/lua/luarocks/loader.lua").ok)
+-- luarocks.loader 会按 luarocks 配置把 rocks_trees 接回来。受控 tree 本身就是
+-- rocks_trees,所以 loader 只许不可见,或就装在受控 tree 里(luarocks 自装进 tree)。
+it("requires the luarocks loader to stay unresolvable or inside a controlled tree", function()
+  check.is_true(runtime.loader_verdict(nil, ROOTS).ok)
+  check.is_true(runtime.loader_verdict(TREE .. "/share/lua/5.4/luarocks/loader.lua", ROOTS).ok)
+  check.is_false(runtime.loader_verdict("/luarocks/bin/lua/luarocks/loader.lua", ROOTS).ok)
 end)
 
 it("accepts a python tool from its own checkout with python 3.11 or newer", function()
