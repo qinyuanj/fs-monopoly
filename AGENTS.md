@@ -50,7 +50,7 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 
 WSL Ubuntu 24.04 与 macOS 是受支持的开发平台；原生 Windows 只是部署目标（ADR 0073 取代 ADR 0066 / 0071，2026-10-27 增补 macOS）。`dry` 由邻接 `.uml-viewer/dryer` 承接并真实扫描（#148；检出与 venv 按契约手动准备，缺失退 3，有效结果须候选文件数 > 0 且新写出入库的 `.metrics/dry.edn`）。
 
-- `tools/foundation/platform_boundary.lua` 保留平台声明与显式跳过的通用协议；保证面判定是 `supported_platform()`（`evaluate` 也经它判定），当前为 Linux（WSL 开发机）与 macOS。不可用（退 3）/ 显式跳过（退 0，`status=skipped`）/ 真实失败（退 1 或用法错误退 2）互相区分，跳过不计通过。
+- `tools/foundation/platform_boundary.lua` 只保留保证面判定与不可用判决：保证面判定是 `supported_platform()`，当前为 Linux（WSL 开发机）与 macOS。不可用（退 3）与真实失败（退 1 或用法错误退 2）互相区分，不可用不计通过。
 - 默认硬门禁不包含完整 dry 软车道；tooling 中相关探针实际执行。安装步骤见 `lua5.4 tools/cli.lua dry --help`，使用口径见 `CODING_STANDARDS.md`。
 - 测试与质量工具的 Lua 依赖只从**受控 Lua 环境**（`luarocks config rocks_trees` 解析的机器 tree，版本口径见 ADR 0072）装载。本仓只核对、不写入、不在项目内自举安装；缺失或版本越界是真实失败（退 1）并打印安装命令。工具/平台显式不可用（#96 / #112）沿用同一「不可用」：`spec-lane`、`behavior_parallel` 等入口退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查环境再重跑，不要当测试回归排查。分类真源是 `tools/foundation/tool_availability.lua`。
 
