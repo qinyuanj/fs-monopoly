@@ -1,6 +1,6 @@
 -- 纯路径计算:只做字符串演算,不碰文件系统,也不问当前平台。
 --
--- 与 common 里的 current_dir / system_tmp_dir / make_temp_path 划清界限——那几个要读
+-- 与 foundation.env 里的 current_dir / system_tmp_dir / make_temp_path 划清界限——那几个要读
 -- 环境变量、起子进程,属于 IO,不在这里。这条边界的意义是:路径演算可以脱离文件系统
 -- 单测,不需要临时目录,也不需要替身。
 local text = require("foundation.text")

@@ -4,7 +4,7 @@
 --   lua5.4 tools/cli.lua <子命令> [args...]
 --   lua5.4 tools/cli.lua --help | -h
 --
--- 调度机制:顶层静态路由表 commands(封闭命令集,子命令集合与「不进」清单以
+-- 调度机制:顶层静态路由表 commands(封闭命令集,子命令集合与「不进」清单
 -- 以本文件的封闭命令表为准；伪入口 / swarm / loc 不进）——查表 →
 -- require("packages.<pkg>.cli") → cli.main(args, env) → 顶层统一 os.exit。
 --
@@ -12,9 +12,8 @@
 -- require 失败)/ 3 = 平台或工具不可用(未运行)。缺依赖或版本越界退 1。
 -- 包内处理 --help/-h 并返回 0。
 --
--- 骨架期(#304):包内 cli.lua 统一接口形态落地为骨架约定
--- (return { main = function(args, env) -> 退出码, usage = function() -> string }),
--- 各子命令转发到现状入口(旧物理位置不动);包迁票逐个替换为包内实现。
+-- 包内 cli.lua 统一接口形态(#304):
+-- return { main = function(args, env) -> 退出码, usage = function() -> string }。
 local commands = {
   { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },

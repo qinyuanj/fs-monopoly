@@ -2,7 +2,7 @@
 -- 按原样拷到本地 Eggy 目录。无 build-mode 概念;release 裁切是人工步骤,无专用脚本。
 --
 -- 行为真源:本文件自身(deploy.lua)。历史来源 deploy.ps1(373 行)已随 #384 删除,
--- 整体由本文件取代(ADR 0030);正文中 deploy.ps1 行号仅作历史坐标保留。
+-- 整体由本文件取代(ADR 0030)。
 -- 运行在 WSL Ubuntu(ADR 0073),以 Lua 5.4 标准库 + POSIX 原语完成目标解析、
 -- 目录镜像与逐文件复制;不加载额外文件系统依赖。部署目标仍是 Windows 侧 Eggy
 -- 宿主目录:经 cmd.exe 取 %USERPROFILE%,再用 wslpath -u 换算成 /mnt/c/... 路径。
@@ -573,7 +573,7 @@ local function _error_text(err)
   return tostring(err)
 end
 
--- 主流程(历史坐标 deploy.ps1 #318-373,已随 #384 删除):顺序与输出逐行复刻。
+-- 主流程:顺序与输出逐行复刻历史来源 deploy.ps1(已随 #384 删除)。
 local function main()
   local project_root = M.resolve_project_root()
   local resolved_platform = M.resolve_platform_name()
