@@ -13,6 +13,8 @@
 -- env.root / env.proc / env.fs 可注入替身(测试用);缺省走真实仓根与子进程。
 local M = {}
 
+local tool_cli = require("foundation.tool_cli")
+
 local dryer = require("packages.dry.dryer")
 
 function M.usage()
@@ -90,11 +92,9 @@ end
 function M.main(args, env)
   env = env or {}
   args = args or {}
-  for _, value in ipairs(args) do
-    if value == "--help" or value == "-h" then
-      io.write(M.usage())
-      return 0
-    end
+  local help = tool_cli.help_exit(args, M.usage)
+  if help ~= nil then
+    return help
   end
 
   local root = _absolute_root(env)
