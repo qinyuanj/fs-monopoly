@@ -74,7 +74,7 @@ function M.usage()
     "        POSIX 入口启动图窗;args 原样转发(如 --restart)。退出码原样回传。",
     "",
     "预检失败退 1;check/crap/mutate 另删除陈旧的 .uml-viewer/quality-result.json。",
-    "Python venv 搭建见 tools/specs/uml_quality.prompt。",
+    "Python venv 搭建见 tools/packages/uml_quality/CONTRACT.md。",
     "",
   }, "\n") .. "\n"
 end
@@ -184,7 +184,7 @@ end
 local function _check_python(state, root, tool)
   local python = root .. "/.uml-viewer/" .. tool .. "/.venv/bin/python"
   if not fs.path_exists(python) then
-    _report(state, false, tool .. ": " .. python .. " missing (see tools/specs/uml_quality.prompt)")
+    _report(state, false, tool .. ": " .. python .. " missing (see tools/packages/uml_quality/CONTRACT.md)")
     return
   end
   local result = proc.run_command({ python, "-I", "-c", _PYTHON_PROBE[tool] }, { cwd = root })

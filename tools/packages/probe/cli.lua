@@ -1,4 +1,4 @@
--- packages/probe/cli.lua —— probe 子命令:试玩态探针(契约见 tools/specs/probe.prompt)。
+-- packages/probe/cli.lua —— probe 子命令:试玩态探针(契约见 usage() 与 test/)。
 --
 -- 统一接口形态(#300 决议):
 --   M.main(args, env) -> 退出码(0 有命中 / 1 失败或超时无命中 / 2 用法错误 / 3 editor-cli 不可用)

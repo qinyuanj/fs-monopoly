@@ -68,7 +68,7 @@ lua5.4 tools/cli.lua probe <lua文件> [--timeout <秒>]   # 脚本内调 probe(
 - 截图：`screenshot editor|game` 打印 `C:/FeverApps/party_pc/Documents/editor_cli_screenshots/*.png`，换成 `/mnt/c/FeverApps/...` 直接 Read 看图。
 - **截图已知坑**：远程虚拟屏下 `screenshot game` 返回近黑帧（mean luminance 0）、`screenshot editor` 报 1x1 尺寸；本机试玩时 `screenshot game` 也可能报 `FRAME_NEAR_WHITE`（mean luminance 255，自动重试后放弃，`--help` 未列）。此时改由用户目视确认：agent 发命令、读日志，每次调用后告诉用户确切时间点与要观察什么。
 
-**试玩态（In Game Runtime）**：游戏内代码优先写成 Lua 文件经 `lua5.4 tools/cli.lua probe <文件> [--timeout <秒>]` 执行：脚本内调 `probe(...)` 输出，工具自动加唯一标记、经 `game_execute` 执行、轮询 `log grep`，只返回命中行；不在试玩态时报错，editor-cli 不可用退 3。契约真源：`tools/specs/probe.prompt` 与 `lua5.4 tools/cli.lua probe --help`。
+**试玩态（In Game Runtime）**：游戏内代码优先写成 Lua 文件经 `lua5.4 tools/cli.lua probe <文件> [--timeout <秒>]` 执行：脚本内调 `probe(...)` 输出，工具自动加唯一标记、经 `game_execute` 执行、轮询 `log grep`，只返回命中行；不在试玩态时报错，editor-cli 不可用退 3。契约真源：`lua5.4 tools/cli.lua probe --help` 与 `tools/packages/probe/test/`。
 
 工具底层原理（手工兜底时用）：`exec "EditorAPI.game_execute([[<lua>]])"` 跑在游戏 Lua 环境——可 `require` 部署目录任何模块，可访问 `UIManager` / `GameAPI` 等全局；真实 state 用 `require('src.app').init()` 取（已初始化时返回同一份）。`game_execute` 不回传值：游戏内 `print('DEBUG-xxxx ...')`，再 `log grep DEBUG-xxxx` 读回。`exec --runtime server|client` 在本地图报 `no active playtest server session`，不可用。
 

@@ -1,7 +1,7 @@
 -- packages/dry/dryer.lua —— dry 车道对邻接 dryer 检出的纯演算面(#148 / 父 spec #146)。
 --
 -- 结构重复检测由 qinyuanj/dryer 承接:检出放 uml-viewer 邻接目录 .uml-viewer/dryer,
--- 按文档手动 clone 并建 venv(与 crapper / mutator 同口径,见 tools/specs/dryer.prompt);
+-- 按文档手动 clone 并建 venv(与 crapper / mutator 同口径,见 cli.lua 的 usage());
 -- 本仓只核对、不安装,直接用 venv 的 Python 调 -m dryer(不依赖上游可执行位)。
 -- 本模块不起进程、不落盘;起进程与写终端在 cli.lua。
 local M = {}

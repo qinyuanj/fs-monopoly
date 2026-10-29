@@ -1,4 +1,4 @@
--- crapper / mutator 的 Lua 覆盖与变异测试入口(#99,tools/specs/uml_quality.prompt):
+-- crapper / mutator 的 Lua 覆盖与变异测试入口(#99):
 -- 它们以仓根为模块根直接调 busted.runner,不经本仓 test_runner。
 -- 只取覆盖 src/ 的 behavior + contract;guards / tooling 测的是 tools/,不计入 CRAP。
 return {

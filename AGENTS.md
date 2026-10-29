@@ -15,7 +15,7 @@
 | 工单登记、台账或 triage | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)、[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | 术语登记或领域模型维护 | [`docs/agents/domain.md`](docs/agents/domain.md) |
 | 产品行为或配置 | `src/config/**`、对应 `src/**` 与 `test/behavior/**` |
-| 工具行为、CLI、PATH/env/subprocess 或工具契约 | `tools/specs/*.prompt`、`lua5.4 tools/cli.lua <子命令> --help` 与对应 `tools/**/test/**` |
+| 工具行为、CLI、PATH/env/subprocess 或工具契约 | `lua5.4 tools/cli.lua <子命令> --help` 与对应 `tools/**/test/**`；包内有 `CONTRACT.md` 时一并读（如 `tools/packages/uml_quality/CONTRACT.md`） |
 | 宿主接口或真机行为 | `EggyAPI.lua` / `EggyEditorAPI.lua` 仅作第三方线索；当前适配器、对应测试与 [`docs/decisions.md`](docs/decisions.md) 才是项目真源 |
 | 部署 | `tools/packages/ops/deploy.lua`、`tools/packages/ops/test/` 与 `lua5.4 tools/cli.lua deploy --help` |
 
@@ -38,7 +38,7 @@ push 前唯一硬地板是 slim：`lua5.4 tools/cli.lua verify`。
 
 按改动风险另选（都是显式步骤，不是硬地板）：`lua5.4 tools/cli.lua uml crap`、`lua5.4 tools/cli.lua uml mutate`；完整 flag 以 `lua5.4 tools/cli.lua verify --help` 与 `lua5.4 tools/cli.lua uml --help` 为准。
 
-uml-viewer 质量入口（ADR 0068 / #93）：`lua5.4 tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/uml-viewer/scripts/uml_posix.py` 派发（`UML_VIEWER_TOOL_ROOT` 可指向兄弟仓开发树）。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，也不做受控 Lua 环境预检，模块可能从版本口径外的 tree 解析出来。契约见 `tools/specs/uml_quality.prompt`。
+uml-viewer 质量入口（ADR 0068 / #93）：`lua5.4 tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/uml-viewer/scripts/uml_posix.py` 派发（`UML_VIEWER_TOOL_ROOT` 可指向兄弟仓开发树）。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，也不做受控 Lua 环境预检，模块可能从版本口径外的 tree 解析出来。补充契约见 `tools/packages/uml_quality/CONTRACT.md`。
 
 uml-viewer companion 边界（ADR 0070 / #99）：
 
@@ -51,7 +51,7 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 WSL Ubuntu 24.04 与 macOS 是受支持的开发平台；原生 Windows 只是部署目标（ADR 0073 取代 ADR 0066 / 0071，2026-10-27 增补 macOS）。`dry` 由邻接 `.uml-viewer/dryer` 承接并真实扫描（#148；检出与 venv 按契约手动准备，缺失退 3，有效结果须候选文件数 > 0 且新写出入库的 `.metrics/dry.edn`）。
 
 - `tools/foundation/platform_boundary.lua` 保留平台声明与显式跳过的通用协议；保证面判定是 `supported_platform()`（`evaluate` 也经它判定），当前为 Linux（WSL 开发机）与 macOS。不可用（退 3）/ 显式跳过（退 0，`status=skipped`）/ 真实失败（退 1 或用法错误退 2）互相区分，跳过不计通过。
-- 默认硬门禁不包含完整 dry 软车道；tooling 中相关探针实际执行。契约见 `tools/specs/dryer.prompt`。
+- 默认硬门禁不包含完整 dry 软车道；tooling 中相关探针实际执行。安装步骤见 `lua5.4 tools/cli.lua dry --help`，使用口径见 `CODING_STANDARDS.md`。
 - 测试与质量工具的 Lua 依赖只从**受控 Lua 环境**（`luarocks config rocks_trees` 解析的机器 tree，版本口径见 ADR 0072）装载。本仓只核对、不写入、不在项目内自举安装；缺失或版本越界是真实失败（退 1）并打印安装命令。工具/平台显式不可用（#96 / #112）沿用同一「不可用」：`spec-lane`、`behavior_parallel` 等入口退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查环境再重跑，不要当测试回归排查。分类真源是 `tools/foundation/tool_availability.lua`。
 
 ## 操作边界

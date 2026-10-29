@@ -103,7 +103,7 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 理由：uml-viewer 已承担「非 Clojure 的 CRAP 与变异」，具备 Lua 扫描与 WSL Ubuntu 复验记录（ADR 0073）；本仓沿用同一实现与架构边界，避免维护两套会漂移的真源。
 
-落地（#93 / #191）：本仓的受支持入口是 `lua5.4 tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 sh 启动脚本里调用邻接仓的 POSIX 命令模块 `scripts/uml_posix.py`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，不钉装载面、也不做受控 Lua 环境预检，工具可能从版本口径外的 tree 解析出来。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。契约见 `tools/specs/uml_quality.prompt`。
+落地（#93 / #191）：本仓的受支持入口是 `lua5.4 tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 sh 启动脚本里调用邻接仓的 POSIX 命令模块 `scripts/uml_posix.py`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，不钉装载面、也不做受控 Lua 环境预检，工具可能从版本口径外的 tree 解析出来。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。补充契约见 `tools/packages/uml_quality/CONTRACT.md`。
 
 ## ADR 0069 — 测试框架的终态是 busted
 

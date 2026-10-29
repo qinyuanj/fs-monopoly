@@ -4,8 +4,8 @@
 --   M.main(args, env) -> 退出码(0 有效结果 / 1 真实失败 / 2 用法错误 / 3 不可用)
 --   M.usage()         -> 完整 usage 文本
 --
--- dryer 检出放邻接目录 .uml-viewer/dryer(按 tools/specs/dryer.prompt 手动 clone 并建
--- venv);本包只核对、不安装,直接调 venv Python(-I -m dryer),绕过上游 `sh` 启动器。
+-- dryer 检出放邻接目录 .uml-viewer/dryer(按 usage() 的安装步骤手动 clone
+-- 并建 venv);本包只核对、不安装,直接调 venv Python(-I -m dryer),绕过上游 `sh` 启动器。
 -- 三态互相可辨:
 --   * 不可用:检出或 venv 缺失 —— stderr status=unavailable,退 3,不启动工具;
 --   * 真实失败:预检其余不过、dryer 非零退出、零候选文件、本次未写出 .metrics/dry.edn;
@@ -21,8 +21,11 @@ function M.usage()
     "",
     "结构重复检测(软车道,dryer):抽函数 / 重构前扫候选;选项经 args 直通 dryer",
     "(--threshold / --min-lines / --min-nodes / --edn / --root / -s / --changed ...)。",
-    "dryer 检出在邻接 .uml-viewer/dryer(手动 clone + venv,契约见 tools/specs/dryer.prompt),",
-    "本命令只核对、不安装,直接用 venv 的 Python 运行。",
+    "dryer 检出在邻接 .uml-viewer/dryer;本命令只核对、不安装,直接用 venv 的 Python 运行。",
+    "安装(手动,需 Python 3.11+):",
+    "  git clone https://github.com/qinyuanj/dryer.git .uml-viewer/dryer",
+    "  python3 -m venv .uml-viewer/dryer/.venv",
+    "  .uml-viewer/dryer/.venv/bin/python -m pip install -e .uml-viewer/dryer",
     "",
     "有效结果 = dryer 退 0、候选文件数 > 0 且本次新写出 " .. dryer.METRICS .. "(入库);",
     "否则退 1 并点名原因,绝不把空扫描报成「没有重复」。重复项只提示,不致失败。",
@@ -43,7 +46,7 @@ local function _unavailable(info)
   local verdict = boundary.unavailable_verdict("dry", " tool=" .. dryer.TOOL .. " step=" .. info.step, {
     "dryer 的 " .. (info.step == "checkout" and "邻接检出" or "venv") .. "不可用: " .. info.detail,
     "本次未运行任何检查;退出码 " .. boundary.UNAVAILABLE_EXIT_CODE .. " 表示环境不可用,不是检测结论。",
-    "处理: 按 tools/specs/dryer.prompt 手动 clone qinyuanj/dryer 到 .uml-viewer/dryer 并建 venv,再重跑。",
+    "处理: 按 `lua5.4 tools/cli.lua dry --help` 的安装步骤 clone qinyuanj/dryer 到 .uml-viewer/dryer 并建 venv,再重跑。",
   })
   return boundary.emit(verdict)
 end
