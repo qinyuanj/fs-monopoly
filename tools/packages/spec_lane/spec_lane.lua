@@ -4,16 +4,14 @@ if _VERSION ~= "Lua 5.4" then
   io.stderr:write("Lua 5.4 interpreter required; run `lua5.4 tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
   os.exit(1)
 end
+local _self = debug.getinfo(1, "S").source or "@tools/packages/spec_lane/spec_lane.lua"
+local _sb = dofile(_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$")
+  .. "/../../foundation/script_bootstrap.lua")
+local bootstrap_env, bootstrap = _sb.install(_self)
+
 local function _normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
 end
-local function _module_dir()
-  local source = debug.getinfo(1, "S").source or "@tools/packages/spec_lane/spec_lane.lua"
-  return _normalize_path(source):gsub("^@", ""):match("^(.*)/[^/]+$") or "tools/packages/spec_lane"
-end
-
-local bootstrap = dofile(_module_dir() .. "/../../foundation/bootstrap.lua")
-local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")

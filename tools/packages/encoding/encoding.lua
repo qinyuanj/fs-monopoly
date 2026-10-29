@@ -1,15 +1,7 @@
-local function _normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
-end
-
-local function _module_dir()
-  local source = debug.getinfo(1, "S").source or "@tools/packages/encoding/encoding.lua"
-  local normalized = _normalize_path(source):gsub("^@", "")
-  return normalized:match("^(.*)/[^/]+$") or "tools/packages/encoding"
-end
-
-local bootstrap = dofile(_module_dir() .. "/../../foundation/bootstrap.lua")
-local env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
+local _self = debug.getinfo(1, "S").source or "@tools/packages/encoding/encoding.lua"
+local _sb = dofile(_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$")
+  .. "/../../foundation/script_bootstrap.lua")
+local env = _sb.install(_self)
 
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")

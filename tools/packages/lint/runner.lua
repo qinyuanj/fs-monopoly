@@ -1,7 +1,7 @@
 local _self = debug.getinfo(1, "S").source or "@tools/packages/lint/runner.lua"
 local _sb = dofile(_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$")
   .. "/../../foundation/script_bootstrap.lua")
-local env = _sb.install("tools/packages/lint", _self)
+local env = _sb.install(_self)
 
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
