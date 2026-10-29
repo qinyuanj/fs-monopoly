@@ -9,9 +9,8 @@ function M.usage()
   }, "\n") .. "\n"
 end
 function M.main(args)
-  for _, value in ipairs(args or {}) do
-    if value == "--help" or value == "-h" then io.write(M.usage()); return 0 end
-  end
+  local help = require("foundation.tool_cli").help_exit(args, M.usage)
+  if help ~= nil then return help end
   local command = require("packages.test_runner.lua54").argv_prefix()
   for _, value in ipairs(args or {}) do command[#command + 1] = value end
   local result = require("foundation.proc").run_command(command)
