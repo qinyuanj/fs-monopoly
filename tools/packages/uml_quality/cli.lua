@@ -29,6 +29,7 @@ local proc = require("foundation.proc")
 local fs = require("foundation.fs")
 local env_lib = require("foundation.env")
 local path_lib = require("foundation.path")
+local tool_cli = require("foundation.tool_cli")
 
 local _TOOLS = { check = { "crapper", "mutator" }, crap = { "crapper" }, mutate = { "mutator" }, ir = {}, view = {} }
 
@@ -317,7 +318,7 @@ function M.main(args, env)
   args = args or {}
   env = env or {}
   local op = args[1]
-  if op == "--help" or op == "-h" then
+  if tool_cli.is_help_flag(op) then
     io.write(M.usage())
     return 0
   end
