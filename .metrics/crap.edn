@@ -33,9 +33,11 @@
   {:name "defaults.register", :namespace "ui.render.anim.defaults", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_resolve_contiguous_rent", :namespace "ui.render.board.visual_sync_tile", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_schedule_followup_sound", :namespace "ui.render.board_feedback.sound_player", :complexity 7, :coverage 100.0, :crap 7.0}
+  {:name "M.build_controls", :namespace "ui.screens.market", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "M.open_market_panel", :namespace "ui.screens.market", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_owner_rent_for_tile", :namespace "ui.view.board_slice", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "gift_code.remember_input", :namespace "ui.screens.gift_code", :complexity 6, :coverage 77.7778, :crap 6.3951}
+  {:name "_close_goods_purchase_panel", :namespace "host.paid_purchase_gateway", :complexity 6, :coverage 83.3333, :crap 6.1667}
   {:name "_rejection", :namespace "rules.skin_ownership.purchase", :complexity 6, :coverage 90.9091, :crap 6.027}
   {:name "tip_queue.has_blocking_pending", :namespace "foundation.tips", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_kill_ctrl_unit", :namespace "host.role_die", :complexity 6, :coverage 100.0, :crap 6.0}
@@ -52,7 +54,6 @@
   {:name "camera_sync.sync_camera_position", :namespace "ui.ports.ui_sync.camera", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_walk_branch_children", :namespace "ui.render.anim.unit_overlay_robot", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_skin_names", :namespace "ui.screens.gift_code", :complexity 6, :coverage 100.0, :crap 6.0}
-  {:name "M.build_controls", :namespace "ui.screens.market", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "M.build_route_specs", :namespace "ui.screens.remote_choice", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "host_slot.new", :namespace "ui.seams.host_slot", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_backward_priority", :namespace "rules.items.roadblock", :complexity 5, :coverage 77.7778, :crap 5.2743}
@@ -1074,7 +1075,6 @@
   {:name "_ensure_move_effect_direction", :namespace "ui.render.anim.defaults", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_face_value", :namespace "ui.render.anim.dice", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_roll_screen_opts", :namespace "ui.render.anim.dice", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_resolve_vector_components", :namespace "ui.render.anim.overlay_compute", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_destroy_unit", :namespace "ui.render.anim.overlay_runtime", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "runtime.spawn_transient", :namespace "ui.render.anim.overlay_runtime", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_emit_tip_text", :namespace "ui.render.anim.tip_chain", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1253,7 +1253,6 @@
   {:name "_yielded_wait_state", :namespace "turn.scheduler.runtime", :complexity 3, :coverage 66.6667, :crap 3.3333}
   {:name "_resolve_port_method", :namespace "ui.input.turn_action", :complexity 3, :coverage 66.6667, :crap 3.3333}
   {:name "_safe_call_method", :namespace "ui.ports.ui_sync.camera_target", :complexity 3, :coverage 66.6667, :crap 3.3333}
-  {:name "_create_offset_vector", :namespace "ui.render.anim.overlay_compute", :complexity 3, :coverage 66.6667, :crap 3.3333}
   {:name "_zero_fixed", :namespace "ui.render.move_anim.stop", :complexity 3, :coverage 66.6667, :crap 3.3333}
   {:name "_should_set_owner_colors", :namespace "ui.render.support.assets", :complexity 3, :coverage 66.6667, :crap 3.3333}
   {:name "_resolve_popup_countdown", :namespace "turn.waits.countdown_resolve", :complexity 3, :coverage 71.4286, :crap 3.2099}
@@ -1308,7 +1307,6 @@
   {:name "M.refresh_button", :namespace "ui.render.widgets.skin_panel_buttons", :complexity 3, :coverage 87.5, :crap 3.0176}
   {:name "session.ensure", :namespace "rules.skin_ownership.session", :complexity 3, :coverage 88.8889, :crap 3.0123}
   {:name "_refresh_active_hold", :namespace "state.visual_hold", :complexity 3, :coverage 88.8889, :crap 3.0123}
-  {:name "_offset_pos", :namespace "ui.render.anim.overlay_compute", :complexity 3, :coverage 88.8889, :crap 3.0123}
   {:name "Scope:defer", :namespace "foundation.scope", :complexity 3, :coverage 90.0, :crap 3.009}
   {:name "deity_ops.transfer_deity", :namespace "player.actions.deity", :complexity 3, :coverage 90.0, :crap 3.009}
   {:name "_resolve_action_anim_idle", :namespace "turn.waits.await_action_anim", :complexity 3, :coverage 90.0, :crap 3.009}
@@ -2071,7 +2069,7 @@
   {:name "_camera_sync_of", :namespace "ui.render.anim", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_roll_timing", :namespace "ui.render.anim.dice", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_set_face_nodes_visibility", :namespace "ui.render.anim.dice", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_y_offset_vector", :namespace "ui.render.anim.overlay_compute", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_resolve_xz", :namespace "ui.render.anim.overlay_compute", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "compute.resolve_tile_pos", :namespace "ui.render.anim.overlay_compute", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_get_overlay_bucket", :namespace "ui.render.anim.overlay_runtime", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_make_decorative", :namespace "ui.render.anim.overlay_runtime", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -4031,8 +4029,7 @@
   {:name "_play_roll_dice_for_role", :namespace "ui.render.anim.dice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_set_roll_screen_visible", :namespace "ui.render.anim.dice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "handlers.play_roll_dice_screen", :namespace "ui.render.anim.handlers", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "_native_add", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "_try_native_vector_add", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_ground_y", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_validate_tile_query", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_zero_vector", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "compute.overlay_pos_for_player", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
