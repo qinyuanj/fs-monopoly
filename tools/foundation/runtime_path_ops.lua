@@ -87,4 +87,57 @@ function runtime_path_ops.parent_dir(path)
   return parent
 end
 
+local function _looks_like_repo_root(path)
+  local required_entries = {
+    "src",
+    "test",
+    "tools",
+    "tools/cli.lua",
+  }
+
+  for _, entry in ipairs(required_entries) do
+    if runtime_path_ops.path_exists(runtime_path_ops.join(path, entry)) ~= true then
+      return false
+    end
+  end
+
+  return true
+end
+
+-- 从源文件路径上溯定位仓根。bootstrap 在 package.path 装好之前经 dofile 装载本文件,
+-- 所以这里只能用本文件内的纯 Lua 原语,不得 require。
+function runtime_path_ops.resolve(opts)
+  opts = opts or {}
+
+  local cwd = runtime_path_ops.normalize(opts.cwd or runtime_path_ops.current_dir())
+  local source_path = runtime_path_ops.resolve_source_path(
+    opts.source_path or opts.script_path or opts.module_source or "",
+    cwd
+  )
+  local script_dir = source_path
+  if source_path:match("%.lua$") ~= nil then
+    script_dir = runtime_path_ops.dirname(source_path)
+  end
+
+  local probe = script_dir
+  while probe ~= "" do
+    if _looks_like_repo_root(probe) then
+      return {
+        source_path = source_path,
+        script_dir = script_dir,
+        repo_root = probe,
+        tools_dir = runtime_path_ops.join(probe, "tools"),
+      }
+    end
+
+    local parent = runtime_path_ops.parent_dir(probe)
+    if parent == probe or parent == "" then
+      break
+    end
+    probe = parent
+  end
+
+  error("failed to resolve repo_root from source path: " .. tostring(source_path))
+end
+
 return runtime_path_ops

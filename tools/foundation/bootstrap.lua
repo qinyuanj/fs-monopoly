@@ -8,15 +8,15 @@ local function _module_dir()
   return normalized:match("^(.*)/[^/]+$") or "tools/foundation"
 end
 
-local runtime_paths = dofile(_module_dir() .. "/runtime_paths.lua")
+local path_ops = dofile(_module_dir() .. "/runtime_path_ops.lua")
 
 local bootstrap = {}
 
 function bootstrap.resolve(script_path, opts)
   opts = opts or {}
-  return runtime_paths.resolve({
+  return path_ops.resolve({
     source_path = script_path or opts.source_path or (debug.getinfo(2, "S") and debug.getinfo(2, "S").source) or "",
-    cwd = opts.cwd or runtime_paths.current_dir(),
+    cwd = opts.cwd or path_ops.current_dir(),
   })
 end
 
@@ -25,7 +25,7 @@ end
 -- 不写入任何 tree,也不在项目内自举安装 rock。
 function bootstrap.install(script_path, opts)
   local env = bootstrap.resolve(script_path, opts)
-  local helper_path = runtime_paths.join_path(env.tools_dir, "foundation/package_path_helper.lua")
+  local helper_path = path_ops.join(env.tools_dir, "foundation/package_path_helper.lua")
   local helper = dofile(helper_path)
   helper.install_eggy_package_paths({
     repo_root = env.repo_root,
@@ -44,7 +44,7 @@ end
 -- 裸命令名解析成完整可执行路径(`command -v` 首个命中);已是路径形态原样返回。
 -- 只供 tool_discovery_env 导出使用,不改变 detect_lua54 自身的候选语义。
 local function _interpreter_path(selected)
-  local normalized = runtime_paths.normalize_path(selected)
+  local normalized = path_ops.normalize(selected)
   if normalized:find("/") ~= nil then
     return normalized
   end
@@ -53,7 +53,7 @@ local function _interpreter_path(selected)
   if found.ok == true then
     local line = tostring(found.output or ""):match("[^\r\n]+")
     if line ~= nil and line ~= "" then
-      return runtime_paths.normalize_path(line)
+      return path_ops.normalize(line)
     end
   end
   return selected
@@ -66,14 +66,14 @@ local function _luarocks_exe()
   local fs_lib = require("foundation.fs")
   local override = os.getenv("MONOPOLY_LUAROCKS_EXE")
   if override ~= nil and override ~= "" then
-    override = runtime_paths.normalize_path(override)
+    override = path_ops.normalize(override)
     if fs_lib.path_exists(override) then
       return override
     end
   end
   local shell_lib = require("foundation.shell")
   local found = require("foundation.proc").run_command("command -v " .. shell_lib.shell_quote("luarocks"))
-  local rocks = found.ok and runtime_paths.normalize_path(tostring(found.output):match("[^\r\n]+") or "") or nil
+  local rocks = found.ok and path_ops.normalize(tostring(found.output):match("[^\r\n]+") or "") or nil
   if rocks == "" then rocks = nil end
   assert(rocks ~= nil, "luarocks executable missing on PATH (install luarocks with Lua 5.4)")
   return rocks

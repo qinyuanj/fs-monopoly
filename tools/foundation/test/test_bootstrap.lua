@@ -10,7 +10,7 @@ local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local test_source = debug.getinfo(1, "S").source:gsub("^@", "")
 local test_dir = test_source:match("^(.*)/[^/]+$") or "tools/foundation/test"
-local runtime_paths = dofile(test_dir .. "/../runtime_paths.lua")
+local runtime_path_ops = dofile(test_dir .. "/../runtime_path_ops.lua")
 local bootstrap_path = test_dir .. "/../bootstrap.lua"
 local bootstrap = require("foundation.bootstrap")
 
@@ -103,7 +103,7 @@ it("resolves a repo root from the standard tool layout", function()
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools")))
   check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/cli.lua"), "return {}"))
 
-  local env = runtime_paths.resolve({
+  local env = runtime_path_ops.resolve({
     cwd = root,
     source_path = "tools/foundation/bootstrap.lua",
   })
