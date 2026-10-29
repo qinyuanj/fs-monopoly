@@ -109,4 +109,30 @@ it("forward subprocess passes args and exit code", function()
   end)
 end)
 
+
+it("help flag is exactly --help or -h", function()
+  check.is_true(tool_cli.is_help_flag("--help"))
+  check.is_true(tool_cli.is_help_flag("-h"))
+  check.is_false(tool_cli.is_help_flag("-help"))
+  check.is_false(tool_cli.is_help_flag("--h"))
+  check.is_false(tool_cli.is_help_flag(nil))
+end)
+
+it("help exit writes usage and returns 0 when any arg asks for help", function()
+  local written = {}
+  local out = { write = function(_, text) written[#written + 1] = text end }
+
+  check.equal(0, tool_cli.help_exit({ "src", "-h" }, function() return "用法: x\n" end, out))
+  check.same({ "用法: x\n" }, written)
+end)
+
+it("help exit returns nil and writes nothing without a help flag", function()
+  local written = {}
+  local out = { write = function(_, text) written[#written + 1] = text end }
+
+  check.is_nil(tool_cli.help_exit({ "src" }, function() return "用法: x\n" end, out))
+  check.is_nil(tool_cli.help_exit(nil, function() return "用法: x\n" end, out))
+  check.same({}, written)
+end)
+
 end)

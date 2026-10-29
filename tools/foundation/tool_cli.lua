@@ -10,6 +10,9 @@
 -- 原样透传给 runner;默认值如何与调用方 env 合并由 runner 自理(#323),
 -- cli adapter 不替 runner 合并。
 --
+-- `--help` / `-h` 的判定与 usage 输出也收在这里(is_help_flag / help_exit),
+-- 所有包 cli 与顶层 tools/cli.lua 共用,不再各自内联。
+--
 -- 语义:
 --   pcall(require, runner_module) 失败(缺上游工具、package.path 未装等)→
 --   子进程兜底 `lua <runner_script> <args...>`,退出码透传(runner 脚本经
@@ -60,6 +63,28 @@ function tool_cli.run(opts, args, env)
     return tool_cli.forward_subprocess(opts.runner_script, args)
   end
   return tool_cli.normalize_exit_code(runner.run(args or {}, env))
+end
+
+-- `--help` / `-h` 判定的唯一出处。按位置识别帮助的子命令(只看首参、子命令后
+-- 的帮助等)直接用它;其余子命令走 help_exit。
+function tool_cli.is_help_flag(value)
+  return value == "--help" or value == "-h"
+end
+
+-- 任一参数是帮助开关时把 usage() 写到 out 并返回 0;否则返回 nil,调用方继续
+-- 正常流程。缺省 out 时调 io.write(按调用时查表,测试替身 io.write 照样生效)。
+function tool_cli.help_exit(args, usage, out)
+  for _, value in ipairs(args or {}) do
+    if tool_cli.is_help_flag(value) then
+      if out ~= nil then
+        out:write(usage())
+      else
+        io.write(usage())
+      end
+      return 0
+    end
+  end
+  return nil
 end
 
 return tool_cli
