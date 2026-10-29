@@ -64,16 +64,6 @@ end
 
 describe("deploy public sandbox contracts", function()
 
-it("get text formats bilingual", function()
-  check.equal("部署 / Deploy", deploy.get_text("部署", "Deploy"))
-end)
-
-it("normalize path replaces all backslashes", function()
-  check.equal("C:/Users/foo", deploy.normalize_path_text("C:\\Users\\foo"))
-  check.equal("/mnt/c", deploy.normalize_path_text("/mnt/c"))
-  check.equal("", deploy.normalize_path_text(""))
-end)
-
 it("Lua source directory name is retained", function()
   -- "大富翁" = U+5927 U+5BCC U+7FC1(UTF-8)。
   check.equal("LuaSource_大富翁", deploy.join_lua_source_dir_name())
@@ -157,6 +147,13 @@ it("home directory resolves the Windows profile through wslpath", function()
   check.same("/mnt/c/Users/测试 user", home)
   check.truthy(commands[1]:find("%USERPROFILE%", 1, true), commands[1])
   check.truthy(commands[2]:find("wslpath -u 'C:\\Users\\测试 user'", 1, true), commands[2])
+end)
+
+it("home directory normalizes backslashes in the converted path", function()
+  check.same("/mnt/c/Users/foo", deploy.resolve_windows_home_dir(function(command)
+    if command:find("cmd.exe", 1, true) then return "C:\\Users\\foo\n" end
+    return "/mnt/c/Users\\foo\n"
+  end))
 end)
 
 it("home directory is empty when the profile cannot be resolved", function()

@@ -30,10 +30,6 @@ local proc_lib = require("foundation.proc")
 
 local M = {}
 
-local function _is_blank(value)
-  return text_lib.trim(value) == ""
-end
-
 -- foundation 以 (nil, err) 报错;部署流程以 error 终止,由 run_cli 统一打印 ERROR。
 local function _check(ok, err)
   if not ok then
@@ -69,11 +65,7 @@ local function _script_dir()
   return path_lib.parent_dir(source) or env_lib.current_dir()
 end
 
--- 文本 / 输出 / 错误工具(Get-Text / Write-Info / Exit-WithError 等价)。
-
-function M.get_text(zh, en)
-  return text_lib.bilingual(zh, en)
-end
+-- 输出 / 错误工具(Write-Info / Exit-WithError 等价)。
 
 function M.write_info(message)
   io.stdout:write(tostring(message or ""), "\n")
@@ -82,12 +74,6 @@ end
 function M.exit_with_error(message)
   io.stderr:write("ERROR: " .. tostring(message or ""), "\n")
   os.exit(1)
-end
-
--- 路径工具。
-
-function M.normalize_path_text(value)
-  return path_lib.normalize_path(value)
 end
 
 local function _is_file(path)
@@ -109,15 +95,15 @@ function M.resolve_windows_home_dir(run)
   if converted == "" or not path_lib.is_absolute_path(converted) then
     return ""
   end
-  return (M.normalize_path_text(converted))
+  return (path_lib.normalize_path(converted))
 end
 
 -- 家目录:部署目标始终是 Windows 侧家目录;WSL 的 $HOME 只作为测试与沙箱的
 -- 显式覆写面(环境变量 MONOPOLY_DEPLOY_HOME),不参与默认目标推导。
 function M.resolve_home_dir()
   local override = os.getenv("MONOPOLY_DEPLOY_HOME")
-  if not _is_blank(override) then
-    return (M.normalize_path_text(override))
+  if text_lib.trim(override) ~= "" then
+    return (path_lib.normalize_path(override))
   end
   return M.resolve_windows_home_dir()
 end
@@ -164,7 +150,7 @@ function M.format_uncommitted_notice(paths)
 end
 
 function M.resolve_normalized_path(path_text)
-  if _is_blank(path_text) then
+  if text_lib.trim(path_text) == "" then
     return ""
   end
 
@@ -202,7 +188,7 @@ end
 
 function M.resolve_default_target_path()
   local home_dir = M.resolve_home_dir()
-  if _is_blank(home_dir) then
+  if text_lib.trim(home_dir) == "" then
     M.exit_with_error("Cannot resolve the Windows home directory (%USERPROFILE%) for the default deploy target.")
   end
   return M.resolve_normalized_path(
@@ -223,7 +209,7 @@ function M.resolve_project_root()
   }
 
   for _, candidate in ipairs(candidates) do
-    if not _is_blank(candidate) and M.test_project_root(candidate) then
+    if text_lib.trim(candidate) ~= "" and M.test_project_root(candidate) then
       return M.resolve_normalized_path(candidate)
     end
   end
@@ -236,6 +222,8 @@ function M.reset_directory(path_text)
   _check(fs_lib.ensure_dir(path_text))
 end
 
+-- 与 #222 前的实现不同:find -type f 不跟随符号链接,`.lua` 后缀区分大小写(`.LUA`
+-- 不计入);payload 无符号链接、无大写后缀,统计不变。
 local function _collect_lua_files(path)
   local files, err = proc_lib.collect_lua_files(path)
   _check(files, err)
@@ -244,6 +232,8 @@ end
 
 -- 目录镜像:先删目标再整体拷贝,可观察结果与历史镜像语义一致(目标侧陈旧文件
 -- 消失,源侧隐藏项与空目录保留,字节原样)。源缺失时先报错,目标保持不动。
+-- 与 #222 前的逐文件实现不同:fs.copy_tree(cp -R)复制符号链接本身而非其指向内容;
+-- payload 不含符号链接,结果不变。
 function M.copy_directory_tree(source_dir, target_dir)
   if not fs_lib.is_dir(source_dir) then
     error("Source directory does not exist: " .. tostring(source_dir))
