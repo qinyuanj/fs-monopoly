@@ -1,5 +1,6 @@
 if arg then rawset(arg, 0, "tools/foundation/test/test_script_tools_contract.lua") end
 local suite = require("test.support.tooling_suites.architecture.script_tools_contract")
+local check = require("luassert")
 
 -- 脚本工具契约的唯一挂载点:每行一个 owner,新增消费者只在这里加一行。
 -- 套件里 owner 不在本表的用例会在 "every case has a registered owner" 判红,
@@ -39,6 +40,6 @@ describe("script tools contract table", function()
         end
       end
     end
-    assert.same({}, orphans)
+    check.same({}, orphans)
   end)
 end)
