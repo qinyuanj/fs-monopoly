@@ -139,9 +139,11 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 2. **测试运行器**。`tools/packages/test_runner/runner.lua` 先预检，再把受控 tree 的 share/lib 路径接入本进程；`cache_loader` 只从这些 tree 装载 busted 及依赖，解析到 tree 之外（含 C 模块）即失败，未验证的 `package.loaded` 预注入同样失败。项目内不提供安装入口。
 3. **变异 worker**。worker 的搜索模板只允许指向 worker 自身与受控 tree；模板指向其他 tree、源仓库代码、外部路径、路径穿越或空模板均失败。worker 不安装、不复制、不链接任何 rocks tree，`lfs` 校验器也从受控 tree 的 C 路径装载。
 4. **uml 子进程**。`uml` 预检把每个受控 tree 的 `share/lua/5.4` 与 `lib/lua/5.4` 写进子进程的 `LUA_PATH(_5_4)` / `LUA_CPATH(_5_4)`（另加仓根），模块探针按同一组根判定来源；`./uml` 安装器拷贝仍不是入口，因为它不钉装载面、也不做预检。
-5. **清理边界**。`distclean` 与 `clean` 同义。spec_lane 的实测时长缓存存于仓内 `tmp/`（gitignored，由 `clean` 清理）。
+5. **清理边界**。清生成物只有 `clean` 一个子命令。spec_lane 的实测时长缓存存于仓内 `tmp/`（gitignored，由 `clean` 清理）。
 
 代价与边界：每台开发机必须自行提供满足口径的机器 tree（CI 已于 2026-10-22 撤销，`.github/scripts/setup-lua.sh` 随之删除，历史供给口径仅存于本句）。缺失或版本越界是真实失败（退 1）；退 3 只保留给平台/工具显式不可用。模块来源、版本、worker 绑定与 uml 探针在每次运行时核对。
+
+修订记录：2026-10-29 删除 `distclean` 别名，清理只剩 `clean`（#220 / #218）。
 
 ## ADR 0073 — 开发与工具链保证面迁到 WSL Ubuntu 与 macOS
 

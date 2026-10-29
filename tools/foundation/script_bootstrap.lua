@@ -1,7 +1,8 @@
 -- script_bootstrap.lua —— 直跑脚本入口的引导共享块。
 --
 -- 消费者:tools/packages/lint/runner.lua、tools/packages/encoding/encoding.lua、
--- tools/packages/spec_lane/spec_lane.lua。样板逻辑(normalize / match / dofile /
+-- tools/packages/spec_lane/spec_lane.lua、tools/packages/ops/deploy.lua(只在直跑时
+-- install,被 require 时跳过)。样板逻辑(normalize / match / dofile /
 -- install 的 source 选择)唯一出处在这里,每个入口头部只剩 3 行:
 --
 --   local _self = debug.getinfo(1, "S").source or "@tools/packages/<pkg>/<entry>.lua"
