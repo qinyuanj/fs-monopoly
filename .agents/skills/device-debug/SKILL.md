@@ -13,7 +13,8 @@ description: 真机运行时取证：分析部署目录 log.txt 定位异常，�
 - **editor-cli**：用 `/mnt/c/Users/<user>/.eggitor/cli/editor-cli.exe`（0.20.x，原生 Windows 可执行，从 WSL 经互操作直接调用；`env-res list` 查版本，`env-res update editor_cli_win` 升级）。`/mnt/c/FeverApps/party_pc/bin/editor-cli.exe` 是随客户端装的 0.4.0 旧版，命令面不同，不用它。连接自动发现编辑器实例，不必指定端口；`status` 连不上 = 编辑器没启动或没开 editor-cli，提示用户开，`doctor` 给完整只读诊断。
 - **授权分层**：只读命令（`status` / `log *` / `screenshot` / `docs search` / `api *` / 只返回或只打印的 `exec`、日志分析脚本）直接跑。部署目录改动、改存档或改场景的 `exec`、`input *` 逐次授权：先说明影响与回滚方式，等用户明确同意；未获同意时保留现场。
 - **试玩交接：用户开关，agent 观察**。准备就绪后提示用户开启或结束试玩，只用只读 `status` 等状态翻转（约 10–20s）；确需代跑 `play start` / `play stop` 时，逐次说明并等用户明确同意。中断或用户暂未操作时，如实报告当前状态并等待。
-- **真人操作先协调**：需要点槽位、切回合或开第二个客户端时，先确认用户在场且愿意配合。优先设计自动化路径——试玩态 `game_execute` 能 `require` 任何模块、直调裁定入口、`inventory.give` 造状态、`print` + 截图取证；实在只能靠手点的（如 UI 事件 payload 的真实内容），如实说明这条自动化验不了。
+- **真人操作先协调**：需要点槽位、切回合或开第二个客户端时，先确认用户在场且愿意配合。优先设计自动化路径——试玩态 `probe` 能 `require` 任何模块、直调裁定入口、`inventory.give` 造状态、`probe(...)` + 截图取证；实在只能靠手点的（如 UI 事件 payload 的真实内容），如实说明这条自动化验不了。
+- **付费购买**：已验证事实见 [#216](https://github.com/qinyuanj/fs-monopoly/issues/216)——批量购买界面无 Lua 关闭接口；`show_goods_purchase_panel(id, 0.1)` 可收起第一层购买页；`get_commodity_count` 跨局保留、`consume_commodity` 可扣减。**未核实**：编辑器试玩内宿主金豆商品购买是否真实扣费。
 
 ## 入口一：log.txt 事后取证
 
@@ -47,11 +48,16 @@ cd /mnt/c/Users/<user>/.eggitor/cli
 ./editor-cli.exe play start|stop          # 需逐次授权
 ./editor-cli.exe docs search "<问题>" --docset manual|game-api|editor-api --limit 3
 ./editor-cli.exe api search|get <名>      # 运行时 API 实时 meta；编辑态用 search-editor|get-editor
+
+# 试玩态探针（在仓根 WSL 侧跑）
+lua5.4 tools/cli.lua probe <lua文件> [--timeout <秒>]   # 脚本内调 probe(...) 输出，只返回命中行
 ```
 
 日志按文件读，不需要清缓冲；每次取证用唯一标记（`DEBUG-xxxx`）配 `log grep`，旧日志不会混进来。`exec` 报错以非零退出码返回并附堆栈。
 
 本项目是帧同步（FS）地图，`docs search` 显式写 `--docset fs-manual`（使用说明）或 `fs-component`（组件）；`manual` 是 SE（状态同步 / 世界版）手册，其 `game:GetService(...)` 体系不适用；`game-api` 是否适用先以真机探针核实。文档条目多数没有来源 URL，结论要以真机探针复核。
+
+`docs search` 输出很大（一次多词扫描约 8000 token）：主线程只做单次精确查询；要连续查多个关键词或多个 docset 时派子代理查，只带回结论表 `接口 | FS可用? | 存根中? | 结论`。
 
 ### 两种状态，两套 API
 
@@ -60,8 +66,11 @@ cd /mnt/c/Users/<user>/.eggitor/cli
 - **node_id 是字符串**（打印出来像整数）：跨 exec 传递别写 int 字面量（会 `param 1 type mismatch`），每次 `get_eui_node_ids_by_name(...)[1]` 现取。
 - 属性名用这套：`pos` / `size` / `anchor`（表，取 `.x/.y`）/ `visible` / `scale` / `rotation` / `opacity` / `name`；`position` 之类猜错了返回 nil。
 - 截图：`screenshot editor|game` 打印 `C:/FeverApps/party_pc/Documents/editor_cli_screenshots/*.png`，换成 `/mnt/c/FeverApps/...` 直接 Read 看图。
+- **截图已知坑**：远程虚拟屏下 `screenshot game` 返回近黑帧（mean luminance 0）、`screenshot editor` 报 1x1 尺寸。此时改由用户目视确认：agent 发命令、读日志，每次调用后告诉用户确切时间点与要观察什么。
 
-**试玩态（In Game Runtime）**：游戏内代码一律经 `exec "EditorAPI.game_execute([[<lua>]])"`，跑在游戏 Lua 环境——可 `require` 部署目录任何模块，可访问 `UIManager` / `GameAPI` 等全局；真实 state 用 `require('src.app').init()` 取（已初始化时返回同一份）。`game_execute` 不回传值：游戏内 `print('DEBUG-xxxx ...')`，再 `log grep DEBUG-xxxx` 读回。`exec --runtime server|client` 在本地图报 `no active playtest server session`，不可用。
+**试玩态（In Game Runtime）**：游戏内代码优先写成 Lua 文件经 `lua5.4 tools/cli.lua probe <文件> [--timeout <秒>]` 执行：脚本内调 `probe(...)` 输出，工具自动加唯一标记、经 `game_execute` 执行、轮询 `log grep`，只返回命中行；不在试玩态时报错，editor-cli 不可用退 3。契约真源：`tools/specs/probe.prompt` 与 `lua5.4 tools/cli.lua probe --help`。
+
+工具底层原理（手工兜底时用）：`exec "EditorAPI.game_execute([[<lua>]])"` 跑在游戏 Lua 环境——可 `require` 部署目录任何模块，可访问 `UIManager` / `GameAPI` 等全局；真实 state 用 `require('src.app').init()` 取（已初始化时返回同一份）。`game_execute` 不回传值：游戏内 `print('DEBUG-xxxx ...')`，再 `log grep DEBUG-xxxx` 读回。`exec --runtime server|client` 在本地图报 `no active playtest server session`，不可用。
 
 ### 沙盒坑
 
@@ -73,8 +82,8 @@ cd /mnt/c/Users/<user>/.eggitor/cli
 
 1. **插桩**：获得部署目录改动授权后，把仓库文件拷入部署目录，注入 `require("src.foundation.log").info_unlimited("[DEBUG-xxxx] ...")`（tag 唯一，方便清理），`luac -p` 过语法。
 2. **起局**：提示用户开启试玩，轮询 `status` 直到 `in_game_runtime True`。
-3. **触发**：等自然触发（大富翁回合自动推进），或 `game_execute` 直调目标模块（用桩 game 表隔离依赖）。
-4. **取证**：后台轮询 `log grep DEBUG-xxxx` 直到命中（命中即退出拿一次通知），别前台 sleep；要视觉证据就在命中时立刻 `screenshot game` 并 Read 看图。
+3. **触发**：等自然触发（大富翁回合自动推进），或 `probe` 脚本直调目标模块（用桩 game 表隔离依赖）。
+4. **取证**：试玩态读状态用 `probe`（自带标记与轮询）；源码插桩的 `DEBUG-xxxx` 则后台轮询 `log grep DEBUG-xxxx` 直到命中（命中即退出拿一次通知），别前台 sleep。要视觉证据就在命中时立刻 `screenshot game` 并 Read 看图；遇近黑帧按「截图已知坑」改由用户目视确认。
 5. **清理**：提示用户结束试玩并轮询确认翻回编辑态；部署目录从仓库原样拷回，全目录搜 `DEBUG-xxxx` 确认无残留；提醒用户编辑器内的结构改动要保存地图。
 
 ## 输出约定

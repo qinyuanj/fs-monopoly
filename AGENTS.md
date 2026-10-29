@@ -23,10 +23,12 @@
 
 | 改动 | 先取窄反馈 | 收尾 |
 |---|---|---|
-| `src/**` | `lua5.4 tools/cli.lua spec-lane --profile <目录>`，或直接跑相关 spec | `lua5.4 tools/cli.lua verify` |
+| `src/**` | `lua5.4 tools/cli.lua spec-lane --profile test/behavior/<目录>`，或直接跑相关 spec | `lua5.4 tools/cli.lua verify` |
 | `tools/**` | `lua5.4 tools/cli.lua spec-lane --profile tooling`；涉及 PATH/env/subprocess 时加 `verify --tooling` | `lua5.4 tools/cli.lua verify --tooling` |
-| `test/**` | `lua5.4 tools/cli.lua spec-lane --profile <目录>` | `lua5.4 tools/cli.lua verify` |
+| `test/**` | `lua5.4 tools/cli.lua spec-lane --profile test/<目录>` | `lua5.4 tools/cli.lua verify` |
 | 只改叙事 Markdown | 检查内部链接，并确认 docs 白名单 guard | 无额外车道 |
+
+`--profile` 的具名车道只有 `behavior` / `tooling`；按目录点跑写从仓根起的完整路径（如 `--profile test/behavior/ui`），`--profile ui` 报 unknown profile。
 
 入口统一显式写 `lua5.4`（ADR 0073）：本机 `lua` 是 5.1，兄弟仓依赖它，不改全局别名。
 
