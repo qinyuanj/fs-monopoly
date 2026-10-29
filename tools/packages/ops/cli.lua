@@ -12,6 +12,8 @@
 -- 报错语义不变(任何参数 → ERROR + exit 1,#384 继承的 deploy.ps1 空 param())。
 local M = {}
 
+local tool_cli = require("foundation.tool_cli")
+
 local DEPLOY_ENTRY = "tools/packages/ops/deploy.lua"
 
 local function _shell_quote(value)
@@ -35,11 +37,9 @@ function M.usage()
 end
 
 function M.main(args, env)
-  for _, value in ipairs(args or {}) do
-    if value == "--help" or value == "-h" then
-      io.write(M.usage())
-      return 0
-    end
+  local help = tool_cli.help_exit(args, M.usage)
+  if help ~= nil then
+    return help
   end
   local parts = { require("foundation.lua54").lua54_bin(), DEPLOY_ENTRY }
   for _, value in ipairs(args or {}) do
