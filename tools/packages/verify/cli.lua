@@ -8,6 +8,8 @@
 -- #307 包迁后入口随包),flag 解析与 os.exit 语义原样住入口,退出码透传。
 local M = {}
 
+local tool_cli = require("foundation.tool_cli")
+
 local ENTRY = "tools/packages/verify/main.lua"
 
 -- 原生 argv 转发，与 foundation 的 cmd quoting 保持单一真源。
@@ -64,11 +66,9 @@ function M.usage()
 end
 
 function M.main(args, env)
-  for _, value in ipairs(args or {}) do
-    if value == "--help" or value == "-h" then
-      io.write(M.usage())
-      return 0
-    end
+  local help = tool_cli.help_exit(args, M.usage)
+  if help ~= nil then
+    return help
   end
   return _forward(args)
 end
