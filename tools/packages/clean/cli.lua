@@ -21,6 +21,7 @@ local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc = require("foundation.proc")
 local shell_lib = require("foundation.shell")
+local tool_cli = require("foundation.tool_cli")
 
 local _CLEAN_DIRS = { "build", "tmp" }
 local _CLEAN_FILES = {
@@ -78,7 +79,7 @@ end
 
 function M.main(args, env)
   local first = (args or {})[1]
-  if first == "--help" or first == "-h" then
+  if tool_cli.is_help_flag(first) then
     io.write(M.usage())
     return 0
   end
