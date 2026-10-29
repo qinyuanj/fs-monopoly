@@ -43,7 +43,7 @@ cd /mnt/c/Users/<user>/.eggitor/cli
 ./editor-cli.exe status                   # running / edit_mode / in_game_runtime / editor_state / 地图名
 ./editor-cli.exe exec "return <expr>"     # 编辑态同步求值，直接回显返回值
 ./editor-cli.exe log tail --lines 50      # 读编辑器日志文件（游戏 print 与 EditorAPI.log 都进这里）
-./editor-cli.exe log grep <regex>         # 按唯一标记取回 print 输出；log trace 出某次试玩的结构化报错
+./editor-cli.exe log grep <regex>         # 按唯一标记取回 print 输出；默认不分大小写（无 -i，区分用 --case-sensitive）；log trace 出某次试玩的结构化报错
 ./editor-cli.exe screenshot editor|game   # 打印 png 的 Windows 路径
 ./editor-cli.exe play start|stop          # 需逐次授权
 ./editor-cli.exe docs search "<问题>" --docset manual|game-api|editor-api --limit 3
@@ -66,7 +66,7 @@ lua5.4 tools/cli.lua probe <lua文件> [--timeout <秒>]   # 脚本内调 probe(
 - **node_id 是字符串**（打印出来像整数）：跨 exec 传递别写 int 字面量（会 `param 1 type mismatch`），每次 `get_eui_node_ids_by_name(...)[1]` 现取。
 - 属性名用这套：`pos` / `size` / `anchor`（表，取 `.x/.y`）/ `visible` / `scale` / `rotation` / `opacity` / `name`；`position` 之类猜错了返回 nil。
 - 截图：`screenshot editor|game` 打印 `C:/FeverApps/party_pc/Documents/editor_cli_screenshots/*.png`，换成 `/mnt/c/FeverApps/...` 直接 Read 看图。
-- **截图已知坑**：远程虚拟屏下 `screenshot game` 返回近黑帧（mean luminance 0）、`screenshot editor` 报 1x1 尺寸。此时改由用户目视确认：agent 发命令、读日志，每次调用后告诉用户确切时间点与要观察什么。
+- **截图已知坑**：远程虚拟屏下 `screenshot game` 返回近黑帧（mean luminance 0）、`screenshot editor` 报 1x1 尺寸；本机试玩时 `screenshot game` 也可能报 `FRAME_NEAR_WHITE`（mean luminance 255，自动重试后放弃，`--help` 未列）。此时改由用户目视确认：agent 发命令、读日志，每次调用后告诉用户确切时间点与要观察什么。
 
 **试玩态（In Game Runtime）**：游戏内代码优先写成 Lua 文件经 `lua5.4 tools/cli.lua probe <文件> [--timeout <秒>]` 执行：脚本内调 `probe(...)` 输出，工具自动加唯一标记、经 `game_execute` 执行、轮询 `log grep`，只返回命中行；不在试玩态时报错，editor-cli 不可用退 3。契约真源：`tools/specs/probe.prompt` 与 `lua5.4 tools/cli.lua probe --help`。
 
