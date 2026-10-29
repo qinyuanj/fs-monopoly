@@ -2105,7 +2105,6 @@
   {:name "M.build_occupants", :namespace "ui.render.board.placement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_snapshot_value", :namespace "ui.render.board.placement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_occupant_count", :namespace "ui.render.board.placement_geometry", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_resolve_min_ground_offset", :namespace "ui.render.board.placement_geometry", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "M.place_players", :namespace "ui.render.board.placement_snap", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_roles_from_players", :namespace "ui.render.board.player_units", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_unit_for_player", :namespace "ui.render.board.player_units", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -3045,7 +3044,6 @@
   {:name "_sync_single_tile", :namespace "ui.render.board.events", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_append_occupant", :namespace "ui.render.board.placement", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_build_snapshot", :namespace "ui.render.board.placement", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_resolve_ground_position", :namespace "ui.render.board.placement_geometry", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "geometry.calc_y_offset", :namespace "ui.render.board.placement_geometry", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_build_role_units", :namespace "ui.render.board.player_units", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_map_players_to_units", :namespace "ui.render.board.player_units", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3131,6 +3129,7 @@
   {:name "runtime.set_client_role", :namespace "ui.render.support.runtime_ui", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_has_ui_method", :namespace "ui.render.support.ui_controls", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "ui_controls.reset_choice_screen", :namespace "ui.render.support.ui_controls", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "unit_position.read_scene_ground_y", :namespace "ui.render.support.unit_position", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_bump_token", :namespace "ui.render.widgets.cash_delta", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_ensure_entry", :namespace "ui.render.widgets.cash_delta", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_token_is_current", :namespace "ui.render.widgets.cash_delta", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -4029,7 +4028,6 @@
   {:name "_play_roll_dice_for_role", :namespace "ui.render.anim.dice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_set_roll_screen_visible", :namespace "ui.render.anim.dice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "handlers.play_roll_dice_screen", :namespace "ui.render.anim.handlers", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "_ground_y", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_validate_tile_query", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_zero_vector", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "compute.overlay_pos_for_player", :namespace "ui.render.anim.overlay_compute", :complexity 1, :coverage 100.0, :crap 1.0}
