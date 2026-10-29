@@ -56,6 +56,6 @@ WSL Ubuntu 24.04 与 macOS 是受支持的开发平台；原生 Windows 只是�
 
 ## 操作边界
 
-- 运行 `editor-cli` 的 `play start` / `play stop`（或 `EditorAPI.run_game` / `stop_game`）、模拟输入，或改动部署目录前，先说明并等待用户明确同意。
+- 运行 `editor-cli` 的 `play start` / `play stop`（或 `EditorAPI.run_game` / `stop_game`）、模拟输入，或改动部署目录（含 `deploy`）前，每次单独说明要做的那一步并等待用户明确同意。「测试一下」「你跑吧」这类泛指授权只覆盖用户当时点名的那一步，不延伸到同轮其他部署或开关试玩。
 - 开发环境支持 WSL Ubuntu 24.04 与 macOS（ADR 0073）：Lua 5.4 与 LuaRocks 5.4 tree，入口显式写 `lua5.4`；新自动化脚本默认 bash，`cmd.exe` 只作为部署时取 `%USERPROFILE%` 的互操作面。Eggy 宿主位于 Windows 端，部署入口是 `lua5.4 tools/cli.lua deploy`（写入 `/mnt/c/...`，缺 `cmd.exe` / `wslpath` 退 3，macOS 上即如此）。
 - `EggyAPI.lua` 与 `EggyEditorAPI.lua` 保持第三方边界，不把它们当作当前宿主契约。
