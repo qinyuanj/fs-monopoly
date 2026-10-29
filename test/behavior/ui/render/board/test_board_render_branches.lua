@@ -247,7 +247,27 @@ describe("TestBoardRenderBranches", function()
     _assert_eq(third[2], nil, "the reused buffer should drop players absent from the current roster")
   end)
 
-  it("test_resolve_min_player_y_falls_back_to_a_half_unit_above_ground_when_config_omits_the_offset", function()
+  -- 角色站位与覆盖物共用同一个地面高度读法:地面坐标只有下标分量时两边都要读得到,
+  -- 否则角色与地雷会再次各算各的高度(eb27598 的教训)。
+  it("test_min_player_y_and_overlay_height_read_the_same_ground_y", function()
+    local overlay_compute = require("src.ui.render.anim.overlay_compute")
+    local scene = {
+      ground = { get_position = function() return { [1] = 0.0, [2] = 1.5, [3] = 0.0 } end },
+      tiles = { [1] = { get_position = function() return { x = 3.0, y = 9.0, z = 4.0 } end } },
+    }
+    local min_y
+    _with_patches({
+      { target = board_geometry, key = "player_min_ground_offset", value = 0.5 },
+    }, function()
+      min_y = placement_snap.resolve_min_player_y(scene)
+    end)
+    local mine_pos = overlay_compute.overlay_pos_for_tile({ board_scene = scene }, "mine", 1)
+
+    _assert_eq(min_y, 2.0, "player floor should be ground y + configured offset")
+    luassert.truthy(math.abs(mine_pos.y - 2.159) < 1e-6, "mine height should come from the same ground y, got " .. tostring(mine_pos.y))
+  end)
+
+  it("test_resolve_min_player_y_adds_the_configured_offset_to_the_ground_height", function()
     local scene = {
       ground = {
         get_position = function()
@@ -255,7 +275,7 @@ describe("TestBoardRenderBranches", function()
         end,
       },
     }
-    local configured, defaulted
+    local configured
 
     _with_patches({
       { target = board_geometry, key = "player_min_ground_offset", value = 1.25 },
@@ -263,14 +283,7 @@ describe("TestBoardRenderBranches", function()
       configured = placement_snap.resolve_min_player_y(scene)
     end)
 
-    _with_patches({
-      { target = board_geometry, key = "player_min_ground_offset", value = nil },
-    }, function()
-      defaulted = placement_snap.resolve_min_player_y(scene)
-    end)
-
     _assert_eq(configured, 3.25, "a configured offset should be added to the ground height")
-    _assert_eq(defaulted, 2.5, "a missing offset should fall back to 0.5 above the ground")
   end)
 
   it("test_sync_tile_visual_reports_unhandled_when_neither_a_cached_nor_a_scene_tile_unit_exists", function()

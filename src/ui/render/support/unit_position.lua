@@ -1,3 +1,5 @@
+local host_types = require("src.foundation.host_types")
+
 local unit_position = {}
 
 local function _access_get_position(unit)
@@ -42,5 +44,17 @@ function unit_position.read_scene_building_position(scene, tile_index)
   return _read_indexed_position(scene and scene.buildings or nil, tile_index)
 end
 
-return unit_position
+-- 棋盘地面高度的唯一读法:角色站位下限与覆盖物离地高度都从这里取,
+-- 保证两者以同一个地面为基准(地板是平的,地块锚点 y 不齐,见 overlay_compute)。
+-- 宿主 Vector3 的 type() 不是 "table"(#266),分量按字段名取,取不到再按下标取。
+function unit_position.read_scene_ground_y(scene)
+  local pos = unit_position.read_unit_position(assert(scene.ground, "missing board_scene.ground"))
+  assert(pos ~= nil, "missing ground position")
+  local y = host_types.field(pos, "y")
+  if y == nil then
+    y = host_types.field(pos, 2)
+  end
+  return assert(y, "missing ground position y")
+end
 
+return unit_position

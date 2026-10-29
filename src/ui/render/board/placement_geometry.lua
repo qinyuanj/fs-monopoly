@@ -1,28 +1,11 @@
 -- 落位几何计算:地面位置解析、占用槽位与网格偏移。纯计算,不触碰宿主单元与动画状态。
 local board_geometry = require("src.config.gameplay.camera_follow")
+local unit_position = require("src.ui.render.support.unit_position")
 
 local geometry = {}
 
-local function _resolve_ground_position(scene)
-  assert(scene.ground ~= nil, "missing board_scene.ground")
-  assert(scene.ground.get_position ~= nil, "missing board_scene.ground.get_position")
-  local ground_pos = scene.ground.get_position()
-  assert(ground_pos ~= nil and ground_pos.y ~= nil, "missing ground position")
-  return ground_pos
-end
-
-local function _resolve_min_ground_offset()
-  local board_cfg = board_geometry or {}
-  local offset = board_cfg.player_min_ground_offset
-  if offset == nil then
-    return 0.5
-  end
-  return offset
-end
-
 function geometry.resolve_min_player_y(scene)
-  local ground_pos = _resolve_ground_position(scene)
-  return ground_pos.y + _resolve_min_ground_offset()
+  return unit_position.read_scene_ground_y(scene) + board_geometry.player_min_ground_offset
 end
 
 local function _occupant_count(list)

@@ -65,16 +65,10 @@ local _height_above_ground = {
   missile = -0.341,
 }
 
-local function _ground_y(scene)
-  local ground_pos = unit_position.read_unit_position(assert(scene.ground, "missing board_scene.ground"))
-  local y = _resolve_vector_value(assert(ground_pos, "missing ground position"), "y", 2)
-  return assert(y, "missing ground position y")
-end
-
 function compute.overlay_pos_for_tile(state, kind, tile_index)
   local height = assert(_height_above_ground[kind], "unknown overlay kind: " .. tostring(kind))
   local x, z = _resolve_xz(compute.resolve_tile_pos(state, tile_index))
-  return host_types.vec3(x, _ground_y(state.board_scene) + height, z)
+  return host_types.vec3(x, unit_position.read_scene_ground_y(state.board_scene) + height, z)
 end
 
 function compute.overlay_pos_for_player(state, kind, player_id)
