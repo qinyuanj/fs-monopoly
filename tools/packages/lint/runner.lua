@@ -7,6 +7,7 @@ local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local text_lib = require("foundation.text")
+local tool_cli = require("foundation.tool_cli")
 
 local M = {}
 local REPO_ROOT = env.repo_root
@@ -42,7 +43,7 @@ local function _parse_args(args)
   }
 
   for _, token in ipairs(args or {}) do
-    if token == "--help" or token == "-h" then
+    if tool_cli.is_help_flag(token) then
       options.help = true
     else
       options.targets[#options.targets + 1] = path_lib.normalize_path(token)
