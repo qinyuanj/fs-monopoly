@@ -3,10 +3,10 @@ if arg then rawset(arg, 0, "tools/packages/clean/test/test_clean_cli.lua") end
 
 require("test.bootstrap").install_package_paths()
 
--- clean / distclean 的 WSL 窄反馈(#69 / ADR 0073)。清单与旧 Makefile 同口径:
+-- clean 的 WSL 窄反馈(#69 / ADR 0073)。清单与旧 Makefile 同口径:
 -- 仓根的 build/ tmp/ 整树删,luacov 的
 -- stats/report 残留(含 luacov.<名>.stats.out 一类)删文件,未命中静默忽略;
--- 项目工具缓存退役后 clean 与 distclean 同义,都不碰非清单目录。
+-- 不碰非清单目录。
 --
 -- 只在临时目录里跑:env.repo_root 指向夹具根,绝不对真实仓库执行清理。
 local check = require("luassert")
@@ -75,7 +75,7 @@ describe("clean cli", function()
 
 it("clean removes the listed artifacts and keeps unrelated directories", function()
   _with_fixture(function(root)
-    check.equal(0, clean_cli.main({}, { repo_root = root, action = "clean" }))
+    check.equal(0, clean_cli.main({}, { repo_root = root }))
 
     _assert_cleaned(root)
     check.is_true(fs_lib.path_exists(path_lib.join_path(root, ".local-cache/manifest")),
@@ -83,14 +83,17 @@ it("clean removes the listed artifacts and keeps unrelated directories", functio
   end)
 end)
 
-it("distclean is the same cleanup as clean", function()
-  _with_fixture(function(root)
-    check.equal(0, clean_cli.main({}, { repo_root = root, action = "distclean" }))
+-- distclean 别名已删(#220):顶层 --help 只列 clean,distclean 按未知子命令退 2。
+it("top-level help lists clean and no longer offers distclean", function()
+  local lua_bin = shell_lib.shell_quote(require("foundation.lua54").lua54_bin())
+  local help = proc_lib.run_command(lua_bin .. " tools/cli.lua --help", { cwd = env_lib.current_dir() })
+  check.equal(0, help.code, help.output)
+  check.truthy(help.output:find("\n  clean ", 1, true), help.output)
+  check.is_nil(help.output:find("distclean", 1, true), help.output)
 
-    _assert_cleaned(root)
-    check.is_true(fs_lib.path_exists(path_lib.join_path(root, ".local-cache/manifest")),
-      "distclean 不碰清单外目录")
-  end)
+  local alias = proc_lib.run_command(lua_bin .. " tools/cli.lua distclean 2>&1", { cwd = env_lib.current_dir() })
+  check.equal(2, alias.code, alias.output)
+  check.truthy(alias.output:find("未知子命令: distclean", 1, true), alias.output)
 end)
 
 -- 受支持环境是 WSL Ubuntu(ADR 0073):清理只依赖 sh 内建与 coreutils 基本命令。
@@ -110,7 +113,7 @@ it("clean works with only the interpreter and system directories on PATH", funct
     check.is_true(fs_lib.write_file(driver, table.concat({
       "package.path = './?.lua;' .. package.path",
       "require('test.bootstrap').install_package_paths()",
-      "os.exit(require('packages.clean.cli').main({}, { repo_root = arg[1], action = 'distclean' }))",
+      "os.exit(require('packages.clean.cli').main({}, { repo_root = arg[1] }))",
       "",
     }, "\n")))
     local command = "PATH=" .. shell_lib.shell_quote(_system_path()) .. " "
@@ -129,7 +132,7 @@ it("an already clean tree is a quiet success", function()
   fs_lib.remove_path(root)
   check.is_true(fs_lib.ensure_dir(root))
   local ok, err = xpcall(function()
-    check.equal(0, clean_cli.main({}, { repo_root = root, action = "clean" }))
+    check.equal(0, clean_cli.main({}, { repo_root = root }))
     check.is_true(fs_lib.is_dir(root))
   end, debug.traceback)
   fs_lib.remove_path(root)
@@ -140,7 +143,7 @@ end)
 
 it("unknown arguments are a usage error and touch nothing", function()
   _with_fixture(function(root)
-    check.equal(2, clean_cli.main({ "--bogus" }, { repo_root = root, action = "clean" }))
+    check.equal(2, clean_cli.main({ "--bogus" }, { repo_root = root }))
     check.is_true(fs_lib.path_exists(path_lib.join_path(root, "luacov.stats.out")))
     check.is_true(fs_lib.is_dir(path_lib.join_path(root, "build")))
   end)

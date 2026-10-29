@@ -1,18 +1,15 @@
--- packages/clean/cli.lua —— clean / distclean 子命令(吸收原 Makefile clean 面;
+-- packages/clean/cli.lua —— clean 子命令(吸收原 Makefile clean 面;
 -- Makefile/project.mk 退役,清理语义原样搬家,清单与生产者一一对应关系不变)。
 --
 -- 统一接口形态(#300 决议):本文件 return 纯接口模块:
 --   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误)
 --   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
 --
--- 路由约定:clean 与 distclean 两个子命令都路由到本包,经 env.action
--- ("clean" / "distclean")分流(顶层 cli.lua 按 commands 表条目注入)。
---
 -- 清单与生产者对应:build/ tmp/ 为本地构建产物;
 -- luacov.* 是 luacov 默认落点的残留
 -- (uml crap 的 crapper 经 luacov 采集覆盖率)。
--- 仓内不再有项目工具缓存:工具模块一律从受控 Lua 环境装载,clean 与 distclean
--- 只清仓内生成物。
+-- 仓内不再有项目工具缓存:工具模块一律从受控 Lua 环境装载,clean 只清仓内
+-- 生成物。
 --
 -- 实现:WSL Ubuntu 单平台(ADR 0073)。目录与文件都经 foundation.fs.remove_path
 -- 删(整树删 / 删文件,未命中静默成功);luacov 的 glob 由 foundation.proc 枚举
@@ -38,10 +35,9 @@ local _CLEAN_FILE_PATTERNS = {
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua clean | distclean",
+    "用法: lua5.4 tools/cli.lua clean",
     "",
-    "clean     清生成物:build/ tmp/、luacov 残留。",
-    "distclean 与 clean 同义(项目工具缓存已退役,不再有仓内工具 tree)。",
+    "清生成物:build/ tmp/、luacov 残留。",
     "",
   }, "\n") .. "\n"
 end
