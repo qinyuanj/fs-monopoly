@@ -45,6 +45,9 @@ local _WHITELIST = {
   [".busted"] = true,
   -- 可选 pre-push hook(#126),经 `git config core.hooksPath .githooks` 启用。
   [".githooks"] = true,
+  -- Eggy 编辑器同步配置(projectID / mapDir / excludePatterns),由编辑器在项目根读取,
+  -- 维护者决定入库(2026-10-29)。
+  ["eggy.json"] = true,
   -- `uml ir` 生成的仓根 policy.edn(ADR 0070 / #99)走 .gitignore,不进白名单;
   -- 人手维护的推演在 docs/architecture.proposals.edn。
 }

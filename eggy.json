@@ -1,0 +1,14 @@
+{
+    "projectName": "大富翁", 
+    "projectID": "69c111d913558ce78d5bb40b", 
+    "serverPort": 61224, 
+    "syncEnabled": true, 
+    "excludePatterns": [
+        ".vscode", 
+        ".git", 
+        "EggyAPI.lua"
+    ], 
+    "version": "1.0.0", 
+    "playerNid": "623873800", 
+    "mapDir": "C:\\FeverApps\\party_pc\\Documents\\etc\\editor_maps\\YWNFUjJSTlZqT2VOVzdRTA==__pc"
+}
