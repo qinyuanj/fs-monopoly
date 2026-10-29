@@ -20,6 +20,7 @@ local M = {}
 
 local boundary = require("foundation.platform_boundary")
 local script = require("packages.probe.script")
+local tool_cli = require("foundation.tool_cli")
 
 local DEFAULT_TIMEOUT = 10
 local POLL_INTERVAL = 0.5
@@ -151,7 +152,7 @@ local function _parse_args(args)
   local index = 1
   while index <= #args do
     local value = args[index]
-    if value == "--help" or value == "-h" then
+    if tool_cli.is_help_flag(value) then
       return { help = true }
     elseif value == "--timeout" then
       local text = args[index + 1]
