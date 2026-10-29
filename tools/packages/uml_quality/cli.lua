@@ -317,11 +317,11 @@ end
 function M.main(args, env)
   args = args or {}
   env = env or {}
-  local op = args[1]
-  if tool_cli.is_help_flag(op) then
-    io.write(M.usage())
-    return 0
+  local help = tool_cli.leading_help_exit(args, M.usage)
+  if help ~= nil then
+    return help
   end
+  local op = args[1]
   if _TOOLS[op] == nil or ((op == "check" or op == "ir") and #args > 1) then
     io.stderr:write((op == nil and "缺少子命令" or ("未知参数: " .. tostring(args[#args]))) .. "\n\n" .. M.usage())
     return 2

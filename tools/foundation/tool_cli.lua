@@ -10,8 +10,15 @@
 -- 原样透传给 runner;默认值如何与调用方 env 合并由 runner 自理(#323),
 -- cli adapter 不替 runner 合并。
 --
--- `--help` / `-h` 的判定与 usage 输出也收在这里(is_help_flag / help_exit),
--- 所有包 cli 与顶层 tools/cli.lua 共用,不再各自内联。
+-- `--help` / `-h` 的判定与 usage 输出也收在这里,所有包 cli 与顶层 tools/cli.lua
+-- 共用,不再各自内联。帮助有两种位置语义,按子命令既有的退出码保留,不统一:
+--   help_exit         任一位置命中:lint / verify / dry / deploy(ops) / sync-data /
+--                     test_runner。这些子命令的其余参数是目标或开关,帮助可写在任意位置。
+--   leading_help_exit 只看首参:clean / uml。首参之后的参数各自报用法错误
+--                     (`clean foo --help` 退 2),统一成任一位置会改变退出码。
+--   is_help_flag      其余按位置识别的场合直接用判定本身:gift-code(写注入的 stdout,
+--                     且认 `new --help`)、probe / lint runner / encoding / spec_lane_args
+--                     (在参数解析循环里置 help 标志)、顶层 tools/cli.lua(首参)。
 --
 -- 语义:
 --   pcall(require, runner_module) 失败(缺上游工具、package.path 未装等)→
@@ -65,24 +72,31 @@ function tool_cli.run(opts, args, env)
   return tool_cli.normalize_exit_code(runner.run(args or {}, env))
 end
 
--- `--help` / `-h` 判定的唯一出处。按位置识别帮助的子命令(只看首参、子命令后
--- 的帮助等)直接用它;其余子命令走 help_exit。
+-- `--help` / `-h` 判定的唯一出处。
 function tool_cli.is_help_flag(value)
   return value == "--help" or value == "-h"
 end
 
--- 任一参数是帮助开关时把 usage() 写到 out 并返回 0;否则返回 nil,调用方继续
--- 正常流程。缺省 out 时调 io.write(按调用时查表,测试替身 io.write 照样生效)。
-function tool_cli.help_exit(args, usage, out)
+-- 输出走 io.write(按调用时查表,dry / uml_quality 等测试替换全局 io.write)。
+local function _write_usage(usage)
+  io.write(usage())
+  return 0
+end
+
+-- 任一参数是帮助开关时写出 usage() 并返回 0;否则返回 nil,调用方继续正常流程。
+function tool_cli.help_exit(args, usage)
   for _, value in ipairs(args or {}) do
     if tool_cli.is_help_flag(value) then
-      if out ~= nil then
-        out:write(usage())
-      else
-        io.write(usage())
-      end
-      return 0
+      return _write_usage(usage)
     end
+  end
+  return nil
+end
+
+-- 首参是帮助开关时写出 usage() 并返回 0;否则返回 nil。
+function tool_cli.leading_help_exit(args, usage)
+  if tool_cli.is_help_flag((args or {})[1]) then
+    return _write_usage(usage)
   end
   return nil
 end

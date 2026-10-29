@@ -118,21 +118,45 @@ it("help flag is exactly --help or -h", function()
   check.is_false(tool_cli.is_help_flag(nil))
 end)
 
-it("help exit writes usage and returns 0 when any arg asks for help", function()
+-- help 写 io.write(按调用时查表),测试替换全局 io.write 观察输出。
+local function _capture_io_write(fn)
   local written = {}
-  local out = { write = function(_, text) written[#written + 1] = text end }
+  local saved = io.write
+  rawset(io, "write", function(text) written[#written + 1] = text end)
+  local ok, result = pcall(fn)
+  rawset(io, "write", saved)
+  assert(ok, result)
+  return result, written
+end
 
-  check.equal(0, tool_cli.help_exit({ "src", "-h" }, function() return "用法: x\n" end, out))
+local function _usage() return "用法: x\n" end
+
+it("help exit writes usage and returns 0 when any arg asks for help", function()
+  local code, written = _capture_io_write(function() return tool_cli.help_exit({ "src", "-h" }, _usage) end)
+  check.equal(0, code)
   check.same({ "用法: x\n" }, written)
 end)
 
 it("help exit returns nil and writes nothing without a help flag", function()
-  local written = {}
-  local out = { write = function(_, text) written[#written + 1] = text end }
-
-  check.is_nil(tool_cli.help_exit({ "src" }, function() return "用法: x\n" end, out))
-  check.is_nil(tool_cli.help_exit(nil, function() return "用法: x\n" end, out))
+  local code, written = _capture_io_write(function() return tool_cli.help_exit({ "src" }, _usage) end)
+  check.is_nil(code)
+  local nil_code, nil_written = _capture_io_write(function() return tool_cli.help_exit(nil, _usage) end)
+  check.is_nil(nil_code)
   check.same({}, written)
+  check.same({}, nil_written)
+end)
+
+it("leading help exit only honours a help flag in first position", function()
+  local code, written = _capture_io_write(function() return tool_cli.leading_help_exit({ "--help", "foo" }, _usage) end)
+  check.equal(0, code)
+  check.same({ "用法: x\n" }, written)
+  local later_code, later_written = _capture_io_write(function()
+    return tool_cli.leading_help_exit({ "foo", "--help" }, _usage)
+  end)
+  check.is_nil(later_code)
+  check.same({}, later_written)
+  local none_code = _capture_io_write(function() return tool_cli.leading_help_exit(nil, _usage) end)
+  check.is_nil(none_code)
 end)
 
 end)

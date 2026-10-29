@@ -78,11 +78,11 @@ local function _remove_all(repo_root, relative_paths)
 end
 
 function M.main(args, env)
-  local first = (args or {})[1]
-  if tool_cli.is_help_flag(first) then
-    io.write(M.usage())
-    return 0
+  local help = tool_cli.leading_help_exit(args, M.usage)
+  if help ~= nil then
+    return help
   end
+  local first = (args or {})[1]
   if first ~= nil then
     io.stderr:write("未知参数: " .. tostring(first) .. "\n\n" .. M.usage())
     return 2
