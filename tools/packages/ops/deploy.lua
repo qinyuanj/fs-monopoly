@@ -297,6 +297,47 @@ function M.resolve_home_dir()
   return M.resolve_windows_home_dir()
 end
 
+-- 部署 payload(与 main 的拷贝清单一致)。部署按工作树原样拷贝,真机插桩靠的正是这一点,
+-- 所以未提交改动只提示、不拦截:避免把半成品当成已提交版本做真机验证。
+local _PAYLOAD_PATHS = { "src", "main.lua", "Data/UIManagerNodes.lua", "Data/Prefab.lua" }
+local _UNCOMMITTED_NOTICE_LIMIT = 10
+
+-- 返回 payload 内未提交路径。用 -z:路径不加引号转义(空格、中文原样),条目以 NUL 分隔;
+-- 重命名/复制条目后紧跟一个源路径字段,跳过它,只报新路径。
+-- 没有 git 或不在仓库里时输出为空,返回空表:这是提示,不走「不可用」退 3。
+function M.list_uncommitted_payload(project_root, run)
+  run = run or _popen
+  local output = run("git -C " .. _shell_arg(project_root)
+    .. " -c core.quotepath=false status --porcelain -z -- " .. table.concat(_PAYLOAD_PATHS, " ") .. " 2>/dev/null")
+  local paths = {}
+  local skip_source = false
+  for entry in tostring(output or ""):gmatch("[^%z]+") do
+    if skip_source then
+      skip_source = false
+    else
+      paths[#paths + 1] = entry:sub(4)
+      skip_source = entry:sub(1, 1) == "R" or entry:sub(1, 1) == "C"
+    end
+  end
+  return paths
+end
+
+function M.format_uncommitted_notice(paths)
+  if #paths == 0 then
+    return {}
+  end
+  local lines = {
+    "WARNING: " .. tostring(#paths) .. " uncommitted payload file(s) deployed as-is (working tree, not HEAD):",
+  }
+  for i = 1, math.min(#paths, _UNCOMMITTED_NOTICE_LIMIT) do
+    lines[#lines + 1] = "  " .. paths[i]
+  end
+  if #paths > _UNCOMMITTED_NOTICE_LIMIT then
+    lines[#lines + 1] = "  ... and " .. tostring(#paths - _UNCOMMITTED_NOTICE_LIMIT) .. " more"
+  end
+  return lines
+end
+
 function M.resolve_normalized_path(path_text)
   if _is_blank(path_text) then
     return ""
@@ -572,6 +613,9 @@ local function main()
   M.write_info("--------------------------------------")
   M.write_info("Deploy target: " .. tostring(target_path))
   M.write_info("--------------------------------------")
+  for _, line in ipairs(M.format_uncommitted_notice(M.list_uncommitted_payload(project_root))) do
+    M.write_info(line)
+  end
 
   M.copy_directory_tree(_join_path(project_root, "src"), _join_path(target_path, "src"))
   M.copy_file_with_parent_dir(_join_path(project_root, "main.lua"), _join_path(target_path, "main.lua"))

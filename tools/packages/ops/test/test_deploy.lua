@@ -177,6 +177,35 @@ it("home directory is empty when the profile cannot be resolved", function()
   end))
 end)
 
+-- 部署按工作树原样拷贝(插桩通道依赖这一点),所以只提示 payload 里未提交的文件。
+it("uncommitted payload lists porcelain paths scoped to the deploy payload", function()
+  local commands = {}
+  local paths = deploy.list_uncommitted_payload("/repo root", function(command)
+    commands[#commands + 1] = command
+    return " M src/ui/a.lua\0?? src/新 文件.lua\0R  src/new.lua\0src/old.lua\0 M Data/Prefab.lua\0"
+  end)
+  check.same({ "src/ui/a.lua", "src/新 文件.lua", "src/new.lua", "Data/Prefab.lua" }, paths)
+  check.truthy(commands[1]:find("git -C '/repo root' -c core.quotepath=false status --porcelain -z", 1, true),
+    commands[1])
+  check.truthy(commands[1]:find("-- src main.lua Data/UIManagerNodes.lua Data/Prefab.lua", 1, true), commands[1])
+end)
+
+it("uncommitted payload is empty for a clean tree or when git is unavailable", function()
+  check.same({}, deploy.list_uncommitted_payload("/repo", function() return "" end))
+end)
+
+it("uncommitted payload notice caps the listing and reports the total", function()
+  local paths = {}
+  for i = 1, 12 do paths[i] = "src/f" .. i .. ".lua" end
+  local lines = deploy.format_uncommitted_notice(paths)
+  check.same("WARNING: 12 uncommitted payload file(s) deployed as-is (working tree, not HEAD):", lines[1])
+  check.same("  src/f1.lua", lines[2])
+  check.same("  src/f10.lua", lines[11])
+  check.same("  ... and 2 more", lines[12])
+  check.same(12, #lines)
+  check.same({}, deploy.format_uncommitted_notice({}))
+end)
+
 it("project root is true for full project shape", function()
   _with_sandbox(function(root)
     local proj = _make_project(root)

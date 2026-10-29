@@ -25,6 +25,7 @@ function M.usage()
     "用法: lua5.4 tools/cli.lua deploy",
     "",
     "把 src/ + main.lua + Data/ 按原样部署到 Windows 侧 Eggy 宿主目录(LuaSource_大富翁)。",
+    "拷贝的是工作树而非 HEAD:payload 里有未提交文件时列出(WARNING,仅提示,不影响退出码)。",
     "零参数、零开关;任何多余参数 → ERROR + exit 1(deploy.lua 自身 CLI 面不变)。",
     "在 WSL Ubuntu 中运行(ADR 0073):目标经 cmd.exe 取 %USERPROFILE% 再按 wslpath 换算;",
     "没有 cmd.exe / wslpath 时退 3(status=unavailable,环境问题不是部署失败)。",
