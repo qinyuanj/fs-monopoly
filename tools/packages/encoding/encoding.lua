@@ -7,6 +7,7 @@ local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local text_lib = require("foundation.text")
+local tool_cli = require("foundation.tool_cli")
 
 local M = {}
 
@@ -60,7 +61,7 @@ local function _parse_args(args)
 
   while index <= #args do
     local token = args[index]
-    if token == "--help" or token == "-h" then
+    if tool_cli.is_help_flag(token) then
       options.help = true
     elseif token == "--root" then
       index = index + 1
