@@ -14,11 +14,8 @@ root = env.repo_root
 local proc = require("foundation.proc")
 local fs = require("foundation.fs")
 local spec_sharding = require("foundation.spec_sharding")
-for _, value in ipairs(arg) do
-  if value == "--help" or value == "-h" then
-    io.write(require("packages.test_runner.cli").usage())
-    os.exit(0)
-  end
+if require("foundation.tool_cli").help_exit(arg, require("packages.test_runner.cli").usage) ~= nil then
+  os.exit(0)
 end
 local opts = { files = {}, roots = {}, arguments = {} }
 local after, index = false, 1
