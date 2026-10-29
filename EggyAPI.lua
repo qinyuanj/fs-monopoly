@@ -5729,6 +5729,11 @@ function LuaAPI.query_units_by_type(_unit_type, _unit_eid) end
 ---@return integer 随机数
 function LuaAPI.rand() end
 
+---修改本次伤害值
+---@param _damage_info Damage 伤害信息
+---@param _value Fixed 伤害值
+function LuaAPI.set_damage_value(_damage_info, _value) end
+
 ---启用死循环检测
 ---@param _enable boolean 启用
 ---@param _max_instruction_count integer 最大指令数限制
