@@ -60,7 +60,7 @@ end)
 it("default target retains the Windows deploy location", function()
   local original = deploy.resolve_home_dir
   deploy.resolve_home_dir = function() return "/mnt/c/Users/玩家/" end
-  local ok, target = pcall(deploy.resolve_default_target_path, "win")
+  local ok, target = pcall(deploy.resolve_default_target_path)
   deploy.resolve_home_dir = original
   check.is_true(ok, target)
   check.same("/mnt/c/Users/玩家/Desktop/dev/eggy/LuaSource_大富翁", target)
@@ -70,7 +70,7 @@ it("project root resolves from other working directory", function()
   sandbox(function(root)
     local proc = require("foundation.proc")
     local repo = env.current_dir()
-    local script = "package.path=" .. string.format("%q", repo .. "/?.lua;")
+    local script = "package.path=" .. string.format("%q", repo .. "/?.lua;" .. repo .. "/tools/?.lua;")
       .. "..package.path; io.write(require('tools.packages.ops.deploy').resolve_project_root())"
     assert(fs.write_file(root .. "/root_driver.lua", script))
     local result = proc.run_command({ require("foundation.lua54").lua54_bin(), root .. "/root_driver.lua" }, { cwd = root })

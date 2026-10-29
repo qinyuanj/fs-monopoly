@@ -3,250 +3,76 @@
 --
 -- 行为真源:本文件自身(deploy.lua)。历史来源 deploy.ps1(373 行)已随 #384 删除,
 -- 整体由本文件取代(ADR 0030)。
--- 运行在 WSL Ubuntu(ADR 0073),以 Lua 5.4 标准库 + POSIX 原语完成目标解析、
--- 目录镜像与逐文件复制;不加载额外文件系统依赖。部署目标仍是 Windows 侧 Eggy
--- 宿主目录:经 cmd.exe 取 %USERPROFILE%,再用 wslpath -u 换算成 /mnt/c/... 路径。
+-- 运行在 WSL Ubuntu(ADR 0073),路径演算、文件系统与子进程原语一律取 foundation
+-- (#222)。部署目标仍是 Windows 侧 Eggy 宿主目录:经 cmd.exe 取 %USERPROFILE%,
+-- 再用 wslpath -u 换算成 /mnt/c/... 路径;盘符形态只在 resolve_windows_home_dir
+-- 这一段出现,foundation 不认盘符。
 --
 -- CLI 面:零参数、零开关、无 --help(继承被取代的 deploy.ps1 空 param(),#384);任何参数 → ERROR + exit 1。
 -- 子命令入口:lua5.4 tools/cli.lua deploy 经 tools/packages/ops/cli.lua 壳转发,仅 --help/-h 在壳内
 -- 消费返回 usage,其余参数原样透传,本语义不变。
 
+local _module_name = ...
+local _required = _module_name == "tools.packages.ops.deploy" or _module_name == "packages.ops.deploy"
+-- 直跑(含 ops/cli.lua 子进程转发)时自举 package.path;被 require 时由调用方装好,不重复 install。
+if not _required then
+  local _self = debug.getinfo(1, "S").source or "@tools/packages/ops/deploy.lua"
+  dofile(_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$")
+    .. "/../../foundation/script_bootstrap.lua").install(_self)
+end
+
+local text_lib = require("foundation.text")
+local path_lib = require("foundation.path")
+local shell_lib = require("foundation.shell")
+local fs_lib = require("foundation.fs")
+local env_lib = require("foundation.env")
+local proc_lib = require("foundation.proc")
+
 local M = {}
 
-local function _trim(value)
-  return (tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-end
-
 local function _is_blank(value)
-  return _trim(value) == ""
+  return text_lib.trim(value) == ""
 end
 
-local function _normalize_path(value)
-  return tostring(value or ""):gsub("\\", "/")
-end
-
-local function _exit_status(ok, _, code)
-  if type(ok) == "number" then
-    return ok == 0, ok
-  end
-  if ok == true then
-    return true, code or 0
-  end
-  return false, code or 1
-end
-
-local function _popen(command)
-  local handle = io.popen(command, "r")
-  if handle == nil then
-    return ""
-  end
-  local output = handle:read("*a") or ""
-  handle:close()
-  return output
-end
-
--- 真 cwd 以 `pwd -L` 为准;继承的 PWD 可能已被子进程 cwd 改动作废
--- (Python subprocess(cwd=...) 不更新 PWD),只作兜底。
-local function _current_dir()
-  local printed = _normalize_path(_trim(_popen("pwd -L 2>/dev/null")))
-  if printed ~= "" then
-    return printed
-  end
-  local value = os.getenv("PWD")
-  if value ~= nil and value ~= "" then
-    return _normalize_path(_trim(value))
-  end
-  return ""
-end
-
--- POSIX 单引号;拒绝换行与 NUL,避免参数被解释成第二条命令。
-local function _shell_arg(value)
-  local text = tostring(value or "")
-  assert(not text:find("[\r\n%z]"), "Unsupported command path")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
-end
-
--- 纯 Lua 判定:io.open 对目录同样成功,故目录用 `path/.` 探测。
-local function _openable(path)
-  local handle = io.open(path, "rb")
-  if handle == nil then
-    return false
-  end
-  handle:close()
-  return true
-end
-
-local function _path_exists(path)
-  if path == nil or path == "" then
-    return false
-  end
-  local text = _normalize_path(path)
-  if _openable(text) or _openable(text .. "/.") then
-    return true
-  end
-  return os.rename(text, text) ~= nil
-end
-
-local function _path_is_dir(path)
-  if path == nil or path == "" then
-    return false
-  end
-  return _openable(_normalize_path(path) .. "/.")
-end
-
-local function _path_is_file(path)
-  if path == nil or path == "" then
-    return false
-  end
-  return _openable(path) and not _openable(_normalize_path(path) .. "/.")
-end
-
-local function _ensure_dir(path)
-  if path == nil or path == "" then
-    return true
-  end
-  local ok, kind, code = os.execute("mkdir -p " .. _shell_arg(_normalize_path(path)))
-  local success = _exit_status(ok, kind, code)
-  if not success then
-    error("Failed to create directory: " .. tostring(path))
+-- foundation 以 (nil, err) 报错;部署流程以 error 终止,由 run_cli 统一打印 ERROR。
+local function _check(ok, err)
+  if not ok then
+    error(err, 2)
   end
   return true
 end
 
-local function _remove_path(path)
-  if not _path_exists(path) then
-    return true
-  end
-  local ok, kind, code = os.execute("rm -rf " .. _shell_arg(_normalize_path(path)))
-  local success = _exit_status(ok, kind, code)
-  if not success then
-    error("Failed to remove path: " .. tostring(path))
-  end
-  return true
-end
-
-local function _command_available(name)
-  local ok, kind, code = os.execute("command -v " .. _shell_arg(name) .. " >/dev/null 2>&1")
-  return _exit_status(ok, kind, code)
+-- 默认命令执行:读回合并输出。外层子壳让命令自带的 2>/dev/null 先于 proc 追加的
+-- `> out 2>&1` 生效(cmd.exe 的 UNC 警告不混进 %USERPROFILE% 输出)。
+local function _run(command)
+  return proc_lib.run_command("(" .. command .. ")").output
 end
 
 -- 一次性探测 WSL 的互操作面:cmd.exe(取 %USERPROFILE%)与 wslpath(路径换算)。
 -- 两者都在才谈得上「在 WSL 里往 Windows 部署」;缺一个就整体不可用。
 function M.detect_interop()
   local missing = {}
-  if not _command_available("cmd.exe") then
+  if not proc_lib.command_exists("cmd.exe") then
     missing[#missing + 1] = "cmd.exe"
   end
-  if not _command_available("wslpath") then
+  if not proc_lib.command_exists("wslpath") then
     missing[#missing + 1] = "wslpath"
   end
   return missing
 end
 
-local function _join_path(...)
-  local result = ""
-  for index = 1, select("#", ...) do
-    local segment = _normalize_path(select(index, ...))
-    if result == "" then
-      result = segment
-    elseif segment ~= "" then
-      result = result:gsub("/+$", "") .. "/" .. segment:gsub("^/+", "")
-    end
-  end
-  return result
-end
-
--- GetFullPath 等价(绝对路径的 . 与 .. 折叠);resolve_normalized_path 在调用前
--- 已保证 candidate 绝对化,这里只做演算。
-
--- 拆出路径前缀:Windows 盘符(如 "C:")、POSIX 根 "/"、或空(相对路径)。
-local function _split_path_prefix(normalized)
-  if normalized:match("^%a:/") then
-    return normalized:sub(1, 3), normalized:sub(4)
-  end
-  if normalized:sub(1, 1) == "/" then
-    return "/", normalized:sub(2)
-  end
-  return "", normalized
-end
-
--- 折叠 "." 与 ".." 段:相对路径(prefix == "")保留前导 "..",绝对路径在根处截断。
-local function _fold_path_segments(remainder, keep_leading_dotdot)
-  local parts = {}
-  for segment in (remainder .. "/"):gmatch("(.-)/") do
-    if segment ~= "" and segment ~= "." then
-      if segment == ".." then
-        if #parts > 0 and parts[#parts] ~= ".." then
-          parts[#parts] = nil
-        elseif keep_leading_dotdot then
-          parts[#parts + 1] = segment
-        end
-      else
-        parts[#parts + 1] = segment
-      end
-    end
-  end
-  return table.concat(parts, "/")
-end
-
--- 前缀与折叠后的段重拼:空段时根 "/" 折叠回 "/",盘符前缀原样返回。
-local function _reassemble_path(prefix, simplified)
-  if prefix == "" then
-    return simplified
-  end
-  if simplified == "" then
-    return prefix == "/" and "/" or prefix
-  end
-  return prefix == "/" and "/" .. simplified or prefix .. simplified
-end
-
-local function _simplify_path(value)
-  local normalized = _normalize_path(value)
-  local prefix, remainder = _split_path_prefix(normalized)
-  return _reassemble_path(prefix, _fold_path_segments(remainder, prefix == ""))
-end
-
-local function _get_full_path(value)
-  return _simplify_path(value)
-end
-
-local function _is_path_rooted(value)
-  local normalized = _normalize_path(value)
-  return normalized:match("^%a:") ~= nil or normalized:match("^[/\\]") ~= nil
-end
-
--- .NET ExpandEnvironmentVariables 等价:%NAME% 展开,未定义变量原样保留。
-local function _expand_environment_variables(value)
-  return (tostring(value or ""):gsub("%%([^%%]+)%%", function(name)
-    local env_value = os.getenv(name)
-    if env_value == nil then
-      return "%" .. name .. "%"
-    end
-    return env_value
-  end))
-end
-
-local function _script_path()
-  local source = debug.getinfo(1, "S").source or ""
-  local value = _normalize_path(tostring(source):gsub("^@", ""))
-  if value == "" then
-    value = tostring(arg and arg[0] or "")
-  end
-  if not _is_path_rooted(value) then
-    value = _join_path(_current_dir(), value)
-  end
-  return value
-end
-
 local function _script_dir()
-  local script = _script_path()
-  return script:match("^(.*)/[^/]+$") or _current_dir()
+  local source = path_lib.normalize_path((tostring(debug.getinfo(1, "S").source or ""):gsub("^@", "")))
+  if not path_lib.is_absolute_path(source) then
+    source = path_lib.join_path(env_lib.current_dir(), source)
+  end
+  return path_lib.parent_dir(source) or env_lib.current_dir()
 end
 
 -- 文本 / 输出 / 错误工具(Get-Text / Write-Info / Exit-WithError 等价)。
 
 function M.get_text(zh, en)
-  return tostring(zh or "") .. " / " .. tostring(en or "")
+  return text_lib.bilingual(zh, en)
 end
 
 function M.write_info(message)
@@ -261,21 +87,26 @@ end
 -- 路径工具。
 
 function M.normalize_path_text(value)
-  return _normalize_path(value)
+  return path_lib.normalize_path(value)
+end
+
+local function _is_file(path)
+  return fs_lib.path_exists(path) and not fs_lib.is_dir(path)
 end
 
 -- Windows 侧家目录从 %USERPROFILE% 动态解析,不在代码里硬编码用户名:
 -- 在 /mnt/c 下起 cmd.exe(UNC 工作目录会让 cmd 回落到 C:\Windows,所以先 cd
--- 到 /mnt/c),再经 wslpath -u 换算成 WSL 路径。任何一步失败都返回 "",由调用方
--- 按「不可用」处理。run 是命令执行注入缝(默认 io.popen 读全部输出),供测试替身。
+-- 到 /mnt/c),由 cmd.exe 自己展开 %USERPROFILE%;拿回的盘符路径只在这里经
+-- wslpath -u 换算成 WSL 路径,之后一律按 POSIX 演算。任何一步失败都返回 "",由
+-- 调用方按「不可用」处理。run 是命令执行注入缝(默认读回合并输出),供测试替身。
 function M.resolve_windows_home_dir(run)
-  run = run or _popen
-  local profile = _trim(run("cd /mnt/c 2>/dev/null && cmd.exe /d /c 'echo %USERPROFILE%' 2>/dev/null"))
-  if _is_blank(profile) or not profile:match("^%a:") then
+  run = run or _run
+  local profile = text_lib.trim(run("cd /mnt/c 2>/dev/null && cmd.exe /d /c 'echo %USERPROFILE%' 2>/dev/null"))
+  if profile == "" or not profile:match("^%a:") then
     return ""
   end
-  local converted = _trim(run("wslpath -u " .. _shell_arg(profile) .. " 2>/dev/null"))
-  if _is_blank(converted) or converted:sub(1, 1) ~= "/" then
+  local converted = text_lib.trim(run("wslpath -u " .. shell_lib.shell_quote(profile) .. " 2>/dev/null"))
+  if converted == "" or not path_lib.is_absolute_path(converted) then
     return ""
   end
   return (M.normalize_path_text(converted))
@@ -300,8 +131,8 @@ local _UNCOMMITTED_NOTICE_LIMIT = 10
 -- 重命名/复制条目后紧跟一个源路径字段,跳过它,只报新路径。
 -- 没有 git 或不在仓库里时输出为空,返回空表:这是提示,不走「不可用」退 3。
 function M.list_uncommitted_payload(project_root, run)
-  run = run or _popen
-  local output = run("git -C " .. _shell_arg(project_root)
+  run = run or _run
+  local output = run("git -C " .. shell_lib.shell_quote(project_root)
     .. " -c core.quotepath=false status --porcelain -z -- " .. table.concat(_PAYLOAD_PATHS, " ") .. " 2>/dev/null")
   local paths = {}
   local skip_source = false
@@ -337,14 +168,11 @@ function M.resolve_normalized_path(path_text)
     return ""
   end
 
-  local candidate = _expand_environment_variables(tostring(path_text))
+  local candidate = tostring(path_text)
   if candidate:sub(1, 2) == "~/" or candidate:sub(1, 2) == "~\\" then
-    candidate = _join_path(M.resolve_home_dir(), candidate:sub(3))
+    candidate = path_lib.join_path(M.resolve_home_dir(), candidate:sub(3))
   end
-  if not _is_path_rooted(candidate) then
-    candidate = _join_path(_current_dir(), candidate)
-  end
-  local full = M.normalize_path_text(_get_full_path(candidate))
+  local full = path_lib.resolve_path(env_lib.current_dir(), candidate)
   return (full:gsub("/+$", ""))
 end
 
@@ -353,7 +181,7 @@ end
 function M.resolve_platform_name()
   local missing = M.detect_interop()
   if #missing > 0 then
-    local boundary = dofile(_script_dir() .. "/../../foundation/platform_boundary.lua")
+    local boundary = require("foundation.platform_boundary")
     local verdict = boundary.unavailable_verdict("deploy", " step=interop", {
       "部署需要 WSL 互操作面:缺 " .. table.concat(missing, ", ") .. "。",
       "本次未改动任何部署目录;退出码 " .. boundary.UNAVAILABLE_EXIT_CODE
@@ -372,30 +200,26 @@ function M.join_lua_source_dir_name()
   return "LuaSource_" .. string.char(0xE5, 0xA4, 0xA7, 0xE5, 0xAF, 0x8C, 0xE7, 0xBF, 0x81)
 end
 
-function M.resolve_default_target_path(resolved_platform)
+function M.resolve_default_target_path()
   local home_dir = M.resolve_home_dir()
   if _is_blank(home_dir) then
     M.exit_with_error("Cannot resolve the Windows home directory (%USERPROFILE%) for the default deploy target.")
   end
-
-  if resolved_platform == "win" then
-    return M.resolve_normalized_path(
-      _join_path(_join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())
-    )
-  end
-  M.exit_with_error("No default deploy target is configured for this platform.")
+  return M.resolve_normalized_path(
+    path_lib.join_path(home_dir, "Desktop", "dev", "eggy", M.join_lua_source_dir_name())
+  )
 end
 
 function M.test_project_root(path_text)
-  return _path_is_file(_join_path(path_text, "main.lua"))
-    and _path_is_dir(_join_path(path_text, "src"))
-    and _path_is_dir(_join_path(path_text, "tools"))
+  return _is_file(path_lib.join_path(path_text, "main.lua"))
+    and fs_lib.is_dir(path_lib.join_path(path_text, "src"))
+    and fs_lib.is_dir(path_lib.join_path(path_text, "tools"))
 end
 
 function M.resolve_project_root()
   local candidates = {
-    _get_full_path(_join_path(_script_dir(), "../../..")),
-    _current_dir(),
+    path_lib.simplify_path(path_lib.join_path(_script_dir(), "../../..")),
+    env_lib.current_dir(),
   }
 
   for _, candidate in ipairs(candidates) do
@@ -408,94 +232,27 @@ function M.resolve_project_root()
 end
 
 function M.reset_directory(path_text)
-  if _path_exists(path_text) then
-    _remove_path(path_text)
-  end
-  _ensure_dir(path_text)
+  _check(fs_lib.remove_path(path_text))
+  _check(fs_lib.ensure_dir(path_text))
 end
 
--- 单层条目枚举(含隐藏项):`find -mindepth 1 -maxdepth 1` 一次调用同时拿到
--- 文件与目录,中文与空格文件名按 NUL 分隔原样读回。
-local function _list_entries(path)
-  if not _path_exists(path) then
-    error("Path does not exist: " .. tostring(path))
-  end
-  local output = _popen("find " .. _shell_arg(_normalize_path(path))
-    .. " -mindepth 1 -maxdepth 1 -print0 2>/dev/null")
-  local entries = {}
-  for full in (output .. "\0"):gmatch("(.-)\0") do
-    if full ~= "" then
-      local name = full:match("([^/]+)$") or full
-      entries[#entries + 1] = { name = name, is_dir = _path_is_dir(full) }
-    end
-  end
-  return entries
+local function _collect_lua_files(path)
+  local files, err = proc_lib.collect_lua_files(path)
+  _check(files, err)
+  return files
 end
 
-local function _collect_lua_files(path, result)
-  for _, entry in ipairs(_list_entries(path)) do
-    local full = _join_path(path, entry.name)
-    if entry.is_dir then
-      _collect_lua_files(full, result)
-    elseif entry.name:lower():match("%.lua$") ~= nil then
-      result[#result + 1] = full
-    end
-  end
-  return result
-end
-
--- 二进制逐块复制(不按行读:行读会把 \r 与二进制内容改写掉)。
-local function _copy_file_bytes(source, target)
-  local in_file, in_err = io.open(source, "rb")
-  if in_file == nil then
-    error("Cannot open source file: " .. tostring(source) .. " (" .. tostring(in_err or "") .. ")")
-  end
-  local out_file, out_err = io.open(target, "wb")
-  if out_file == nil then
-    in_file:close()
-    error("Cannot open target file: " .. tostring(target) .. " (" .. tostring(out_err or "") .. ")")
-  end
-  while true do
-    local chunk = in_file:read(65536)
-    if chunk == nil then
-      break
-    end
-    out_file:write(chunk)
-  end
-  in_file:close()
-  out_file:close()
-  return true
-end
-
-local function _copy_entry_recursive(source, target)
-  if _path_is_dir(source) then
-    _ensure_dir(target)
-    for _, entry in ipairs(_list_entries(source)) do
-      _copy_entry_recursive(_join_path(source, entry.name), _join_path(target, entry.name))
-    end
-  else
-    _copy_file_bytes(source, target)
-  end
-end
-
--- 目录镜像:先删目标再整体拷贝。跨文件系统(/mnt/c 与 ext4)时逐文件复制,
--- 可观察结果与历史镜像语义一致(目标侧陈旧文件消失,源侧隐藏项与空目录保留)。
+-- 目录镜像:先删目标再整体拷贝,可观察结果与历史镜像语义一致(目标侧陈旧文件
+-- 消失,源侧隐藏项与空目录保留,字节原样)。源缺失时先报错,目标保持不动。
 function M.copy_directory_tree(source_dir, target_dir)
-  if not _path_is_dir(source_dir) then
+  if not fs_lib.is_dir(source_dir) then
     error("Source directory does not exist: " .. tostring(source_dir))
   end
-  M.reset_directory(target_dir)
-  for _, entry in ipairs(_list_entries(source_dir)) do
-    _copy_entry_recursive(_join_path(source_dir, entry.name), _join_path(target_dir, entry.name))
-  end
+  _check(fs_lib.copy_tree(source_dir, target_dir))
 end
 
 function M.copy_file_with_parent_dir(source_path, target_path)
-  local target_parent = _normalize_path(target_path):match("^(.*)/[^/]+$")
-  if not _is_blank(target_parent) then
-    _ensure_dir(target_parent)
-  end
-  return _copy_file_bytes(source_path, target_path)
+  return _check(fs_lib.copy_file(source_path, target_path))
 end
 
 -- 统计函数。
@@ -505,7 +262,7 @@ end
 -- 行内开口(代码行尾的 --[[@as T]] 之类)不做状态跟踪:同仓库内该类注解
 -- 均同行闭合,不影响口径。
 function M.get_effective_lua_line_count_for_file(path_text)
-  if not _path_is_file(path_text) then
+  if not _is_file(path_text) then
     return 0
   end
 
@@ -522,13 +279,13 @@ function M.get_effective_lua_line_count_for_file(path_text)
         block_close = nil
       end
     end
-    local trimmed = _trim(text)
+    local trimmed = text_lib.trim(text)
     local _, open_end, equals = trimmed:find("^%-%-%[(=*)%[")
     if open_end ~= nil then
       block_close = "]" .. equals .. "]"
       local _, inline_close_end = trimmed:find(block_close, open_end + 1, true)
       if inline_close_end ~= nil then
-        trimmed = _trim(trimmed:sub(inline_close_end + 1))
+        trimmed = text_lib.trim(trimmed:sub(inline_close_end + 1))
         block_close = nil
       else
         trimmed = ""
@@ -542,25 +299,25 @@ function M.get_effective_lua_line_count_for_file(path_text)
 end
 
 function M.get_effective_lua_line_count_for_dir(path_text)
-  if not _path_is_dir(path_text) then
+  if not fs_lib.is_dir(path_text) then
     return 0
   end
 
   local total = 0
-  for _, file_path in ipairs(_collect_lua_files(path_text, {})) do
+  for _, file_path in ipairs(_collect_lua_files(path_text)) do
     total = total + M.get_effective_lua_line_count_for_file(file_path)
   end
   return total
 end
 
 function M.get_lua_file_count(path_text)
-  if not _path_exists(path_text) then
+  if not fs_lib.path_exists(path_text) then
     return 0
   end
-  if _path_is_file(path_text) then
+  if _is_file(path_text) then
     return 1
   end
-  return #_collect_lua_files(path_text, {})
+  return #_collect_lua_files(path_text)
 end
 
 local function _error_text(err)
@@ -577,10 +334,10 @@ end
 local function main()
   local project_root = M.resolve_project_root()
   local resolved_platform = M.resolve_platform_name()
-  local target_source = M.resolve_default_target_path(resolved_platform)
+  local target_source = M.resolve_default_target_path()
   local target_path = M.resolve_normalized_path(target_source)
 
-  _ensure_dir(target_path)
+  _check(fs_lib.ensure_dir(target_path))
 
   M.write_info("======================================")
   M.write_info("Starting project deployment")
@@ -596,28 +353,28 @@ local function main()
     M.write_info(line)
   end
 
-  M.copy_directory_tree(_join_path(project_root, "src"), _join_path(target_path, "src"))
-  M.copy_file_with_parent_dir(_join_path(project_root, "main.lua"), _join_path(target_path, "main.lua"))
+  M.copy_directory_tree(path_lib.join_path(project_root, "src"), path_lib.join_path(target_path, "src"))
+  M.copy_file_with_parent_dir(path_lib.join_path(project_root, "main.lua"), path_lib.join_path(target_path, "main.lua"))
   M.copy_file_with_parent_dir(
-    _join_path(project_root, "Data/UIManagerNodes.lua"),
-    _join_path(target_path, "Data/UIManagerNodes.lua")
+    path_lib.join_path(project_root, "Data/UIManagerNodes.lua"),
+    path_lib.join_path(target_path, "Data/UIManagerNodes.lua")
   )
   M.copy_file_with_parent_dir(
-    _join_path(project_root, "Data/Prefab.lua"),
-    _join_path(target_path, "Data/Prefab.lua")
+    path_lib.join_path(project_root, "Data/Prefab.lua"),
+    path_lib.join_path(target_path, "Data/Prefab.lua")
   )
 
   -- 统计读本地源侧:拷贝是 as-is,文件与有效行数量等价。
   local total_files =
-    M.get_lua_file_count(_join_path(project_root, "src"))
-    + M.get_lua_file_count(_join_path(project_root, "main.lua"))
-    + M.get_lua_file_count(_join_path(project_root, "Data/UIManagerNodes.lua"))
-    + M.get_lua_file_count(_join_path(project_root, "Data/Prefab.lua"))
+    M.get_lua_file_count(path_lib.join_path(project_root, "src"))
+    + M.get_lua_file_count(path_lib.join_path(project_root, "main.lua"))
+    + M.get_lua_file_count(path_lib.join_path(project_root, "Data/UIManagerNodes.lua"))
+    + M.get_lua_file_count(path_lib.join_path(project_root, "Data/Prefab.lua"))
   local total_effective_line_count =
-    M.get_effective_lua_line_count_for_dir(_join_path(project_root, "src"))
-    + M.get_effective_lua_line_count_for_file(_join_path(project_root, "main.lua"))
-    + M.get_effective_lua_line_count_for_file(_join_path(project_root, "Data/UIManagerNodes.lua"))
-    + M.get_effective_lua_line_count_for_file(_join_path(project_root, "Data/Prefab.lua"))
+    M.get_effective_lua_line_count_for_dir(path_lib.join_path(project_root, "src"))
+    + M.get_effective_lua_line_count_for_file(path_lib.join_path(project_root, "main.lua"))
+    + M.get_effective_lua_line_count_for_file(path_lib.join_path(project_root, "Data/UIManagerNodes.lua"))
+    + M.get_effective_lua_line_count_for_file(path_lib.join_path(project_root, "Data/Prefab.lua"))
 
   M.write_info("")
   M.write_info("Lua Files: " .. tostring(total_files))
@@ -647,7 +404,7 @@ local function run_cli()
   return 0
 end
 
-if ... == "tools.packages.ops.deploy" or ... == "packages.ops.deploy" then
+if _required then
   return M
 end
 

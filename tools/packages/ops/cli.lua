@@ -4,23 +4,17 @@
 --   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误)
 --   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
 --
--- 实现:子进程转发 tools/packages/ops/deploy.lua,退出码透传。deploy.lua 自包含
--- 决策(只用 Lua 5.4 标准库,不 require foundation.*;唯一例外是不可用时 dofile
--- platform_boundary 渲染退 3 诊断),在 WSL 中运行、写入
--- Windows 侧 Eggy 宿主目录(ADR 0073)。
+-- 实现:子进程转发 tools/packages/ops/deploy.lua,退出码透传。deploy.lua 直跑时
+-- 经 script_bootstrap 自举 package.path,原语取 foundation(#222);在 WSL 中运行、
+-- 写入 Windows 侧 Eggy 宿主目录(ADR 0073)。
 -- --help/-h 在壳内消费返回 usage;其余参数原样透传,deploy.lua 自身零参数接口
 -- 报错语义不变(任何参数 → ERROR + exit 1,#384 继承的 deploy.ps1 空 param())。
 local M = {}
 
 local tool_cli = require("foundation.tool_cli")
+local shell_lib = require("foundation.shell")
 
 local DEPLOY_ENTRY = "tools/packages/ops/deploy.lua"
-
-local function _shell_quote(value)
-  local text = tostring(value or "")
-  assert(not text:find("[\r\n%z]"), "Unsupported command argument")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
-end
 
 function M.usage()
   return table.concat({
@@ -43,7 +37,7 @@ function M.main(args, env)
   end
   local parts = { require("foundation.lua54").lua54_bin(), DEPLOY_ENTRY }
   for _, value in ipairs(args or {}) do
-    parts[#parts + 1] = _shell_quote(value)
+    parts[#parts + 1] = shell_lib.shell_quote(value)
   end
   local ok, how, code = os.execute(table.concat(parts, " "))
   if how == "exit" then

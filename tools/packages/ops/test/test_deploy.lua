@@ -111,16 +111,9 @@ it("folds dot and dotdot segments", function()
   check.equal("/bob", deploy.resolve_normalized_path("/home/alice/../../bob"))
 end)
 
-it("drive path folds when handed a raw Windows path", function()
-  -- 部署目标始终经 wslpath 换算成 /mnt/c/...;折叠逻辑对未换算的盘符路径同样成立。
-  check.equal("C:/Users/bar", deploy.resolve_normalized_path("C:/Users/foo/../bar/"))
-end)
-
-it("expands percent environment variables", function()
-  local home = os.getenv("HOME")
-  check.truthy(home ~= nil and tostring(home):gsub("^%s+", ""):gsub("%s+$", "") ~= "",
-    "HOME must be set in the WSL development environment")
-  check.equal(deploy.normalize_path_text(home) .. "/x", deploy.resolve_normalized_path("%HOME%/x"))
+-- %USERPROFILE% 只在 cmd.exe 内展开;Lua 侧路径里的 %NAME% 是普通字符(#222)。
+it("keeps percent text literal", function()
+  check.equal("/mnt/c/Users/a%HOME%b/x", deploy.resolve_normalized_path("/mnt/c/Users/a%HOME%b/x/"))
 end)
 
 it("platform name returns win when the WSL interop surface is present", function()
@@ -139,7 +132,8 @@ it("platform name exits 3 with status=unavailable without WSL interop", function
   check.is_true(fs_lib.ensure_dir(root))
   local driver = root .. "/driver.lua"
   check.is_true(fs_lib.write_file(driver, table.concat({
-    "package.path = " .. string.format("%q", env_lib.current_dir() .. "/?.lua;") .. " .. package.path",
+    "package.path = " .. string.format("%q", env_lib.current_dir() .. "/?.lua;" .. env_lib.current_dir() .. "/tools/?.lua;")
+      .. " .. package.path",
     "local deploy = require('tools.packages.ops.deploy')",
     "deploy.detect_interop = function() return { 'cmd.exe', 'wslpath' } end",
     "deploy.resolve_platform_name()",

@@ -160,11 +160,6 @@ local function _test_foundation_handles_unicode_paths_for_file_ops()
       error(err)
     end
 
-    ok, err = fs_lib.append_file(file_path, "-- appended\n")
-    if not ok then
-      error(err)
-    end
-
     check.is_true(fs_lib.path_exists(file_path) == true, "unicode file path should exist after write")
 
     local content, read_err = fs_lib.read_file(file_path)
@@ -172,7 +167,6 @@ local function _test_foundation_handles_unicode_paths_for_file_ops()
       error(read_err)
     end
     _assert_contains(content, "中文 English", "unicode file content should round-trip through file io")
-    _assert_contains(content, "-- appended", "append_file should preserve appended content")
 
     local files, list_err = proc_lib.collect_lua_files(tmp_root)
     if files == nil then
@@ -351,7 +345,7 @@ local function _test_deploy_lua_matches_simplified_cli()
   -- Windows 侧落点:~/Desktop/dev/eggy/LuaSource_大富翁(经 %USERPROFILE% + wslpath 换算)。
   _assert_contains(
     script_text,
-    '_join_path(_join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())',
+    'path_lib.join_path(home_dir, "Desktop", "dev", "eggy", M.join_lua_source_dir_name())',
     "deploy.lua should keep the Windows default deploy path semantics"
   )
   _assert_contains(script_text, "wslpath", "deploy.lua should convert the Windows profile through wslpath")

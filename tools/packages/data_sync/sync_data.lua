@@ -175,8 +175,8 @@ function M.main(args)
   end
 
   -- 缺 WSL 互操作面时 resolve_platform_name 内部直接退 3(status=unavailable,deploy 语义)。
-  local platform = deploy.resolve_platform_name()
-  local deploy_dir = deploy.resolve_default_target_path(platform)
+  deploy.resolve_platform_name()
+  local deploy_dir = deploy.resolve_default_target_path()
   local repo_root = deploy.resolve_project_root()
 
   io.stdout:write("======================================\n")
