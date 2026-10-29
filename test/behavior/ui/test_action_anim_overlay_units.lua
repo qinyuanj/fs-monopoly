@@ -395,7 +395,8 @@ describe("TestActionAnimOverlayUnits", function()
     _assert_eq(spawn_calls[1].kind, "mine", "mine overlay should pass the mine kind")
     _assert_eq(spawn_calls[1].tile_index, 1, "mine overlay should target the requested tile")
     _assert_eq(spawn_calls[1].group_id, 7777, "mine overlay should pass the resolved group id")
-    luassert.truthy(spawn_calls[1].pos ~= nil, "mine overlay should pass a resolved ground position")
+    -- build_min_state 地面 y=0:pos.y 即地雷离地高度。
+    _assert_near(spawn_calls[1].pos.y, 0.659, "mine overlay should sit at the calibrated mine height above ground")
   end)
 
   it("test_anim_unit_overlay_play_overlay_mine_warns_and_skips_when_prefab_missing", function()
