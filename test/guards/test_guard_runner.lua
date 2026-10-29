@@ -69,6 +69,10 @@ local guards = {
     module = "test.guards.lib.root_whitelist_guard",
   },
   {
+    name = "eggy_json_guard",
+    module = "test.guards.lib.eggy_json_guard",
+  },
+  {
     name = "docs_whitelist_guard",
     module = "test.guards.lib.docs_whitelist_guard",
   },
