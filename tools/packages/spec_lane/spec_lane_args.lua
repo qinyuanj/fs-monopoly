@@ -1,5 +1,7 @@
 local spec_lane_args = {}
 
+local tool_cli = require("foundation.tool_cli")
+
 function spec_lane_args.usage()
   return table.concat({
     "用法: lua5.4 tools/cli.lua spec-lane --profile <name> [--serial] [--verbose] [--evidence-dir=<目录>]",
@@ -49,7 +51,7 @@ function spec_lane_args.parse(args)
       if value == nil or value == "" then return nil, "missing --recount value" end
       options.recount = value
       i = i + 1
-    elseif token == "--help" or token == "-h" then
+    elseif tool_cli.is_help_flag(token) then
       options.help = true
       i = i + 1
     else
