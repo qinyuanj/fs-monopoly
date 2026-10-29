@@ -6,8 +6,8 @@
 #        [-n 尾部行数] [-c 上下行数] [-m 最多命中数]
 #
 # 部署目录由 `lua5.4 tools/cli.lua deploy` 纯拷贝生成,不是 git clone;log.txt 在根部。
-# 目标解析顺序:-l > -t > $MONOPOLY_DEPLOY_TARGET > 经 cmd.exe + wslpath 解析的
-# %USERPROFILE%/Desktop/dev/eggy/LuaSource_大富翁(与 deploy 同一口径)。
+# 目标解析顺序:-l > -t > <家目录>/Desktop/dev/eggy/LuaSource_大富翁;家目录取
+# $MONOPOLY_DEPLOY_HOME,否则经 cmd.exe + wslpath 解析 %USERPROFILE%(与 deploy 同一口径)。
 set -euo pipefail
 
 target_path=""
@@ -49,12 +49,10 @@ windows_home() {
 }
 
 default_target() {
-  if [[ -n "${MONOPOLY_DEPLOY_TARGET:-}" ]]; then
-    expand_path "$MONOPOLY_DEPLOY_TARGET"
-    return
-  fi
   local home
-  if ! home=$(windows_home); then
+  if [[ -n "${MONOPOLY_DEPLOY_HOME:-}" ]]; then
+    home=$(expand_path "$MONOPOLY_DEPLOY_HOME")
+  elif ! home=$(windows_home); then
     echo "无法解析 Windows 家目录:cmd.exe 或 wslpath 不可用(在 WSL 中运行)。" >&2
     exit 3
   fi

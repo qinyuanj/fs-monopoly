@@ -18,7 +18,7 @@ description: 真机运行时取证：分析部署目录 log.txt 定位异常，�
 
 ## 入口一：log.txt 事后取证
 
-用户给了日志路径或部署根目录就传参；否则裸跑脚本，由它兜底解析 `MONOPOLY_DEPLOY_TARGET` 或默认部署目录。
+用户给了日志路径或部署根目录就传参；否则裸跑脚本，由它兜底解析默认部署目录。
 
 1. 跑分析脚本：
 
@@ -26,7 +26,7 @@ description: 真机运行时取证：分析部署目录 log.txt 定位异常，�
 .agents/skills/device-debug/scripts/analyze_log.sh [-t 部署根] [-l log.txt路径]
 ```
 
-脚本自身按 `-l` > `-t` > `MONOPOLY_DEPLOY_TARGET` > `cmd.exe` + `wslpath` 解析的 `%USERPROFILE%` 顺序找部署目录，与 `deploy` 同一口径；不在 WSL 里（拿不到 Windows 家目录）退 3。
+脚本自身按 `-l` > `-t` > 家目录下默认部署目录的顺序找，家目录取 `MONOPOLY_DEPLOY_HOME`、否则经 `cmd.exe` + `wslpath` 解析 `%USERPROFILE%`，与 `deploy` 同一口径；不在 WSL 里（拿不到 Windows 家目录）退 3。
 
 2. 读输出：TOP_MATCHES 已按严重度排序（stack traceback > error > attempt/nil value > failed/exception/panic > warn）；`[warn]` 只在和用户反馈直接相关时深入。
 3. 追源码只看命中文件和相邻调用点，不预读整目录。
