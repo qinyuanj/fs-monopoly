@@ -5,6 +5,9 @@ local gateway = {}
 
 local runtime_field = "__market_paid_runtime"
 local panel_show_seconds = 10.0
+-- 宿主没有关闭购买页的接口;真机验证(2026-10-29):对同一商品重新调用
+-- show_goods_purchase_panel 并给极短显示时间,会把已打开的购买页立即收起。
+local panel_close_seconds = 0.1
 
 local function _new_runtime()
   return {
@@ -323,11 +326,25 @@ local function _hide_purchase_panel(player)
   end
 end
 
+-- 购买成功即收起购买页,避免页面存活期内连续购买:后续购买找不到待到账记录,
+-- 宿主扣款与限购计数会和 Lua 侧对不上。待到账记录缺失时同样收起。
+local function _close_goods_purchase_panel(data, goods_id)
+  local role = data and data.role or nil
+  if role == nil or type(role.show_goods_purchase_panel) ~= "function" then
+    return
+  end
+  local ok = pcall(role.show_goods_purchase_panel, goods_id, panel_close_seconds)
+  if not ok then
+    logger.warn("market paid panel close failed", "goods_id=" .. tostring(goods_id))
+  end
+end
+
 local function _on_purchase_goods_callback(game, rt, data)
   local goods_id = _callback_goods_id(data)
   if goods_id == nil then
     return
   end
+  _close_goods_purchase_panel(data, goods_id)
   local pending = _consume_callback_pending(rt, data, goods_id)
   if pending == nil then
     return

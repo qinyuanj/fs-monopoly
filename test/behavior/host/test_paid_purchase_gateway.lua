@@ -955,6 +955,56 @@ local function _test_eggy_paid_gateway_callback_hides_purchase_panel()
   _assert_eq(hidden, false, "successful callback should hide purchase panel")
 end
 
+-- 购买页无关闭接口:回调里对同一商品以 0.1 秒重开,把购买页立即收起(真机 2026-10-29 验证)。
+local function _closing_callback_role(calls)
+  return {
+    get_roleid = function() return 5 end,
+    show_goods_purchase_panel = function(goods_id, show_time)
+      calls[#calls + 1] = { goods_id = goods_id, show_time = show_time }
+    end,
+  }
+end
+
+local function _test_eggy_paid_gateway_callback_closes_goods_purchase_panel()
+  local gateway = require("src.host.paid_purchase_gateway")
+  local player = _player(99)
+  local entry = _entry()
+  local game = _game_with_player(player)
+  local rt = gateway._runtime(game)
+  local calls = {}
+  gateway._push_pending(rt, 5, {
+    player_id = player.id,
+    product_id = entry.product_id,
+    entry = entry,
+    goods_id = "goods_123",
+  })
+
+  with_patches({
+    {
+      target = require("src.foundation.ports.runtime_ports"),
+      key = "resolve_role",
+      value = function() return {} end,
+    },
+  }, function()
+    gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = _closing_callback_role(calls) })
+  end)
+
+  luassert.same({ { goods_id = "goods_123", show_time = 0.1 } }, calls,
+    "successful callback should reopen the same goods with 0.1s to close the purchase panel")
+end
+
+local function _test_eggy_paid_gateway_callback_closes_panel_even_without_pending()
+  local gateway = require("src.host.paid_purchase_gateway")
+  local game = _game_with_player(_player(99))
+  local rt = gateway._runtime(game)
+  local calls = {}
+
+  gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = _closing_callback_role(calls) })
+
+  luassert.same({ { goods_id = "goods_123", show_time = 0.1 } }, calls,
+    "callback without pending should still close the purchase panel")
+end
+
 local function _test_eggy_paid_gateway_registers_purchase_events_once()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
@@ -1047,6 +1097,9 @@ it("test_eggy_paid_gateway_register_guard_skips_already_registered_roles", _test
 it("test_eggy_paid_gateway_panel_call_failure_warns_with_caption", _test_eggy_paid_gateway_panel_call_failure_warns_with_caption)
 it("test_eggy_paid_gateway_pending_on_purchase_field_keeps_only_functions", _test_eggy_paid_gateway_pending_on_purchase_field_keeps_only_functions)
 it("test_eggy_paid_gateway_callback_hides_purchase_panel", _test_eggy_paid_gateway_callback_hides_purchase_panel)
+it("test_eggy_paid_gateway_callback_closes_goods_purchase_panel", _test_eggy_paid_gateway_callback_closes_goods_purchase_panel)
+it("test_eggy_paid_gateway_callback_closes_panel_even_without_pending",
+  _test_eggy_paid_gateway_callback_closes_panel_even_without_pending)
 it("test_eggy_paid_gateway_registers_purchase_events_once", _test_eggy_paid_gateway_registers_purchase_events_once)
 it("test_eggy_paid_gateway_skips_event_registration_without_event_contract", _test_eggy_paid_gateway_skips_event_registration_without_event_contract)
 end)

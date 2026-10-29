@@ -47,6 +47,18 @@ local function _find_option(options, product_id)
   return nil
 end
 
+-- 购买页调用分两类:开屏(宿主显示时长 10 秒)与回调里的收屏(同商品 0.1 秒重开)。
+-- opens=true 只数开屏,false 只数收屏。
+local function _count_panel_calls(panel_calls, opens)
+  local count = 0
+  for _, call in ipairs(panel_calls) do
+    if (call.show_time > 1) == opens then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 local function _find_paid_item_entry()
   for _, entry in ipairs(market_cfg) do
     if entry.kind == "item" and (entry.currency == "金豆" or entry.currency == "乐园币") and entry.market_enabled ~= false then
@@ -748,7 +760,8 @@ do -- describe("market")
         luassert.truthy(type(second) == "table" and second.ok == true and second.deferred_fulfillment == true, "second paid purchase should also defer fulfillment")
         cb(nil, nil, { role = role, goods_id = "goods_paid_item_repeat" })
 
-        luassert.truthy(#panel_calls == 2, "same paid goods should be purchasable multiple times")
+        luassert.truthy(_count_panel_calls(panel_calls, true) == 2, "same paid goods should be purchasable multiple times")
+        luassert.truthy(_count_panel_calls(panel_calls, false) == 2, "each paid callback should close the purchase panel")
       end)
 
       luassert.truthy(p.inventory:count() == before_count + 2, "repeated paid callback should grant the item twice")
@@ -816,18 +829,18 @@ do -- describe("market")
       }, function()
         local first = market_service.purchase.execute(g, p, target.product_id)
         luassert.truthy(type(first) == "table" and first.ok == true and first.deferred_fulfillment == true, "first paid purchase should succeed")
-        luassert.truthy(#panel_calls == 1, "first purchase should open panel")
+        luassert.truthy(_count_panel_calls(panel_calls, true) == 1, "first purchase should open panel")
 
         local second = market_service.purchase.execute(g, p, target.product_id)
         luassert.truthy(type(second) == "table" and second.ok == false and second.reason == "purchase_in_flight", "second purchase while in-flight should be blocked")
-        luassert.truthy(#panel_calls == 1, "blocked purchase should not open another panel")
+        luassert.truthy(_count_panel_calls(panel_calls, true) == 1, "blocked purchase should not open another panel")
 
         local cb = purchase_handlers[p.id]
         cb(nil, nil, { role = role, goods_id = "goods_in_flight_test" })
 
         local third = market_service.purchase.execute(g, p, target.product_id)
         luassert.truthy(type(third) == "table" and third.ok == true and third.deferred_fulfillment == true, "purchase after callback should succeed again")
-        luassert.truthy(#panel_calls == 2, "purchase after callback should open panel")
+        luassert.truthy(_count_panel_calls(panel_calls, true) == 2, "purchase after callback should open panel")
       end)
     end)
 
