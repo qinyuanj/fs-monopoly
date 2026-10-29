@@ -22,7 +22,7 @@ end
 
 describe("TestArchConfigRules", function()
   -- ui.state 拥有展示状态,ui.coord 消费它并驱动视图/宿主副作用;层序把两者都算
-  -- ui(3),所以这条方向约束不在层门禁覆盖范围内,必须由显式规则承担
+  -- ui(L3),所以这条方向约束不在层门禁覆盖范围内,必须由显式规则承担
   -- (docs/architecture.md「ui 内部」一节)。
   it("test_ui_state_must_not_depend_on_ui_coord", function()
     local rule = _rule("ui_state_no_coord")
@@ -34,7 +34,7 @@ describe("TestArchConfigRules", function()
       "ui_state_no_coord 的 to 必须覆盖整个 src.ui.coord 子树")
   end)
 
-  -- 回合循环运行时以 turn → ui 方向调用 ui;层序允许 ui(3) 依赖 turn(4),所以
+  -- 回合循环运行时以 turn → ui 方向调用 ui;层序允许 ui(L3) 依赖 turn(L4),所以
   -- ui 反过来 require 回合循环会形成隐性双向边而层门禁不拦(#206 C / #211)。
   -- 锁输入谓词已下沉到 src.state.input_lock,ui 应向内依赖它。
   it("test_ui_must_not_depend_on_turn_loop", function()

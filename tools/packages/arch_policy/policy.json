@@ -23,8 +23,6 @@
       "name": "app",
       "component": "app",
       "match": [
-        "^src%.entry$",
-        "^src%.entry%..+",
         "^src%.app$",
         "^src%.app%..+"
       ]
@@ -106,7 +104,7 @@
   "forbidden_dependency_rules": [
     {
       "name": "ui_no_player",
-      "description": "ui must not depend on player modules directly (downward-skip purity: layer order allows ui(3)->player as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
+      "description": "ui must not depend on player modules directly (downward-skip purity: layer order allows ui(L3)->player as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
       "from": [
         "^src%.ui%..+"
       ],
@@ -116,7 +114,7 @@
     },
     {
       "name": "ui_no_computer",
-      "description": "ui must not depend on computer modules directly (downward-skip purity: layer order allows ui(3)->computer as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
+      "description": "ui must not depend on computer modules directly (downward-skip purity: layer order allows ui(L3)->computer as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
       "from": [
         "^src%.ui%..+"
       ],
@@ -126,7 +124,7 @@
     },
     {
       "name": "ui_no_rules",
-      "description": "ui must not depend on rules modules directly (downward-skip purity: layer order allows ui(3)->rules as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
+      "description": "ui must not depend on rules modules directly (downward-skip purity: layer order allows ui(L3)->rules as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
       "from": [
         "^src%.ui%..+"
       ],
@@ -156,7 +154,7 @@
     },
     {
       "name": "ui_state_no_coord",
-      "description": "ui.state owns presentation state and must not depend on ui.coord, which consumes it and drives view/host side effects (intra-ui direction; layer order treats both as ui(3) so this is NOT covered by the layer gate — retained)",
+      "description": "ui.state owns presentation state and must not depend on ui.coord, which consumes it and drives view/host side effects (intra-ui direction; layer order treats both as ui(L3) so this is NOT covered by the layer gate — retained)",
       "from": [
         "^src%.ui%.state%..+"
       ],
@@ -166,7 +164,7 @@
     },
     {
       "name": "ui_no_turn_loop",
-      "description": "ui must not depend on the turn loop, which calls into ui (turn -> ui runtime direction); the input-lock predicate lives in src.state.input_lock (#206 C / #211). Layer order allows ui(3)->turn(4) as a legal downward edge, so this ban is NOT covered by the layer gate",
+      "description": "ui must not depend on the turn loop, which calls into ui (turn -> ui runtime direction); the input-lock predicate lives in src.state.input_lock (#206 C / #211). Layer order allows ui(L3)->turn(L4) as a legal downward edge, so this ban is NOT covered by the layer gate",
       "from": [
         "^src%.ui%..+"
       ],
