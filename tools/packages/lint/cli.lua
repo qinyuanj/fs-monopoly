@@ -27,11 +27,9 @@ function M.usage()
 end
 
 function M.main(args, env)
-  for _, value in ipairs(args or {}) do
-    if value == "--help" or value == "-h" then
-      io.write(M.usage())
-      return 0
-    end
+  local help = tool_cli.help_exit(args, M.usage)
+  if help ~= nil then
+    return help
   end
   return tool_cli.run(RUN_OPTS, args, env)
 end
