@@ -26,6 +26,11 @@ local M = { key = "market" }
 local MARKET_SLOTS_FULL_TIP = "道具槽已满，无法购买"
 local MARKET_SLOTS_FULL_TIP_SECONDS = 3.0
 
+-- #178 点背景关闭暂时停用(2026-10-29,金豆单次限购改 1 后连续购买易误触关屏)。
+-- 背景仍注册路由且保持触摸,只吞点击、不产出意图,避免点击穿透到下方棋盘;
+-- 恢复时改回 true 即可。
+M.BACKGROUND_CLICK_CLOSE_ENABLED = false
+
 -- 槽满点击拦截(UI 本地闸):购买按钮在 build_intent 处打回 —— tip 告知 + 不生出
 -- market_confirm intent,引擎往返整段跳过。槽位按 choice owner 取(视角玩家可能
 -- 只是观战);模型缺槽位数据时放行,由引擎侧 purchase_fulfillment 的
@@ -134,9 +139,15 @@ function M.build_controls(state)
       build_intent = _build_cancel_intent,
     },
     {
-      -- #178 点背景关闭:与 close 同一取消意图,权限由同一校验裁定。
+      -- #178 点背景关闭:与 close 同一取消意图,权限由同一校验裁定;开关见
+      -- BACKGROUND_CLICK_CLOSE_ENABLED。
       name = nodes.background,
-      build_intent = _build_cancel_intent,
+      build_intent = function()
+        if M.BACKGROUND_CLICK_CLOSE_ENABLED ~= true then
+          return nil
+        end
+        return _build_cancel_intent()
+      end,
     },
     {
       name = nodes.page_prev,

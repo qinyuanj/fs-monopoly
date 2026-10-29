@@ -642,9 +642,9 @@ it("test_ui_event_router_injects_actor_for_market_confirm_and_cancel", function(
   _assert_eq(captured[2] and captured[2].actor_role_id, 3, "market_close should inject actor_role_id")
 end)
 
-it("test_ui_event_router_market_background_click_equals_close_click_for_operator_and_spectator", function()
-  -- #178 点背景关闭:操作者与旁观者点黑市背景,派发的意图(含 actor)与点关闭按钮逐字段一致,
-  -- 权限由回合层对同一 choice_cancel 的同一校验裁定。
+-- #178 点背景关闭:按 close → background → close → background(操作者 3、旁观者 4)顺序点击,
+-- 返回派发到回合层的意图列表;background_close_enabled 覆盖黑市屏的暂停开关。
+local function _click_market_close_and_background(background_close_enabled)
   local market_nodes = require("src.ui.schema.market")
   local node_map = {
     [market_nodes.close] = _new_listenable_node(),
@@ -652,7 +652,9 @@ it("test_ui_event_router_market_background_click_equals_close_click_for_operator
   }
   local captured
 
-  _with_patches(_router_env_patches(node_map), function()
+  _with_patches(_router_env_patches(node_map, {
+    { target = market_modal_renderer, key = "BACKGROUND_CLICK_CLOSE_ENABLED", value = background_close_enabled },
+  }), function()
     local state
     state, captured = _make_dispatch_state({
       ui_model = {
@@ -681,13 +683,28 @@ it("test_ui_event_router_market_background_click_equals_close_click_for_operator
     node_map[market_nodes.close]._listener_cb({ role = spectator })
     node_map[market_nodes.background]._listener_cb({ role = spectator })
   end)
+  return captured
+end
 
+it("test_ui_event_router_market_background_click_equals_close_click_for_operator_and_spectator", function()
+  -- #178 点背景关闭(开关打开时):操作者与旁观者点黑市背景,派发的意图(含 actor)与点关闭按钮
+  -- 逐字段一致,权限由回合层对同一 choice_cancel 的同一校验裁定。
+  local captured = _click_market_close_and_background(true)
   _assert_eq(#captured, 4, "every close/background click must reach the dispatcher")
   _assert_eq(captured[1].type, "choice_cancel", "operator close dispatches choice_cancel")
   _assert_eq(captured[1].actor_role_id, 3, "operator close carries operator actor")
   luassert.same(captured[1], captured[2], "operator background click must equal operator close click")
   _assert_eq(captured[3].actor_role_id, 4, "spectator close carries spectator actor")
   luassert.same(captured[3], captured[4], "spectator background click must equal spectator close click")
+end)
+
+it("test_ui_event_router_market_background_click_does_not_close_while_paused", function()
+  -- 2026-10-29 暂停点背景关闭:背景点击不派发,关闭按钮照常派发 choice_cancel。
+  local captured = _click_market_close_and_background(false)
+  _assert_eq(#captured, 2, "only close button clicks reach the dispatcher while paused")
+  _assert_eq(captured[1].type, "choice_cancel", "operator close still dispatches choice_cancel")
+  _assert_eq(captured[1].actor_role_id, 3, "operator close carries operator actor")
+  _assert_eq(captured[2].actor_role_id, 4, "spectator close carries spectator actor")
 end)
 
 it("test_ui_event_router_optional_end_button_blocked_when_choice_modal_open", function()

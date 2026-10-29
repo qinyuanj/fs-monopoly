@@ -115,9 +115,9 @@ it("test_cancel_and_close_both_call_choice_cancel_intent_with_market_close", fun
   _assert_eq(cancel_calls[2], "market_close", "reason 'market_close' literal stable across both")
 end)
 
--- #178 点背景关闭:黑市背景与黑市关闭按钮产出同一取消意图,不允许取消时同为 nil。
-it("test_background_click_builds_same_cancel_intent_as_close_button", function()
-  local function _intents_for(allow_cancel)
+-- #178 点背景关闭:开关打开时黑市背景与黑市关闭按钮产出同一取消意图,不允许取消时同为 nil;
+-- 开关默认关闭(2026-10-29 暂停),背景仍注册路由但不产出意图。
+local function _background_and_close_intents(allow_cancel, background_close_enabled)
     local model = {
       choice = { id = 12, kind = "market_buy", allow_cancel = allow_cancel, options = {} },
       market = { choice_id = 12, options = {} },
@@ -125,6 +125,7 @@ it("test_background_click_builds_same_cancel_intent_as_close_button", function()
     local background, close
     _with_patches({
       { target = runtime_state, key = "get_ui_model", value = function() return model end },
+      { target = market_route, key = "BACKGROUND_CLICK_CLOSE_ENABLED", value = background_close_enabled },
     }, function()
       local specs = market_route.build_route_specs({})
       local background_spec = _find_spec(specs, "黑市_背景矩形")
@@ -133,15 +134,23 @@ it("test_background_click_builds_same_cancel_intent_as_close_button", function()
       close = _find_spec(specs, "黑市_关闭").build_intent()
     end)
     return background, close
-  end
+end
 
-  local background, close = _intents_for(true)
+it("test_background_click_builds_same_cancel_intent_as_close_button_when_enabled", function()
+  local background, close = _background_and_close_intents(true, true)
   luassert.same({ type = "choice_cancel", choice_id = 12 }, close, "close button cancels the market choice")
   luassert.same(close, background, "background click must equal close button intent")
 
-  local blocked_background, blocked_close = _intents_for(false)
+  local blocked_background, blocked_close = _background_and_close_intents(false, true)
   _assert_eq(blocked_close, nil, "close yields nothing when cancel is not allowed")
   _assert_eq(blocked_background, nil, "background yields nothing when cancel is not allowed")
+end)
+
+it("test_background_click_close_is_disabled_by_default", function()
+  _assert_eq(market_route.BACKGROUND_CLICK_CLOSE_ENABLED, false, "background click close is paused")
+  local background, close = _background_and_close_intents(true, market_route.BACKGROUND_CLICK_CLOSE_ENABLED)
+  luassert.same({ type = "choice_cancel", choice_id = 12 }, close, "close button still cancels the market choice")
+  _assert_eq(background, nil, "background click must not close the market while paused")
 end)
 
 -- Targets architect-listed L40 _resolve_market check + L75 "market_page_next" literal capture.
