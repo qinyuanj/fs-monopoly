@@ -72,9 +72,11 @@ if _VERSION ~= "Lua 5.4" then
   os.exit(1)
 end
 
+local tool_cli = require("foundation.tool_cli")
+
 local raw_args = arg or {}
 local name = raw_args[1]
-if name == nil or name == "--help" or name == "-h" then
+if name == nil or tool_cli.is_help_flag(name) then
   io.write(_usage())
   os.exit(0)
 end
