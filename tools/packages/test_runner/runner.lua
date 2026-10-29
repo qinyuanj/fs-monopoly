@@ -5,8 +5,8 @@ if _VERSION ~= "Lua 5.4" then
 end
 local source = debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")
 local root = source:match("^(.*)/tools/packages/test_runner/runner.lua$") or "."
--- #139: lanes merge stderr into stdout. Redirected Windows stdout can still
--- flush a "line" buffer in chunks, so finish every write before later stderr.
+-- #139: lanes merge stderr into stdout. Redirected stdout is block-buffered
+-- while stderr is not, so finish every write before later stderr.
 io.stdout:setvbuf("no")
 local bootstrap = dofile(root .. "/tools/foundation/bootstrap.lua")
 local env = bootstrap.install(source)

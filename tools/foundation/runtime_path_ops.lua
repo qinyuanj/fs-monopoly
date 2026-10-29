@@ -62,9 +62,9 @@ function runtime_path_ops.path_exists(path)
   return os.rename(path, path) ~= nil
 end
 
+-- 只认 POSIX 根 "/"(ADR 0073):盘符不是绝对路径的特例。
 function runtime_path_ops.is_absolute(path)
-  local normalized = runtime_path_ops.normalize(path)
-  return normalized:sub(1, 1) == "/" or normalized:match("^%a:[/]") ~= nil
+  return runtime_path_ops.normalize(path):sub(1, 1) == "/"
 end
 
 function runtime_path_ops.resolve_source_path(source_path, cwd)
