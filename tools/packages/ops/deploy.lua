@@ -25,12 +25,6 @@ local function _normalize_path(value)
   return tostring(value or ""):gsub("\\", "/")
 end
 
--- 运行平台:WSL 的判据是「Linux 且能起 cmd.exe + wslpath」。缺任一即不可用
--- (退 3),不把环境问题当成部署失败。
-local function _actual_is_windows()
-  return package.config:sub(1, 1) == "\\"
-end
-
 local function _exit_status(ok, _, code)
   if type(ok) == "number" then
     return ok == 0, ok
@@ -354,12 +348,6 @@ function M.resolve_normalized_path(path_text)
   return (full:gsub("/+$", ""))
 end
 
--- 平台判定入口。
-
-function M.test_is_windows_host()
-  return _actual_is_windows()
-end
-
 -- 平台名:部署目标恒为 Windows 宿主;运行面必须是能起 cmd.exe + wslpath 的 WSL。
 -- 不可用时退 3(环境问题),不打印 ERROR(那不是部署失败)。
 function M.resolve_platform_name()
@@ -508,15 +496,6 @@ function M.copy_file_with_parent_dir(source_path, target_path)
     _ensure_dir(target_parent)
   end
   return _copy_file_bytes(source_path, target_path)
-end
-
-function M.remove_nested_paths(root_dir, relative_paths)
-  for _, relative_path in ipairs(relative_paths or {}) do
-    local target = _join_path(root_dir, relative_path)
-    if _path_exists(target) then
-      _remove_path(target)
-    end
-  end
 end
 
 -- 统计函数。

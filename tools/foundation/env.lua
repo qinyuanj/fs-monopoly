@@ -7,7 +7,6 @@
 -- 「工具链跑在哪个 OS」与「部署目标是哪个 OS」搞混:Eggy 宿主仍在 Windows 端,
 -- 那条路径活在 tools/packages/ops/deploy.lua 里,与本文件无关。
 local path_lib = require("foundation.path")
-local shell_lib = require("foundation.shell")
 local fs_lib = require("foundation.fs")
 local runtime_path_ops = require("foundation.runtime_path_ops")
 
@@ -50,11 +49,6 @@ function env.make_temp_path(prefix, suffix)
     _entropy_token(),
   }, "_")
   return path_lib.join_path(base_dir, name .. tostring(suffix or ""))
-end
-
-function env.build_open_command(path)
-  local normalized = path_lib.normalize_path(path)
-  return shell_lib.build_command({ "xdg-open", normalized })
 end
 
 return env

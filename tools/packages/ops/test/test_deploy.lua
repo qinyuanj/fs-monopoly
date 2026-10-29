@@ -123,10 +123,6 @@ it("expands percent environment variables", function()
   check.equal(deploy.normalize_path_text(home) .. "/x", deploy.resolve_normalized_path("%HOME%/x"))
 end)
 
-it("WSL host is not the native Windows platform", function()
-  check.is_false(deploy.test_is_windows_host())
-end)
-
 it("platform name returns win when the WSL interop surface is present", function()
   _with_stubbed("detect_interop", function()
     return {}
@@ -344,16 +340,6 @@ it("copy tree errors on missing source", function()
     check.has_error(function()
       deploy.copy_directory_tree(root .. "/missing", root .. "/target")
     end)
-  end)
-end)
-
-it("remove nested paths removes existing targets", function()
-  _with_sandbox(function(root)
-    local dir = root .. "/nested"
-    fs_lib.ensure_dir(dir .. "/a/b")
-    _write_file(dir .. "/a/b/c.txt", "x")
-    deploy.remove_nested_paths(dir, { "a/b", "missing" })
-    check.is_false(fs_lib.path_exists(dir .. "/a/b"))
   end)
 end)
 

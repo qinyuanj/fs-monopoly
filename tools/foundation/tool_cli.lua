@@ -6,10 +6,9 @@
 --
 --   require runner → 归一化退出码 → 子进程兜底
 --
--- 各 cli.lua 的 main 只剩 --help 路由 + 一次 tool_cli.run 调用。env merge 的
--- 唯一落点在 runner 侧(#323):runner 以自身 _env 为底经 tool_cli.merge_env
--- 合并调用方 env;cli adapter 只透传,不替 runner 合并——否则会出现
--- cli/runner 双侧各 merge 一遍的冗余。
+-- 各 cli.lua 的 main 只剩 --help 路由 + 一次 tool_cli.run 调用。调用方 env
+-- 原样透传给 runner;默认值如何与调用方 env 合并由 runner 自理(#323),
+-- cli adapter 不替 runner 合并。
 --
 -- 语义:
 --   pcall(require, runner_module) 失败(缺上游工具、package.path 未装等)→
@@ -49,26 +48,12 @@ function tool_cli.forward_subprocess(runner_script, args)
   return result.code or (result.ok and 0 or 1)
 end
 
--- env merge 唯一出处(#323):base 为底、overrides 覆盖(后者优先),nil 侧按
--- 空表计;不改动入参,返回新表。职责落点在 runner 侧——runner 用自己的 _env
--- 默认值做 base 合并调用方透传来的 env;cli adapter 不替 runner 合并(见 run)。
-function tool_cli.merge_env(base, overrides)
-  local merged = {}
-  if type(base) == "table" then
-    for key, value in pairs(base) do merged[key] = value end
-  end
-  if type(overrides) == "table" then
-    for key, value in pairs(overrides) do merged[key] = value end
-  end
-  return merged
-end
-
 -- 统一入口。opts = { runner_module = "packages.<pkg>.runner",
 --                     runner_script  = "tools/packages/<pkg>/runner.lua" }。
 -- runner 模块须 return { env = <table 可选>, run = function(args, env) };
 -- env 字段 adapter 自身不读,供契约套件等直接消费方取 runner 默认值。
--- env 实参原样透传给 runner.run;merge(runner 默认值 + 调用方覆盖)由
--- runner 侧经 tool_cli.merge_env 完成,cli 不掺和(#323 唯一落点)。
+-- env 实参原样透传给 runner.run;runner 默认值与调用方覆盖的合并由 runner
+-- 自理,cli 不掺和(#323)。
 function tool_cli.run(opts, args, env)
   local ok_load, runner = pcall(require, opts.runner_module)
   if not ok_load or type(runner) ~= "table" or type(runner.run) ~= "function" then

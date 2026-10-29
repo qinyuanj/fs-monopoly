@@ -107,13 +107,4 @@ function proc.collect_lua_files(root)
   return proc.collect_files(root, ".lua")
 end
 
-function proc.open_path(path)
-  local normalized = path_lib.normalize_path(path)
-  local result = proc.run_command(env_lib.build_open_command(normalized))
-  if not result.ok then
-    return nil, text_lib.bilingual_with_suffix("打开路径失败: ", "Failed to open path: ", path)
-  end
-  return true
-end
-
 return proc

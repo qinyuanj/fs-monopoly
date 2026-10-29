@@ -40,24 +40,6 @@ it("normalize exit code maps truthy and falsy", function()
   check.equal(1, tool_cli.normalize_exit_code(nil))
 end)
 
-it("merge env overlays overrides on base", function()
-  local merged = tool_cli.merge_env({ from_base = "base", shared = "base-default" }, { shared = "override" })
-
-  check.equal("base", merged.from_base)
-  check.equal("override", merged.shared)
-end)
-
-it("merge env tolerates nil sides and does not mutate inputs", function()
-  local base = { key = "base" }
-  local overrides = { key = "override" }
-
-  check.same({}, tool_cli.merge_env(nil, nil))
-  check.same({ key = "base" }, tool_cli.merge_env(base, nil))
-  check.same({ key = "override" }, tool_cli.merge_env(nil, overrides))
-  check.same({ key = "base" }, base)
-  check.same({ key = "override" }, overrides)
-end)
-
 it("run passes caller env through untouched", function()
   _with_fixture_root(function(root)
     -- fixture 故意带 env 字段:断言 adapter 对它视而不见(不替 runner 合并)
