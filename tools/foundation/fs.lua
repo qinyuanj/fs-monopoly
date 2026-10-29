@@ -24,8 +24,8 @@ function fs.read_raw(path)
   return content
 end
 
-local function _write_raw_file(path, content, mode)
-  local file = io.open(path, mode or "wb")
+local function _write_raw_file(path, content)
+  local file = io.open(path, "wb")
   if file == nil then
     return nil
   end
@@ -61,32 +61,17 @@ function fs.ensure_parent_dir(path)
   return fs.ensure_dir(path_lib.parent_dir(path))
 end
 
--- write_file / append_file 只差一个写入模式。差异参数化,流程只留一份。
-local function _write_file_with_mode(path, content, mode)
+function fs.write_file(path, content)
   local ok, err = fs.ensure_parent_dir(path)
   if not ok then
     return nil, err
   end
 
-  local appending = mode == "append"
   local normalized = path_lib.normalize_path(path)
-  local write_ok = _write_raw_file(normalized, tostring(content or ""), appending and "ab" or "wb")
-  if write_ok == nil then
-    return nil, text_lib.bilingual_with_suffix(
-      "无法" .. (appending and "追加" or "写入") .. "文件: ",
-      "Cannot " .. (appending and "append" or "write") .. " file: ",
-      path
-    )
+  if _write_raw_file(normalized, tostring(content or "")) == nil then
+    return nil, text_lib.bilingual_with_suffix("无法写入文件: ", "Cannot write file: ", path)
   end
   return true
-end
-
-function fs.write_file(path, content)
-  return _write_file_with_mode(path, content, "write")
-end
-
-function fs.append_file(path, content)
-  return _write_file_with_mode(path, content, "append")
 end
 
 -- path_exists / is_dir 只差一个判定谓词(存在 vs 是目录)。
