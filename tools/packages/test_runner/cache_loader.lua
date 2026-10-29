@@ -69,8 +69,10 @@ local function absolute(path)
   return normalized
 end
 
+-- 按字节比较(ADR 0073):两侧都取自同一来源(MUTATOR_* 与磁盘路径),macOS 保留大小写,
+-- 不需要大小写折叠。
 local function within(path, base)
-  return path:sub(1, #base + 1):lower() == base:lower() .. "/"
+  return path:sub(1, #base + 1) == base .. "/"
 end
 
 -- 只认 POSIX 根 "/" 起头的绝对路径(ADR 0073)。
@@ -91,7 +93,6 @@ local function _controlled_lfs(roots)
   local search = {}
   for _, root in ipairs(roots) do
     local base = tostring(root):gsub("\\", "/"):gsub("/+$", "")
-    search[#search + 1] = base .. "/lib/lua/5.4/?.dll"
     search[#search + 1] = base .. "/lib/lua/5.4/?.so"
   end
   local file, err = lua_env.locate("lfs", roots, table.concat(search, ";"))
@@ -112,8 +113,8 @@ local function worker_context(root)
 
   local roots = M.roots()
   local lfs = _controlled_lfs(roots)
-  assert(absolute(lfs.currentdir()):lower() == worker:lower(), "mutation worker cwd mismatch")
-  assert(absolute(root):lower() == worker:lower(), "mutation worker root mismatch")
+  assert(absolute(lfs.currentdir()) == worker, "mutation worker cwd mismatch")
+  assert(absolute(root) == worker, "mutation worker root mismatch")
   -- Inspect each component: textual containment must not authorize junctions or
   -- symlinks escaping the physical source repository (or a linked tree).
   _real_directory(lfs, worker)

@@ -93,7 +93,7 @@ end
 local function _repo_relative(file)
   local normalized = _normalize_path(file)
   local prefix = _normalize_path(bootstrap_env.repo_root) .. "/"
-  if normalized:sub(1, #prefix):lower() == prefix:lower() then return normalized:sub(#prefix + 1) end
+  if normalized:sub(1, #prefix) == prefix then return normalized:sub(#prefix + 1) end
   return normalized
 end
 
