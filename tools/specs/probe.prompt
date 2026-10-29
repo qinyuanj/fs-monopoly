@@ -1,0 +1,37 @@
+# probe 工具契约(试玩态探针)
+
+用途:在试玩态(In Game Runtime)的游戏 Lua 环境里执行一个本地 lua 文件,取回其中 `probe(...)` 的输出。把手工的 `editor-cli exec "EditorAPI.game_execute([[...]])"` + `log grep DEBUG-xxxx` 回路收成一条命令。
+项目包装:`lua5.4 tools/cli.lua probe`(包 `tools/packages/probe/`:`cli.lua` 流程与依赖注入,`script.lua` 纯演算)。
+
+CLI 契约:
+- `lua5.4 tools/cli.lua probe <lua文件> [--timeout <秒>]`;`--timeout` 是等待命中的正数秒,默认 10。`--help` / `-h` 打印用法。
+- 退出码沿用 `tools/cli.lua`:0 有命中 / 1 真实失败(读不到文件、不在试玩态、exec 失败、超时无命中)/ 2 用法错误(缺文件、多余参数、未知选项、`--timeout` 非正数)/ 3 editor-cli 不可用。
+- stdout 只放命中行:`log grep` 文本输出里以 `> ` 开头的行,去掉 `> <行号>: ` 前缀(保留时间戳与 `[级别/平台]`)。诊断一律走 stderr。
+
+editor-cli 定位(与 deploy 同一解析函数 `packages.ops.deploy.resolve_windows_home_dir`):
+- 在 `/mnt/c` 下起 `cmd.exe /d /c 'echo %USERPROFILE%'`,再 `wslpath -u` 换算;拼 `<家目录>/.eggitor/cli/editor-cli.exe`。所有 editor-cli 调用的 cwd 都是该目录。
+- 不可用(退 3,stderr 首行 `[probe] status=unavailable tool=editor-cli step=<步>`,不执行任何脚本):
+  - `step=interop`:PATH 上缺 `cmd.exe` 或 `wslpath`(macOS 上恒如此);
+  - `step=userprofile`:`%USERPROFILE%` 解析不出 `X:` 开头的路径,或换算结果不是绝对路径;
+  - `step=executable`:`editor-cli.exe` 不存在;
+  - `step=status`:`editor-cli status` 非零退出(编辑器未启动或未开 editor-cli,如 `CONNECTION_ERROR`)。
+- 渲染复用 `foundation.platform_boundary.unavailable_verdict`,退 3 与 `status=unavailable` 同时出现(`foundation.tool_availability` 的认领口径)。
+
+试玩态门:
+- 先跑 `editor-cli status`;只有 `in_game_runtime  True` 才继续。否则退 1,提示用户先在编辑器里开启试玩。
+- probe 绝不调用 `play start` / `play stop`,也不模拟输入;开关试玩由用户操作。
+
+脚本包装(`script.lua`):
+- 标记 `DEBUG-PROBE-<os.time()>-<8 位十六进制随机>`(随机取 `/dev/urandom`,不可读时退回 `math.random`)。只含 `[A-Za-z0-9-]`,作为 .NET 正则按字面匹配。
+- 注入前导 `local function probe(...) print('DEBUG-PROBE-' .. '<后缀>', ...) end`,后接用户脚本原文与一个换行。标记在游戏内拼接,源码文本里不出现完整标记,编辑器回显源码也不会自命中。
+- 整体包成 `EditorAPI.game_execute([==[\n<前导>\n<脚本>\n]==])`;等级从 2 起递增到 `]` + `=`×n + `]` 不出现在载荷中为止。载荷以换行收尾,脚本末尾的 `]` / `]=` 不会与闭合串拼成误闭合。脚本行号比原文件多 1。
+- 包装后的代码写到 editor-cli 目录下的临时文件 `.probe-<标记>.lua`,经 `editor-cli exec --file <相对文件名>` 提交(默认 editor runtime);提交后无论成败立即删除。走文件而不是命令行参数,多行脚本与单双引号都不经 shell 转义。
+- exec 非零退出 → 退 1,原样转出 editor-cli 输出。exec 成功只代表提交成功,`game_execute` 不回传值。
+
+取回:
+- 轮询 `editor-cli log grep <标记> --context 0 --max-matches 1000 --case-sensitive`,间隔 0.5 秒,直到有命中或超过 `--timeout`。首次命中后再等 0.5 秒重读一次,取命中更多的那次,收齐同一次执行里稍后落盘的行。
+- 超时无命中 → 退 1,stderr 给出标记与最后一次 grep 失败输出(若有)。常见原因:脚本没调 `probe`,或游戏内报错(用 `editor-cli log grep` / `log trace` 查)。
+
+测试:
+- `tools/packages/probe/test/` 注入子进程执行器 `run(argv, {cwd})`、`command_exists`、`resolve_home`、文件读写、时钟与随机源;覆盖标记注入与 bracket 选级(包装结果用 `load` 回放验证原文还原)、非试玩态拒绝、命中解析、轮询、超时退 1、exec 失败、各 `step` 的不可用退 3 与用法错误。
+- 测试不起真实 editor-cli。真机验证需用户先开启试玩,再手动跑一次 `lua5.4 tools/cli.lua probe <文件>`。

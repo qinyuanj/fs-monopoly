@@ -23,6 +23,7 @@ local commands = {
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
   { name = "deploy",            pkg = "ops",                summary = "部署到 Windows 侧 Eggy 目录(WSL 写 /mnt/c;零参数)" },
   { name = "sync-data",         pkg = "data_sync",          summary = "从部署目录回同步导出(Data;EggyAPI/EggyEditorAPI 存根)" },
+  { name = "probe",             pkg = "probe",              summary = "试玩态探针(经 editor-cli 在游戏内执行 lua 文件,取回 probe(...) 输出)" },
   { name = "gift-code",         pkg = "gift_code",          summary = "礼包码补偿码生成(new:随机码 → 哈希入码表,明文只打印一次)" },
   { name = "clean",             pkg = "clean",              summary = "清生成物(build/tmp/luacov 等)",              action = "clean" },
   { name = "distclean",         pkg = "clean",              summary = "clean 的别名(仓内已无项目工具缓存)", action = "distclean" },
