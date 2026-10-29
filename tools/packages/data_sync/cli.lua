@@ -8,6 +8,8 @@
 -- 行为真源见 packages/data_sync/sync_data.lua。
 local M = {}
 
+local tool_cli = require("foundation.tool_cli")
+
 local sync_data = require("packages.data_sync.sync_data")
 
 function M.usage()
@@ -25,11 +27,9 @@ function M.usage()
 end
 
 function M.main(args, env)
-  for _, value in ipairs(args or {}) do
-    if value == "--help" or value == "-h" then
-      io.write(M.usage())
-      return 0
-    end
+  local help = tool_cli.help_exit(args, M.usage)
+  if help ~= nil then
+    return help
   end
   return sync_data.main(args)
 end
