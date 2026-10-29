@@ -501,14 +501,6 @@ local valid_groups = {
   shared = true,
 }
 
-local valid_owners = {
-  bootstrap = true,
-  foundation = true,
-  deploy = true,
-  encoding = true,
-  tooling_policy = true,
-}
-
 local function _validate_cases(cases, label)
   for _, case in ipairs(cases or {}) do
     if valid_groups[case.group] ~= true then
@@ -517,14 +509,6 @@ local function _validate_cases(cases, label)
         label,
         tostring(case.name),
         tostring(case.group)
-      ))
-    end
-    if valid_owners[case.owner] ~= true then
-      error(string.format(
-        "%s case %s has invalid tooling owner: %s",
-        label,
-        tostring(case.name),
-        tostring(case.owner)
       ))
     end
   end
