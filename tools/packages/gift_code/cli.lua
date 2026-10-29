@@ -17,6 +17,7 @@ local M = {}
 local boundary = require("foundation.platform_boundary")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
+local tool_cli = require("foundation.tool_cli")
 local number_utils = require("src.foundation.number")
 local gift_code_table = require("src.rules.skin_ownership.gift_code_table")
 local skins = require("src.config.content.skins")
@@ -268,7 +269,7 @@ function M.main(args, env)
   local stdout = env.stdout or io.stdout
   local stderr = env.stderr or io.stderr
   local first = args[1]
-  if first == "--help" or first == "-h" or (first == "new" and (args[2] == "--help" or args[2] == "-h")) then
+  if tool_cli.is_help_flag(first) or (first == "new" and tool_cli.is_help_flag(args[2])) then
     stdout:write(M.usage())
     return 0
   end
