@@ -8,9 +8,9 @@ local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
 
-local ROOT = "C:\\Users\\dev\\AppData\\Roaming\\luarocks"
-local EARLIER = "D:\\controlled\\earlier"
-local LATER = "D:\\controlled\\later"
+local ROOT = "/home/user/.luarocks"
+local EARLIER = "/opt/controlled/earlier"
+local LATER = "/opt/controlled/later"
 local TREES = "{\n   {\n      name = \"user\",\n      root = \"" .. ROOT:gsub("\\", "\\\\") .. "\"\n   }\n}\n"
 
 local GOOD = {
@@ -261,13 +261,13 @@ describe("controlled lua environment module origin", function()
   end)
 
   it("rejects a module that resolves outside the tree", function()
-    local search = "C:/elsewhere/?.lua;" .. ROOT .. "/share/lua/5.4/?.lua"
+    local search = "/elsewhere/?.lua;" .. ROOT .. "/share/lua/5.4/?.lua"
     local file, err = lua_env.locate("luacheck.main", roots, search, function(path)
       return path:find("elsewhere", 1, true) ~= nil
     end)
     check.is_nil(file)
     check.matches("受控 Lua 环境以外", err, 1, true)
-    check.matches("C:/elsewhere/luacheck/main.lua", err, 1, true)
+    check.matches("/elsewhere/luacheck/main.lua", err, 1, true)
   end)
 
   it("rejects a module that cannot be found at all", function()

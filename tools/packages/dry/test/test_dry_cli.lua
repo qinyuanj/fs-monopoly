@@ -15,7 +15,7 @@ local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
 
-local ROOT = "C:/fake"
+local ROOT = "/fake"
 local PYTHON = dryer.python_path(ROOT)
 
 local function _capture(fn)
@@ -107,7 +107,7 @@ end)
 -- venv 里的包不是出自邻接检出(例如全局 pip 装的 dryer):真实失败,不是不可用。
 it("fails, not unavailable, when dryer imports from outside the checkout", function()
   local proc = _fake_proc(function()
-    return { ok = true, code = 0, output = "3.12.10\nC:/elsewhere/site-packages/dryer/__init__.py\n" }
+    return { ok = true, code = 0, output = "3.12.10\n/elsewhere/site-packages/dryer/__init__.py\n" }
   end)
   local code, _, err = _capture(function()
     return cli.main({ "src" }, { root = ROOT, proc = proc, fs = _ready_fs() })
@@ -228,11 +228,11 @@ it("judges the metrics file under --root, not the repo root", function()
   local fs = _ready_fs({ [ROOT .. "/.metrics/dry.edn"] = "COMMITTED" })
   local proc = _fake_proc(function(argv)
     if argv[#argv - 1] == "-c" then return PROBE_OK end
-    fs.files["D:/tmp/x/.metrics/dry.edn"] = "ISOLATED"
+    fs.files["/tmp/x/.metrics/dry.edn"] = "ISOLATED"
     return { ok = true, code = 0, output = "" }
   end)
   local code = _capture(function()
-    return cli.main({ "--root", "D:/tmp/x" }, { root = ROOT, proc = proc, fs = fs })
+    return cli.main({ "--root", "/tmp/x" }, { root = ROOT, proc = proc, fs = fs })
   end)
 
   check.same(0, code)

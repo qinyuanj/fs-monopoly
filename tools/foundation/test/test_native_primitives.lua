@@ -133,7 +133,9 @@ end)
 
 it("POSIX path shapes and string command", function()
   check.equal("/中文 space/file.lua", path.resolve_path("/中文 space/root", "../file.lua"))
-  check.equal("//server/share/b", path.simplify_path("//server/share/a/../b"))
+  -- 只认 POSIX 形态(ADR 0073):盘符与 UNC 前缀不是绝对路径的特例。
+  check.equal("/server/share/b", path.simplify_path("//server/share/a/../b"))
+  check.equal("/base/C:/x", path.resolve_path("/base", "C:/x"))
   local root = env.make_temp_path("shell_中文 space", "")
   check.truthy(fs.ensure_dir(root))
   local command = shell.wrap_command_with_cwd(shell.build_command({ lua54.lua54_bin(), "-e", 'io.write("中文 ok")' }), root)

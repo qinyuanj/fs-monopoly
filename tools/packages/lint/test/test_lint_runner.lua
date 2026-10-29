@@ -5,7 +5,7 @@ require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 local runner = require("packages.lint.runner")
 
-local ROOT = "C:\\Users\\dev\\AppData\\Roaming\\luarocks"
+local ROOT = "/home/user/.luarocks"
 
 describe("lint runner controlled lua environment", function()
 
@@ -37,7 +37,7 @@ it("preflight success loads luacheck through the controlled environment", functi
   local joined = table.concat(seen, " ")
   check.matches("lua_env.lua", joined, 1, true)
   check.matches("require_controlled('luacheck.main'", joined, 1, true)
-  check.matches("'C:/Users/dev/AppData/Roaming/luarocks'", joined, 1, true)
+  check.matches("'/home/user/.luarocks'", joined, 1, true)
   check.is_nil(joined:find("bootstrap", 1, true), joined)
 end)
 

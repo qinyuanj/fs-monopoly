@@ -12,11 +12,7 @@ function path.normalize_path(value)
 end
 
 function path.is_absolute_path(value)
-  local normalized = path.normalize_path(value)
-  if normalized:match("^%a:/") then
-    return true
-  end
-  return normalized:sub(1, 1) == "/"
+  return path.normalize_path(value):sub(1, 1) == "/"
 end
 
 -- 变参逐段左折。段数不设上限:写几段就得几段,不静默丢参(issue #211)。
@@ -47,14 +43,7 @@ function path.simplify_path(value)
   local prefix = ""
   local remainder = normalized
 
-  local unc = normalized:match("^(//[^/]+/[^/]+)")
-  if unc then
-    prefix = unc
-    remainder = normalized:sub(#unc + 2)
-  elseif normalized:match("^%a:/") then
-    prefix = normalized:sub(1, 2)
-    remainder = normalized:sub(4)
-  elseif normalized:sub(1, 1) == "/" then
+  if normalized:sub(1, 1) == "/" then
     prefix = "/"
     remainder = normalized:sub(2)
   end
@@ -78,16 +67,7 @@ function path.simplify_path(value)
   if prefix == "" then
     return simplified
   end
-  if simplified == "" then
-    if prefix == "/" then
-      return "/"
-    end
-    return prefix .. "/"
-  end
-  if prefix == "/" then
-    return "/" .. simplified
-  end
-  return prefix .. "/" .. simplified
+  return "/" .. simplified
 end
 
 function path.resolve_path(base, value)

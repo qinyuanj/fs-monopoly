@@ -62,7 +62,7 @@ end
 
 local function absolute(path)
   local normalized = tostring(path):gsub("\\", "/"):gsub("/+$", "")
-  assert(normalized:sub(1, 1) == "/" or normalized:match("^%a:/"), "worker context requires absolute paths")
+  assert(normalized:sub(1, 1) == "/", "worker context requires absolute paths")
   for part in normalized:gmatch("[^/]+") do
     assert(part ~= "." and part ~= "..", "worker context forbids path traversal")
   end
@@ -73,13 +73,11 @@ local function within(path, base)
   return path:sub(1, #base + 1):lower() == base:lower() .. "/"
 end
 
--- 前缀形态:POSIX 根 "/"、Windows 盘符 "C:/"、UNC "//host/share/"。
+-- 只认 POSIX 根 "/" 起头的绝对路径(ADR 0073)。
 local function _real_directory(lfs, path)
-  local drive, tail = path:match("^(%a:/)(.*)$")
-  if not drive then drive, tail = path:match("^(//[^/]+/[^/]+/)(.*)$") end
-  if not drive then drive, tail = path:match("^(/)(.*)$") end
-  assert(drive ~= nil, "worker context requires an absolute path: " .. tostring(path))
-  local current = drive:gsub("/$", "")
+  local tail = path:match("^/(.*)$")
+  assert(tail ~= nil, "worker context requires an absolute path: " .. tostring(path))
+  local current = ""
   for part in tail:gmatch("[^/]+") do
     current = current .. "/" .. part
     assert(lfs.symlinkattributes(current, "mode") == "directory", "worker requires real directories: " .. current)

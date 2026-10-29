@@ -49,7 +49,7 @@ function M.metrics_root(args, root)
     end
   end
   value = _normalize(value)
-  if value:match("^%a:/") or value:sub(1, 1) == "/" then return value end
+  if value:sub(1, 1) == "/" then return value end
   return _normalize(root) .. "/" .. value
 end
 
