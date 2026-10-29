@@ -34,7 +34,7 @@ function bootstrap.install(script_path, opts)
 end
 
 -- 解释器解析与全仓同源:LUA54_BIN 覆写 + 候选表 + `<candidate> -v` 版本验证全在
--- packages.test_runner.lua54 一处表达;这里不再自造第二套规则(旧实现读 arg[-1],
+-- foundation.lua54 一处表达;这里不再自造第二套规则(旧实现读 arg[-1],
 -- 而 `-e` 形态下 arg[-1] 恒为 nil,等于沉默退回 PATH 猜测)。调用点均已装好
 -- package.path(install / script_bootstrap 在前)。
 local function _selected_interpreter()
