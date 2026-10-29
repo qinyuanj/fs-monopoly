@@ -37,7 +37,7 @@ end
 
 local function _state()
   return {
-    board_scene = { tiles = {} },
+    board_scene = { tiles = {}, ground = { get_position = function() return math.Vector3(0.0, 0.0, 0.0) end } },
     presentation_runtime = { marker = "rt" },
   }
 end

@@ -769,7 +769,7 @@ describe("TestContiguousVisualSync", function()
       has_roadblock = function() return true end,
       has_mine = function() return false end,
     }
-    local state = { game = { board = board, turn = {} }, board_scene = { tiles = {} } }
+    local state = { game = { board = board, turn = {} }, board_scene = { tiles = {}, ground = { get_position = function() return math.Vector3(0.0, 0.0, 0.0) end } } }
     local spawned = nil
 
     _with_patches({

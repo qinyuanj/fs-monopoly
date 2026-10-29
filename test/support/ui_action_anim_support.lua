@@ -8,6 +8,11 @@ function M.build_min_state(opts)
   local state = {
     ui = {},
     board_scene = {
+      ground = {
+        get_position = function()
+          return math.Vector3(0.0, 0.0, 0.0)
+        end,
+      },
       tiles = {
         [1] = {
           get_position = function()

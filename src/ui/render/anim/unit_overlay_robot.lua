@@ -6,8 +6,6 @@ local number_utils = require("src.foundation.number")
 local handle_ops = require("src.ui.render.anim.unit_overlay_handle")
 
 local robot = {}
--- #339:y_offset 1.0 在真机被地板埋没(机器人看不见),2.0 是段B 探针肉眼验证过的高度。
-local robot_y_offset = 2.0
 
 function robot.resolve_presentation_runtime(state)
   return state and state.presentation_runtime or nil
@@ -100,7 +98,7 @@ local function _walk_branch_children(state, clear_overlay, schedule, hr, robot_i
         child_handle = _spawn_robot(hr, robot_id, current_pos)
       end
       _schedule_step(schedule, step_duration, function()
-        local child_pos = compute.overlay_pos_for_tile(state, child.tile_index, robot_y_offset)
+        local child_pos = compute.overlay_pos_for_tile(state, "robot", child.tile_index)
         local moved_handle = _move_robot(hr, robot_id, child_handle, child_pos)
         if child.has_obstacle then
           robot.clear_obstacle(state, clear_overlay, child.tile_index)
@@ -147,7 +145,7 @@ function robot.play_clear_obstacles(state, anim, duration, opts)
     logger.warn("[Eggy]", "清障机器人 prefab 缺失，已跳过生成")
     return
   end
-  local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"), robot_y_offset)
+  local player_pos = compute.overlay_pos_for_player(state, "robot", assert(anim.player_id, "missing player_id"))
   local hr = _resolve_hr(robot.resolve_presentation_runtime(state))
   local schedule = _resolve_schedule(opts, hr)
   local branches = anim.branches or {}

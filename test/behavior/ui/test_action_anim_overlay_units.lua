@@ -158,6 +158,11 @@ local function _build_overlay_state()
   return {
     ui = {},
     board_scene = {
+      ground = {
+        get_position = function()
+          return math.Vector3(0.0, 0.0, 0.0)
+        end,
+      },
       tiles = {
         [1] = {
           get_position = function()
@@ -204,6 +209,128 @@ local function _make_host_unit(x, y, z)
 end
 
 describe("TestActionAnimOverlayUnits", function()
+
+  -- 真机实测(2026-10-29):地面单位 y=1.457,普通格锚点 y=0.116,起点等特殊格锚点 y=1.59,
+  -- 角色在两种格子上都站在 1.747(地板是平的)。#339 在普通格标定的世界高度:
+  -- 地雷/清障机器人 0.116+2.0=2.116,路障/导弹 0.116+1.0=1.116。覆盖物在特殊格上
+  -- 必须与普通格同高,否则地雷会飘到角色头顶。
+  local function _build_board_with_special_tile()
+    local state = _build_overlay_state()
+    state.board_scene.ground = _make_host_unit(0.0, 1.457, 0.0)
+    state.board_scene.tiles[1] = _make_host_unit(3.0, 0.116, 4.0)
+    state.board_scene.tiles[2] = _make_host_unit(8.0, 1.59, 9.0)
+    return state
+  end
+
+  local function _assert_near(actual, expected, message)
+    luassert.truthy(actual ~= nil and math.abs(actual - expected) < 1e-6,
+      message .. " expected=" .. tostring(expected) .. " actual=" .. tostring(actual))
+  end
+
+  local function _capture_spawn_positions(state, fn)
+    local positions = {}
+    _with_overlay_patches({
+      {
+        target = overlay_runtime,
+        key = "spawn_overlay",
+        value = function(_scene, kind, tile_index, _group_id, _unit_id, pos)
+          positions[kind .. ":" .. tostring(tile_index)] = pos
+          return true
+        end,
+      },
+      {
+        target = overlay_runtime,
+        key = "spawn_transient",
+        value = function(_group_id, _unit_id, pos)
+          positions.transient = pos
+        end,
+      },
+    }, function()
+      fn(state)
+    end)
+    return positions
+  end
+
+  it("test_mine_on_special_tile_sits_at_the_same_ground_height_as_on_a_normal_tile", function()
+    local state = _build_board_with_special_tile()
+    local positions = _capture_spawn_positions(state, function(s)
+      unit_overlay.play_overlay(s, { kind = "mine", tile_index = 1 }, 0.2, {})
+      unit_overlay.play_overlay(s, { kind = "mine", tile_index = 2 }, 0.2, {})
+    end)
+
+    _assert_near(positions["mine:1"].y, 2.116, "mine on a normal tile keeps the #339 calibrated height")
+    _assert_near(positions["mine:2"].y, 2.116, "mine on a special tile must not ride the higher tile anchor")
+    _assert_near(positions["mine:2"].x, 8.0, "mine keeps the tile x")
+    _assert_near(positions["mine:2"].z, 9.0, "mine keeps the tile z")
+  end)
+
+  it("test_visual_sync_mine_on_special_tile_matches_the_placement_height", function()
+    local state = _build_board_with_special_tile()
+    state.game.board = {
+      has_roadblock = function() return false end,
+      has_mine = function() return true end,
+    }
+    local positions = _capture_spawn_positions(state, function(s)
+      visual_sync.sync_overlay_visual(s, 2)
+    end)
+
+    _assert_near(positions["mine:2"].y, 2.116, "sync-spawned mine must match the placement height on a special tile")
+  end)
+
+  it("test_roadblock_and_missile_on_special_tile_sit_at_the_normal_tile_height", function()
+    local state = _build_board_with_special_tile()
+    state.game.board = {
+      has_roadblock = function() return true end,
+      has_mine = function() return false end,
+    }
+    local positions = _capture_spawn_positions(state, function(s)
+      unit_overlay.play_overlay(s, { kind = "roadblock", tile_index = 1 }, 0.2, {})
+      visual_sync.sync_overlay_visual(s, 2)
+      unit_overlay.play_missile(s, { tile_index = 2 }, 0.2, { clear_overlay = function() end })
+    end)
+
+    _assert_near(positions["roadblock:1"].y, 1.116, "roadblock on a normal tile keeps the default height")
+    _assert_near(positions["roadblock:2"].y, 1.116, "roadblock on a special tile must not ride the tile anchor")
+    _assert_near(positions.transient.y, 1.116, "missile on a special tile must not ride the tile anchor")
+  end)
+
+  it("test_clear_obstacle_robot_on_special_tiles_flies_at_the_normal_tile_height", function()
+    local prefab = require("Data.Prefab")
+    local state = _build_board_with_special_tile()
+    state.game.find_player_by_id = function()
+      return { position = 2, name = "测试玩家" }
+    end
+    local records = { moves = {} }
+    local spawned = {}
+    local scheduled = {}
+
+    _with_overlay_patches({
+      { target = prefab.unit, key = "清障机器人", value = 4242 },
+      {
+        target = host_runtime,
+        key = "create_unit_with_scale",
+        value = function(_unit_id, pos)
+          spawned[#spawned + 1] = pos
+          return _new_robot_handle(pos, records)
+        end,
+      },
+      { target = host_runtime, key = "destroy_unit", value = function() end },
+    }, function()
+      unit_overlay.play_clear_obstacles(state, {
+        player_id = 1,
+        branches = { { { tile_index = 1, has_obstacle = false } } },
+      }, 1.0, {
+        clear_overlay = function() end,
+        schedule = function(delay, callback)
+          scheduled[#scheduled + 1] = { delay = delay, callback = callback }
+        end,
+      })
+      _drain_scheduled(scheduled)
+    end)
+
+    _assert_near(spawned[1].y, 2.116, "robot starting on a special tile must not ride the tile anchor")
+    _assert_near(records.moves[1].y, 2.116, "robot stepping onto a normal tile keeps the calibrated height")
+  end)
 
   it("test_action_anim_roadblock_overlay_uses_4x_scale", function()
     local state = support.build_min_state()
@@ -496,7 +623,7 @@ describe("TestActionAnimOverlayUnits", function()
     luassert.truthy(destroy_calls[1] == handle, "destroy should receive the moved host handle")
     luassert.truthy(#robot_records.moves == 1, "non-table robot handle should use set_position_smooth")
     luassert.truthy(#robot_records.fallback_moves == 0, "set_position fallback should not run after smooth move succeeds")
-    luassert.truthy(robot_records.moves[1].x == 10.0 and robot_records.moves[1].y == 2.0 and robot_records.moves[1].z == 0.0, "non-table robot handle should move to the target tile overlay position")
+    luassert.truthy(robot_records.moves[1].x == 10.0 and robot_records.moves[1].y == 0.659 and robot_records.moves[1].z == 0.0, "non-table robot handle should move to the target tile overlay position")
   end)
 
   it("test_anim_unit_overlay_clear_obstacles_walks_per_step_then_clears_and_destroys", function()
@@ -595,7 +722,7 @@ describe("TestActionAnimOverlayUnits", function()
         end,
       })
       luassert.truthy(#unit_calls == 1, "single branch should create exactly one robot")
-      luassert.truthy(unit_calls[1].pos.x == 0.0 and unit_calls[1].pos.y == 2.0 and unit_calls[1].pos.z == 0.0, "clear_obstacles robot unit should spawn above the acting player tile")
+      luassert.truthy(unit_calls[1].pos.x == 0.0 and unit_calls[1].pos.y == 0.659 and unit_calls[1].pos.z == 0.0, "clear_obstacles robot unit should spawn above the acting player tile")
       luassert.truthy(#scheduled_callbacks == 1 and math.abs(scheduled_callbacks[1].delay - 0.2) < 0.0001, "single branch should schedule the first move using duration / path_len")
       luassert.truthy(#cleared_calls == 0, "single branch should not clear overlays before the first arrival")
 
@@ -728,7 +855,7 @@ describe("TestActionAnimOverlayUnits", function()
       _drain_scheduled(scheduled_callbacks, 1)
 
       luassert.truthy(#unit_calls == 2, "robot should split only after reaching the fork tile")
-      luassert.truthy(unit_calls[2].pos.x == 10.0 and unit_calls[2].pos.y == 2.0 and unit_calls[2].pos.z == 0.0, "forked robot should spawn at the fork position instead of the player start")
+      luassert.truthy(unit_calls[2].pos.x == 10.0 and unit_calls[2].pos.y == 0.659 and unit_calls[2].pos.z == 0.0, "forked robot should spawn at the fork position instead of the player start")
 
       _drain_scheduled(scheduled_callbacks)
     end)
@@ -876,9 +1003,9 @@ describe("TestActionAnimOverlayUnits", function()
     local state = _build_overlay_state()
     state.board_scene.tiles[1] = _make_host_unit(5.0, 6.0, 7.0)
 
-    local pos = overlay_compute.overlay_pos_for_tile(state, 1)
+    local pos = overlay_compute.overlay_pos_for_tile(state, "roadblock", 1)
     luassert.truthy(pos.x == 5.0, "overlay compute should preserve host unit x")
-    luassert.truthy(pos.y == 7.0, "overlay compute should add y offset on host unit position")
+    luassert.truthy(pos.y == -0.341, "overlay height should come from the ground, not the tile anchor y")
     luassert.truthy(pos.z == 7.0, "overlay compute should preserve host unit z")
   end)
 
@@ -916,8 +1043,8 @@ describe("TestActionAnimOverlayUnits", function()
     luassert.truthy(#spawn_calls == 1, "visual sync should spawn one mine overlay")
     luassert.truthy(spawn_calls[1].kind == "mine", "visual sync should spawn mine overlay")
     luassert.truthy(spawn_calls[1].pos.x == 12.0, "visual sync should pass host unit x")
-    -- #339 真机标定:地雷 sync 生成 y_offset 2.0(缺省 1.0 被地板埋没),tile y=3.0 → 5.0。
-    luassert.truthy(spawn_calls[1].pos.y == 5.0, "visual sync should add the calibrated mine y offset")
+    -- 地雷高度从地面(y=0)起算,与 tile 锚点 y=3.0 无关。
+    luassert.truthy(spawn_calls[1].pos.y == 0.659, "visual sync should place the mine at the calibrated height above ground")
     luassert.truthy(spawn_calls[1].pos.z == 4.0, "visual sync should pass host unit z")
   end)
 
@@ -1512,34 +1639,11 @@ describe("TestActionAnimOverlayUnits", function()
     _assert_eq(zero_pos.x, 0.0, "missing tile/building should fall back to zero vector")
   end)
 
-  it("test_overlay_compute_uses_native_vector_add_when_available", function()
-    -- L53/L57/L75 三连:宿主向量可加法时走原生相加,不得回退分量拼装。
-    -- __add 表故意不带 x/y/z 字段:回退路径会产出 (0,1,0),与原生和 (5,7,7) 可区分。
-    local addable = setmetatable({}, {
-      __add = function()
-        return math.Vector3(5.0, 7.0, 7.0)
-      end,
-    })
-    local state = {
-      board_scene = {
-        tiles = {
-          [1] = {
-            get_position = function()
-              return addable
-            end,
-          },
-        },
-      },
-    }
-    local pos = overlay_compute.overlay_pos_for_tile(state, 1)
-    _assert_eq(pos.x, 5.0, "native add must win over component fallback")
-    _assert_eq(pos.y, 7.0, "native add must include the y offset")
-  end)
-
   it("test_overlay_compute_reads_position_from_indexed_components", function()
     -- L13 兜底取 index 分量 + L61(1->0):无 x/y/z 字段时按 [1]/[2]/[3] 取分量。
     local state = {
       board_scene = {
+        ground = { get_position = function() return { [1] = 0.0, [2] = 1.5, [3] = 0.0 } end },
         tiles = {
           [1] = {
             get_position = function()
@@ -1549,9 +1653,9 @@ describe("TestActionAnimOverlayUnits", function()
         },
       },
     }
-    local pos = overlay_compute.overlay_pos_for_tile(state, 1)
+    local pos = overlay_compute.overlay_pos_for_tile(state, "mine", 1)
     _assert_eq(pos.x, 5.0, "index 1 component should backfill x")
-    _assert_eq(pos.y, 7.0, "index 2 component should backfill y plus offset")
+    _assert_near(pos.y, 2.159, "index 2 component should backfill the ground y")
     _assert_eq(pos.z, 7.0, "index 3 component should backfill z")
   end)
 
@@ -1559,6 +1663,7 @@ describe("TestActionAnimOverlayUnits", function()
     -- L61(0->1)/L62/L63:缺分量必须兜底 0,不能变 1。
     local state = {
       board_scene = {
+        ground = { get_position = function() return math.Vector3(0.0, 1.0, 0.0) end },
         tiles = {
           [1] = {
             get_position = function()
@@ -1568,9 +1673,9 @@ describe("TestActionAnimOverlayUnits", function()
         },
       },
     }
-    local pos = overlay_compute.overlay_pos_for_tile(state, 1)
+    local pos = overlay_compute.overlay_pos_for_tile(state, "roadblock", 1)
     _assert_eq(pos.x, 0.0, "missing x must default to zero")
-    _assert_eq(pos.y, 1.0, "missing y must default to zero before adding the y offset")
+    _assert_near(pos.y, 0.659, "height must still come from the ground when the tile has no components")
     _assert_eq(pos.z, 0.0, "missing z must default to zero")
   end)
 
@@ -1578,6 +1683,7 @@ describe("TestActionAnimOverlayUnits", function()
     -- L109 resolve_tile_pos(state, player.position) 换 nil:玩家 overlay 必须落在其格子。
     local state = {
       board_scene = {
+        ground = { get_position = function() return math.Vector3(0.0, 1.0, 0.0) end },
         tiles = {
           [5] = {
             get_position = function()
@@ -1592,10 +1698,22 @@ describe("TestActionAnimOverlayUnits", function()
         end,
       },
     }
-    local pos = overlay_compute.overlay_pos_for_player(state, 7)
+    local pos = overlay_compute.overlay_pos_for_player(state, "robot", 7)
     _assert_eq(pos.x, 20.0, "player overlay x must come from the player tile")
-    _assert_eq(pos.y, 31.0, "player overlay y must add the y offset")
+    _assert_near(pos.y, 1.659, "player overlay y must come from the ground, not the tile anchor")
     _assert_eq(pos.z, 40.0, "player overlay z must come from the player tile")
+  end)
+
+  it("test_overlay_pos_fails_loudly_without_ground_or_with_unknown_kind", function()
+    local state = { board_scene = { tiles = { [1] = _make_host_unit(1.0, 2.0, 3.0) } } }
+    local ok, err = pcall(overlay_compute.overlay_pos_for_tile, state, "mine", 1)
+    _assert_eq(ok, false, "missing ground must not silently fall back to the tile anchor")
+    luassert.truthy(tostring(err):find("missing board_scene.ground", 1, true), "assert message should name the ground")
+
+    state.board_scene.ground = _make_host_unit(0.0, 0.0, 0.0)
+    ok, err = pcall(overlay_compute.overlay_pos_for_tile, state, "bogus", 1)
+    _assert_eq(ok, false, "unknown overlay kind must assert")
+    luassert.truthy(tostring(err):find("unknown overlay kind: bogus", 1, true), "assert message should name the kind")
   end)
 
   it("test_resolve_tile_pos_asserts_on_missing_state_or_index", function()

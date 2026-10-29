@@ -11,10 +11,6 @@ local roadblock_scale = math and math.Vector3 and math.Vector3(4.0, 4.0, 4.0) or
   z = 4.0,
 }
 
--- #339 真机标定:y_offset 缺省 1.0 会被地板埋没,2.0 是探针肉眼验证的可见高度;
--- 地雷 scale 1x 不像路障 4x 能顶出地板,sync 生成必须显式抬升。
-local mine_y_offset = 2.0
-
 local _trigger_kind_for_overlay = {
   roadblock = "roadblock_trigger",
   mine = "mine_trigger",
@@ -62,7 +58,7 @@ local function _spawn_roadblock_overlay(state, idx)
     idx,
     nil,
     prefab.unit and prefab.unit["路障"] or nil,
-    overlay_compute.overlay_pos_for_tile(state, idx),
+    overlay_compute.overlay_pos_for_tile(state, "roadblock", idx),
     roadblock_scale,
     shared.deps(state)
   )
@@ -75,7 +71,7 @@ local function _spawn_mine_overlay(state, idx)
     idx,
     prefab.group["地雷A"],
     prefab.unit and prefab.unit["地雷A"] or nil,
-    overlay_compute.overlay_pos_for_tile(state, idx, mine_y_offset),
+    overlay_compute.overlay_pos_for_tile(state, "mine", idx),
     nil,
     shared.deps(state)
   )

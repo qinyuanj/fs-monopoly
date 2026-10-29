@@ -376,7 +376,7 @@ describe("TestBoardRenderBranches", function()
         return true
       end,
     }
-    local state = { game = { board = board }, board_scene = { tiles = {} } }
+    local state = { game = { board = board }, board_scene = { tiles = {}, ground = { get_position = function() return math.Vector3(0.0, 0.0, 0.0) end } } }
     local spawned = {}
 
     _with_patches({
@@ -758,7 +758,7 @@ describe("TestBoardRenderBranches", function()
     }
     local state = {
       game = { board = board },
-      board_scene = { tiles = {} },
+      board_scene = { tiles = {}, ground = { get_position = function() return math.Vector3(0.0, 0.0, 0.0) end } },
       presentation_runtime = { host_runtime = host_runtime },
     }
 
@@ -770,9 +770,8 @@ describe("TestBoardRenderBranches", function()
     _assert_eq(calls[1][4] and calls[1][4].x or nil, 4.0, "roadblock scale should stay 4x")
     _assert_eq(calls[2][1], "unit", "mine overlay should also spawn a unit (prefab.group has no 地雷)")
     _assert_eq(calls[2][2], prefab.unit["地雷A"], "mine unit id should come from the prefab unit table")
-    -- #339 真机标定:缺省 y_offset 1.0 被地板埋没,地雷 scale 1x 顶不出来,
-    -- sync 生成必须显式抬到 2.0(空 scene 下 tile pos 为零向量,pos.y 即偏移量)。
-    _assert_eq(calls[2][3] and calls[2][3].y or nil, 2.0, "mine spawn should lift 2.0 above the tile pivot")
+    -- 地雷高度从地面起算:地面 y=0 时 pos.y 即地雷离地高度(#339 普通格标定折算)。
+    _assert_eq(calls[2][3] and calls[2][3].y or nil, 0.659, "mine spawn should sit at the calibrated height above ground")
   end)
 
 

@@ -49,64 +49,40 @@ function compute.resolve_tile_pos(state, tile_index)
   return _zero_vector()
 end
 
-local function _native_add(a, b)
-  return a + b
+local function _resolve_xz(vec)
+  return _resolve_vector_value(vec, "x", 1) or 0, _resolve_vector_value(vec, "z", 3) or 0
 end
 
-local function _try_native_vector_add(pos, offset)
-  return pcall(_native_add, pos, offset)
+-- 覆盖物离地高度(相对 board_scene.ground 的 y)。地板是平的,格子模型原点却不齐:
+-- 真机实测普通格锚点 y=0.116,起点等特殊格 1.575~2.238,角色在所有格都站在 1.747。
+-- 以锚点为基准时特殊格上的地雷飘到角色头顶,所以只取锚点的 x/z,高度一律从地面起算。
+-- 数值 = #339 在普通格(锚点 0.116、地面 1.457)标定的世界高度 - 地面 y:
+-- 地雷/清障机器人 0.116+2.0,路障/导弹 0.116+1.0,普通格观感保持不变。
+local _height_above_ground = {
+  mine = 0.659,
+  robot = 0.659,
+  roadblock = -0.341,
+  missile = -0.341,
+}
+
+local function _ground_y(scene)
+  local ground_pos = unit_position.read_unit_position(assert(scene.ground, "missing board_scene.ground"))
+  local y = _resolve_vector_value(assert(ground_pos, "missing ground position"), "y", 2)
+  return assert(y, "missing ground position y")
 end
 
-local function _resolve_vector_components(vec)
-  local x = _resolve_vector_value(vec, "x", 1) or 0
-  local y = _resolve_vector_value(vec, "y", 2) or 0
-  local z = _resolve_vector_value(vec, "z", 3) or 0
-  return x, y, z
+function compute.overlay_pos_for_tile(state, kind, tile_index)
+  local height = assert(_height_above_ground[kind], "unknown overlay kind: " .. tostring(kind))
+  local x, z = _resolve_xz(compute.resolve_tile_pos(state, tile_index))
+  return host_types.vec3(x, _ground_y(state.board_scene) + height, z)
 end
 
-local function _create_offset_vector(pos_x, pos_y, pos_z, offset_x, offset_y, offset_z)
-  if math and math.Vector3 then
-    return math.Vector3(pos_x + offset_x, pos_y + offset_y, pos_z + offset_z)
-  end
-  return nil
-end
-
-local function _offset_pos(pos, offset)
-  local ok, result = _try_native_vector_add(pos, offset)
-  if ok then
-    return result
-  end
-  local pos_x, pos_y, pos_z = _resolve_vector_components(pos)
-  local offset_x, offset_y, offset_z = _resolve_vector_components(offset)
-  local vector = _create_offset_vector(pos_x, pos_y, pos_z, offset_x, offset_y, offset_z)
-  if vector then
-    return vector
-  end
-  return pos
-end
-
-local _y_offset_cache = {}
-local function _y_offset_vector(y_offset)
-  local key = y_offset or 1.0
-  local cached = _y_offset_cache[key]
-  if cached then
-    return cached
-  end
-  cached = math.Vector3(0.0, key, 0.0)
-  _y_offset_cache[key] = cached
-  return cached
-end
-
-function compute.overlay_pos_for_tile(state, tile_index, y_offset)
-  return _offset_pos(compute.resolve_tile_pos(state, tile_index), _y_offset_vector(y_offset))
-end
-
-function compute.overlay_pos_for_player(state, player_id, y_offset)
+function compute.overlay_pos_for_player(state, kind, player_id)
   assert(state ~= nil, "missing state")
   assert(player_id ~= nil, "missing player_id")
   local game = assert(state.game, "missing state.game")
   local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
-  return _offset_pos(compute.resolve_tile_pos(state, player.position), _y_offset_vector(y_offset))
+  return compute.overlay_pos_for_tile(state, kind, player.position)
 end
 
 return compute

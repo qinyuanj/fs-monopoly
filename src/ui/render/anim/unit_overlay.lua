@@ -19,7 +19,7 @@ local function _play_roadblock(state, tile_index)
     tile_index,
     nil,
     unit_id,
-    compute.overlay_pos_for_tile(state, tile_index),
+    compute.overlay_pos_for_tile(state, "roadblock", tile_index),
     roadblock_scale,
     _deps(state)
   )
@@ -32,10 +32,8 @@ local function _play_mine(state, tile_index)
     logger.warn("[Eggy]", "地雷A prefab 缺失，已跳过生成")
     return
   end
-  -- 地雷生成高度取 #339 真机标定的 2.0(缺省 1.0 被地板埋没),与
-  -- visual_sync_overlay 的 sync 生成同高,避免布雷演出与状态同步之间跳变。
   runtime.spawn_overlay(assert(state.board_scene, "missing board_scene"), "mine", tile_index, group_id, unit_id,
-    compute.overlay_pos_for_tile(state, tile_index, 2.0), nil, _deps(state))
+    compute.overlay_pos_for_tile(state, "mine", tile_index), nil, _deps(state))
 end
 
 function overlay.clear_overlay(state, kind, tile_index)
@@ -61,7 +59,7 @@ function overlay.play_missile(state, anim, duration, opts)
   robot.clear_obstacle(state, clear_overlay, tile_index)
   local unit_id = prefab.unit and prefab.unit["导弹"] or nil
   local group_id = prefab.group["导弹"]
-  runtime.spawn_transient(group_id, unit_id, compute.overlay_pos_for_tile(state, tile_index), duration, _deps(state))
+  runtime.spawn_transient(group_id, unit_id, compute.overlay_pos_for_tile(state, "missile", tile_index), duration, _deps(state))
 end
 
 overlay.play_clear_obstacles = robot.play_clear_obstacles
