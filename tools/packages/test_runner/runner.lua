@@ -91,19 +91,21 @@ local ok, err = pcall(function()
   assert(verified_env, env_err)
   lua_env.install_paths(env_info.roots)
   require("packages.test_runner.cache_loader").install(root)
-  -- --durations-out:busted file start/end 事件之间的墙钟秒数(Windows os.clock
-  -- 即墙钟),格式见 spec_sharding.format_durations,供 spec_lane 实测时长缓存分片(#107)。
+  -- --durations-out:busted file start/end 事件之间的墙钟秒数,取 busted.monotime
+  -- (受控 Lua 环境里 luasystem 的单调时钟,busted 自身计时同源);os.clock 是进程
+  -- CPU 时间,会把等待子进程的 spec 记成近 0。格式见 spec_sharding.format_durations,
+  -- 供 spec_lane 实测时长缓存分片(#107)。
   local configure, durations
   if opts.durations_out then
     durations = {}
     configure = function(busted)
       local started = {}
       busted.subscribe({ "file", "start" }, function(file)
-        started[file.name] = os.clock()
+        started[file.name] = busted.monotime()
         return nil, true
       end)
       busted.subscribe({ "file", "end" }, function(file)
-        if started[file.name] then durations[file.name] = os.clock() - started[file.name] end
+        if started[file.name] then durations[file.name] = busted.monotime() - started[file.name] end
         return nil, true
       end)
     end

@@ -77,6 +77,18 @@ describe("real busted execution", function()
     check.is_not_nil(seen[fixtures .. "passing.lua"], text)
     check.is_not_nil(seen[fixtures .. "failing.lua"], text)
   end)
+  -- 记的是墙钟秒数:等待子进程不耗本进程 CPU,CPU 计时会把它记成近 0。
+  it("durations out measures wall time spent waiting on a child process", function()
+    local out = env.make_temp_path("spec_durations_wall", ".tsv")
+    local command = { lua54.lua54_bin(), root .. "/tools/packages/test_runner/runner.lua", "--output=TAP",
+      "--durations-out=" .. out, "--", fixtures .. "waiting.lua" }
+    local result = proc.run_command(command)
+    local text = fs.read_raw(out) or ""
+    fs.remove_path(out)
+    check.matches("cases=1 passed=1 failed=0 errors=0", result.output, 1, true)
+    local seconds = spec_sharding.parse_durations(text)[fixtures .. "waiting.lua"]
+    check.is_true(seconds ~= nil and seconds >= 0.9, text)
+  end)
   it("nested hooks replay rng and restore ports after teardown", function()
     local result = run({ "test/behavior/lifecycle" }, true)
     check.equal(0, result.code, result.output)
