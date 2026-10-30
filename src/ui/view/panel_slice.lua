@@ -1,5 +1,6 @@
 local panel_view = require("src.ui.view.panel_builder")
 local role_id_utils = require("src.foundation.identity")
+local tables = require("src.foundation.tables")
 
 local panel_slice = {}
 
@@ -14,18 +15,12 @@ end
 
 local _auto_labels = {}
 
-local function _clear(map)
-  for k in pairs(map) do
-    map[k] = nil
-  end
-end
-
 local function _normalized_player_id(player)
   return role_id_utils.normalize(player and player.id or nil)
 end
 
 local function _build_auto_label_by_player(players, enabled_by_player)
-  _clear(_auto_labels)
+  tables.clear(_auto_labels)
   for _, player in ipairs(players or {}) do
     local player_id = _normalized_player_id(player)
     if player_id then

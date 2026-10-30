@@ -1,4 +1,5 @@
 local tiles_cfg = require("src.config.content.tiles")
+local tables = require("src.foundation.tables")
 local contiguous_count = require("src.ui.view.contiguous_count")
 local tile_rent = require("src.ui.view.tile_rent")
 
@@ -15,10 +16,6 @@ local _tile_state_out = {}
 local _tile_state_entries = {}
 local _count_by_owner = {}
 local _rent_by_owner = {}
-
-local function _clear_table(t)
-  for k in pairs(t) do t[k] = nil end
-end
 
 local function _owner_count_for_tile(owner_id, board, tile_id)
   _count_by_owner[owner_id] = _count_by_owner[owner_id] or contiguous_count.build_for_owner(board, owner_id)
@@ -50,9 +47,9 @@ end
 
 local function _fill_tile_states(board)
   local lookup = board.tile_lookup or {}
-  _clear_table(_tile_state_out)
-  _clear_table(_count_by_owner)
-  _clear_table(_rent_by_owner)
+  tables.clear(_tile_state_out)
+  tables.clear(_count_by_owner)
+  tables.clear(_rent_by_owner)
   for tile_id, raw in pairs(lookup) do _update_tile_entry(tile_id, raw, board) end
 end
 

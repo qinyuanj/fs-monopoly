@@ -1,5 +1,6 @@
 local role_id_utils = require("src.foundation.identity")
 local runtime_state = require("src.ui.state.runtime")
+local tables = require("src.foundation.tables")
 
 local lock_policy = {}
 
@@ -105,12 +106,6 @@ end
 local _sync_state, _sync_lock_state, _sync_exempt_by_role, _sync_buff_id, _sync_runtime, _sync_seen_roles
 local _seen_roles = {}
 
-local function _clear_seen_roles()
-  for k in pairs(_seen_roles) do
-    _seen_roles[k] = nil
-  end
-end
-
 local function _begin_sync_context(state, lock_state, exempt_by_role, buff_id, runtime)
   _sync_state = state
   _sync_lock_state = lock_state
@@ -185,7 +180,7 @@ end
 
 -- 遍历当前所有角色重建锁，然后回收这一轮没见到的角色。
 local function _sync_locked_roles(state, lock_state, exempt_by_role, buff_id, runtime)
-  _clear_seen_roles()
+  tables.clear(_seen_roles)
   _begin_sync_context(state, lock_state, exempt_by_role, buff_id, runtime)
 
   runtime.for_each_role_or_global(_sync_role_callback)

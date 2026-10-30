@@ -1,5 +1,12 @@
 local M = {}
 
+-- 原地清空复用表，保持表身份供缓存与调用方引用继续使用。
+function M.clear(map)
+  for key in pairs(map) do
+    map[key] = nil
+  end
+end
+
 function M.copy(value)
   if type(value) ~= "table" then
     return value

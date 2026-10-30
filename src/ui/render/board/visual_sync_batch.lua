@@ -1,12 +1,9 @@
 local shared = require("src.ui.render.board.visual_sync_shared")
+local tables = require("src.foundation.tables")
 local tile_sync = require("src.ui.render.board.visual_sync_tile")
 local overlay_sync = require("src.ui.render.board.visual_sync_overlay")
 
 local visual_sync_batch = {}
-
-local function _clear_table(t)
-  for k in pairs(t) do t[k] = nil end
-end
 
 local function _append_unique(raw_list, out, seen)
   for _, value in ipairs(raw_list) do
@@ -18,8 +15,8 @@ local function _append_unique(raw_list, out, seen)
 end
 
 local function _dedupe_into(raw_list, out, seen)
-  _clear_table(out)
-  _clear_table(seen)
+  tables.clear(out)
+  tables.clear(seen)
   if type(raw_list) == "table" then
     _append_unique(raw_list, out, seen)
   end
@@ -46,7 +43,7 @@ local _expand_owner_set = {}
 local _expand_tile_ids = {}
 
 local function _build_owner_set(owner_ids)
-  _clear_table(_expand_owner_set)
+  tables.clear(_expand_owner_set)
   for _, owner_id in ipairs(owner_ids) do
     _expand_owner_set[owner_id] = true
   end
@@ -67,7 +64,7 @@ local function _collect_owned_land_tiles(path, owner_set, out)
 end
 
 local function _expand_affected_tiles(state, owner_ids)
-  _clear_table(_expand_tile_ids)
+  tables.clear(_expand_tile_ids)
   -- owner_ids 恒为 table(_normalize_payload 经 _dedupe_into 归一),`not owner_ids`
   -- 是死防御——or->and 变异体在空表下殊途同归不可杀(#262 删除)。
   if #owner_ids == 0 then

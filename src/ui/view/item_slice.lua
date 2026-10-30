@@ -14,12 +14,6 @@ end
 
 local _empty_items = {}
 
-local function _clear(map)
-  for k in pairs(map) do
-    map[k] = nil
-  end
-end
-
 local function _normalized_player_id(player)
   return role_id_utils.normalize(player and player.id or nil)
 end
@@ -34,7 +28,7 @@ end
 -- 空洞(false 占位)与无 id 条目渲染为空槽,后面的卡不补位。
 local function _fill_item_slots(item_slots, items, slot_count)
   -- 复用池表需先清空:slot_count 缩小时不残留尾部残槽(#526)。
-  _clear(item_slots)
+  tables.clear(item_slots)
   for i = 1, slot_count do
     local item = items[i]
     if item and item.id then
@@ -58,7 +52,7 @@ local _delegated_by_player = {}
 
 
 function item_slice.build_item_slots_by_player(players, slot_count)
-  _clear(_slots_by_player)
+  tables.clear(_slots_by_player)
   for _, player in ipairs(players or {}) do
     local player_id = _normalized_player_id(player)
     if player_id then
@@ -71,7 +65,7 @@ function item_slice.build_item_slots_by_player(players, slot_count)
 end
 
 function item_slice.build_delegated_by_player(player_control_by_player)
-  _clear(_delegated_by_player)
+  tables.clear(_delegated_by_player)
   for player_id, entry in pairs(player_control_by_player or {}) do
     role_id_utils.write(_delegated_by_player, player_id, entry.is_delegated == true)
   end
