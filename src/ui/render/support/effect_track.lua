@@ -1,18 +1,11 @@
 local runtime_ports = require("src.foundation.ports.runtime_ports")
+local tables = require("src.foundation.tables")
 
 local effect_track = {}
 
 local active_tokens = {}
 local next_token_id = 1
 local timeout_seconds = 10.0
-
-local function _active_count()
-  local count = 0
-  for _ in pairs(active_tokens) do
-    count = count + 1
-  end
-  return count
-end
 
 local function _complete(token)
   if token == nil then
@@ -59,7 +52,7 @@ function effect_track.cancel(token)
 end
 
 function effect_track.is_idle()
-  return _active_count() == 0
+  return tables.count(active_tokens) == 0
 end
 
 function effect_track.await_all(callback)
@@ -84,7 +77,7 @@ function effect_track.await_all(callback)
 end
 
 local function _pressure()
-  local count = _active_count()
+  local count = tables.count(active_tokens)
   if count <= 1 then
     return 0
   end

@@ -7,6 +7,14 @@ function M.clear(map)
   end
 end
 
+function M.count(map)
+  local count = 0
+  for _ in pairs(map) do
+    count = count + 1
+  end
+  return count
+end
+
 function M.copy(value)
   if type(value) ~= "table" then
     return value

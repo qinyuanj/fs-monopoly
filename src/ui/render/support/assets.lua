@@ -5,6 +5,7 @@ local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
 local number_utils = require("src.foundation.number")
 local runtime_assets = require("src.config.runtime_assets")
+local tables = require("src.foundation.tables")
 
 local M = {}
 
@@ -62,14 +63,6 @@ local function _map_player_colors(players, colors_by_index)
   return owner_colors, mapped_count, unique_colors
 end
 
-local function _count_unique(unique_colors)
-  local count = 0
-  for _ in pairs(unique_colors) do
-    count = count + 1
-  end
-  return count
-end
-
 local function _game_players(game)
   return game and game.players or nil
 end
@@ -80,7 +73,7 @@ local function _should_set_owner_colors(mapped_count, unique_colors)
   if mapped_count <= 0 then
     return false
   end
-  return mapped_count == 1 or _count_unique(unique_colors) > 1
+  return mapped_count == 1 or tables.count(unique_colors) > 1
 end
 
 function M.capture_player_colors(state, game)
