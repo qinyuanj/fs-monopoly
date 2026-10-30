@@ -74,22 +74,21 @@ function pending_confirmation.enter(state, source, payload)
   return true
 end
 
-function pending_confirmation.confirm(state)
+local function _settle(state, item_phase_confirmed)
   local record = _pop_active(state)
   if record and record.source == pending_confirmation.SOURCE_ITEM_PHASE_ASK then
-    _store(state).item_phase_confirmed = true
+    _store(state).item_phase_confirmed = item_phase_confirmed
   end
   _prune(state)
   return record
 end
 
+function pending_confirmation.confirm(state)
+  return _settle(state, true)
+end
+
 function pending_confirmation.cancel(state)
-  local record = _pop_active(state)
-  if record and record.source == pending_confirmation.SOURCE_ITEM_PHASE_ASK then
-    _store(state).item_phase_confirmed = nil
-  end
-  _prune(state)
-  return record
+  return _settle(state, nil)
 end
 
 -- 丢弃当前记录而不触发 confirm/cancel 语义（force-skip、passive 屏切换用）。
