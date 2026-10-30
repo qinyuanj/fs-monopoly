@@ -25,6 +25,7 @@
   {:name "choice_resolution.install", :namespace "turn.deadlines.choice_resolution", :complexity 7, :coverage 76.4706, :crap 7.6383}
   {:name "_grant_and_record", :namespace "rules.skin_ownership.redeem", :complexity 7, :coverage 86.6667, :crap 7.1161}
   {:name "sequence_builder.build_steps", :namespace "ui.render.move_anim.sequence_builder", :complexity 7, :coverage 95.0, :crap 7.0061}
+  {:name "runtime_context.current_api", :namespace "host.context", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "roadblock.auto_candidates", :namespace "rules.items.roadblock", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "catalog.sorted", :namespace "rules.skin_ownership.catalog", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_record_ports", :namespace "turn.loop.ports", :complexity 7, :coverage 100.0, :crap 7.0}
@@ -110,11 +111,8 @@
   {:name "runtime_ports.wall_now_hms", :namespace "foundation.ports.runtime_ports", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "tip_runtime.configure", :namespace "foundation.tip_runtime", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "host_runtime.register_input_text_end", :namespace "host", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "_current_env", :namespace "host.archive_ports", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "_current_env", :namespace "host.clock_ports", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_try_timestamp_from_api", :namespace "host.clock_ports", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_resolve_game_api_roles", :namespace "host.context", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "_current_env", :namespace "host.default_ports", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "entity_pool.acquire", :namespace "host.entity_pool", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "entity_pool.release", :namespace "host.entity_pool", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_all_valid_roles", :namespace "host.like_collect_subscribe", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -130,7 +128,6 @@
   {:name "_try_role_id", :namespace "host.paid_purchase_gateway", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "gateway.start", :namespace "host.paid_purchase_gateway", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_resolve_ctrl_unit", :namespace "host.role_model", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "_current_env", :namespace "host.role_ports", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_query_game_roles", :namespace "host.role_ports", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_resolve_roles", :namespace "host.role_ports", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_game_roles_fallback", :namespace "host.role_resolver", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -637,8 +634,7 @@
   {:name "_schedule_release", :namespace "foundation.tips", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_warn", :namespace "foundation.tips", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_host_lua_api", :namespace "host", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "host_runtime.register_custom_event", :namespace "host", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "host_runtime.register_trigger_event", :namespace "host", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_register_event", :namespace "host", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_int_archive_type", :namespace "host.archive_ports", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_read_archive_int", :namespace "host.archive_ports", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_read_archive_str", :namespace "host.archive_ports", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1329,7 +1325,6 @@
   {:name "_is_fresh_first_turn", :namespace "app.gameplay_start", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "M.install", :namespace "app.host_install", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_copy_ids", :namespace "app.host_integrations.achievement", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_positive_amount", :namespace "app.host_integrations.achievement_runtime", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_record", :namespace "app.host_integrations.achievement_runtime", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_role", :namespace "app.host_integrations.achievement_runtime", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_accumulate_player", :namespace "app.host_integrations.leaderboard", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1395,7 +1390,9 @@
   {:name "_shallow_freeze", :namespace "foundation.memo", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_snapshots_equal", :namespace "foundation.memo", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "number_utils.diff_or_zero", :namespace "foundation.number", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "number_utils.non_negative_or_zero", :namespace "foundation.number", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "number_utils.resolve_numeric", :namespace "foundation.number", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "number_utils.to_positive_integer", :namespace "foundation.number", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_port", :namespace "foundation.ports.runtime_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "runtime_ports.schedule", :namespace "foundation.ports.runtime_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "Scope:destroy", :namespace "foundation.scope", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1411,13 +1408,10 @@
   {:name "tip_queue.snapshot", :namespace "foundation.tips", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "host_runtime.unregister_custom_event", :namespace "host", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "lua_api_fn", :namespace "host", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_current_game_api", :namespace "host.archive_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_has_archive_reader", :namespace "host.archive_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_write_archive_str", :namespace "host.archive_ports", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_current_game_api", :namespace "host.clock_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_parts_complete", :namespace "host.clock_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "runtime_context.install_runtime_helpers", :namespace "host.context", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_current_api", :namespace "host.default_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_fill_prewarm", :namespace "host.entity_pool", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_valid_prewarm_args", :namespace "host.entity_pool", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "entity_pool.prewarm", :namespace "host.entity_pool", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1443,15 +1437,13 @@
   {:name "_warn_mapping_missing_once", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_remove_ctrl_unit", :namespace "host.role_die", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_adapter_of", :namespace "host.role_ports", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_current_game_api", :namespace "host.role_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_registry", :namespace "host.role_ports", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "role_matches_predicate", :namespace "host.role_resolver", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "role_resolver.resolve_role_with", :namespace "host.role_resolver", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "scene_ui.destroy_scene_ui", :namespace "host.scene_ui", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "scene_ui.has_scene_ui_support", :namespace "host.scene_ui", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "scene_ui.set_scene_ui_visible", :namespace "host.scene_ui", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_game_api_3d", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_game_api_sfx", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_game_api_with", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_has_indexed_component", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_has_named_component", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_is_vector_like", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1677,7 +1669,6 @@
   {:name "_valid_market_buy", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "session.apply_navigation", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "paid_purchase_flow.handle", :namespace "rules.market.paid_purchase_flow", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_resolve_product_id", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "local_purchase.execute", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "paid_fulfillment.fulfill_entry", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_charge_if_needed", :namespace "rules.market.purchase_fulfillment", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1742,10 +1733,9 @@
   {:name "game:init", :namespace "state.game_state", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_collect_unvisited", :namespace "state.land_component", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_active", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_settle", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_store", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "pending_confirmation.active_source", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "pending_confirmation.cancel", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "pending_confirmation.confirm", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "pending_confirmation.option_id", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "pending_confirmation.source_screen", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "pending_confirmation.stored_intent", :namespace "state.pending_confirmation", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1893,7 +1883,6 @@
   {:name "_scan_next_candidate", :namespace "turn.policies.camera", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_can_computer_actor_choose", :namespace "turn.policies.choice_auto", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_choice_options", :namespace "turn.policies.choice_auto", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_normalize_visible_seconds", :namespace "turn.policies.choice_auto", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_is_computer_controlled", :namespace "turn.policies.item_play_context", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_apply_lock_enabled", :namespace "turn.policies.role_control", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_state_ports", :namespace "turn.policies.role_control", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2018,7 +2007,6 @@
   {:name "_option_id", :namespace "ui.input.item_phase_ask", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_apply_locked_state", :namespace "ui.input.lock", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_lock_market_buttons", :namespace "ui.input.lock", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_current_choice", :namespace "ui.input.pre_confirm", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_discard_eliminated_locks", :namespace "ui.input.role_control_lock", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_prune_unseen_roles", :namespace "ui.input.role_control_lock", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_ctrl_unit", :namespace "ui.input.role_control_lock", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2094,7 +2082,6 @@
   {:name "_resolve_robot_id", :namespace "ui.render.anim.unit_overlay_robot", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_step_duration", :namespace "ui.render.anim.unit_overlay_robot", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "robot.resolve_presentation_runtime", :namespace "ui.render.anim.unit_overlay_robot", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_sanitize_delay", :namespace "ui.render.anim.units", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_schedule_fn", :namespace "ui.render.anim.units", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_target_player_ids", :namespace "ui.render.anim.units", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "units.play_clear_obstacles", :namespace "ui.render.anim.units", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2234,7 +2221,6 @@
   {:name "panel.close", :namespace "ui.screens.item_atlas.panel", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_apply_secondary_confirm_copy", :namespace "ui.screens.secondary_confirm", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_confirm_screen", :namespace "ui.screens.secondary_confirm", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_current_choice", :namespace "ui.screens.secondary_confirm", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_first_selected_id", :namespace "ui.screens.secondary_confirm", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "skin_panel.build_route_specs", :namespace "ui.screens.skin_panel", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_activate_slot", :namespace "ui.screens.skin_panel.panel", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2359,7 +2345,6 @@
   {:name "service.refresh_turn_label", :namespace "ui.coord.ui_runtime", :complexity 2, :coverage 91.6667, :crap 2.0023}
   {:name "ENode:init", :namespace "ui.manager.enode", :complexity 2, :coverage 91.6667, :crap 2.0023}
   {:name "_step_anim", :namespace "turn.output.anim", :complexity 2, :coverage 92.3077, :crap 2.0018}
-  {:name "_install_class_mixin", :namespace "app.compose_game", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.uninstall", :namespace "app.event_bridge", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_new_player_entry", :namespace "app.game_factory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_new_rng", :namespace "app.game_factory", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2435,6 +2420,7 @@
   {:name "logger.set_anim_debug_enabled_provider", :namespace "foundation.log", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_table_fields_match", :namespace "foundation.memo", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "memo.new", :namespace "foundation.memo", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "mixin.install", :namespace "foundation.mixin", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "move_anim_debug.log", :namespace "foundation.move_anim_debug", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_digits_to_number", :namespace "foundation.number", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_truncate_number", :namespace "foundation.number", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2446,6 +2432,8 @@
   {:name "_apply_defaults", :namespace "foundation.resettable_defaults", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_pad", :namespace "foundation.sha256", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "sha256.hex", :namespace "foundation.sha256", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "M.clear", :namespace "foundation.tables", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "M.count", :namespace "foundation.tables", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.ensure_absent_field", :namespace "foundation.tables", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.ensure_field", :namespace "foundation.tables", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.ensure_table_field", :namespace "foundation.tables", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2457,8 +2445,7 @@
   {:name "_immediate_release", :namespace "foundation.tips", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_invoked_ok", :namespace "foundation.tips", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_test_mode_release", :namespace "foundation.tips", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "host_runtime.query_unit", :namespace "host", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "host_runtime.query_units", :namespace "host", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_query", :namespace "host", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "host_runtime.schedule", :namespace "host", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "camera_helper.new", :namespace "host.camera", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_api_now_seconds", :namespace "host.clock_ports", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2466,16 +2453,15 @@
   {:name "_safe_part", :namespace "host.clock_ports", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_timestamp_diff", :namespace "host.clock_ports", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "clock_ports.install", :namespace "host.clock_ports", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_validate_lua_api_methods", :namespace "host.context", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "runtime_context.install_environment", :namespace "host.context", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "runtime_context.install_globals", :namespace "host.context", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "runtime_context.new", :namespace "host.context", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "runtime_context.validate_lua_api_methods", :namespace "host.context", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_bucket", :namespace "host.entity_pool", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_call_method", :namespace "host.entity_pool", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_prewarm_one", :namespace "host.entity_pool", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_return_or_destroy", :namespace "host.entity_pool", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "entity_pool.stats", :namespace "host.entity_pool", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_require_lua_api", :namespace "host.global_aliases", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "host_runtime_bridge.install", :namespace "host.global_aliases", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_handle_like_or_collect", :namespace "host.like_collect_subscribe", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_runtime", :namespace "host.like_collect_subscribe", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2503,8 +2489,7 @@
   {:name "_has_eui_lookup", :namespace "host.scene_ui", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_has_set_visible", :namespace "host.scene_ui", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_invoke_show_panel", :namespace "host.share_panel", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_invalid_sfx_key", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_invalid_sound_id", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_invalid_positive_integer_id", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_pos", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_rotation", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_scale_invalid", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2738,7 +2723,6 @@
   {:name "event_log.flush_buffer", :namespace "state.event_log", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "event_log.new", :namespace "state.event_log", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "event_log.push_buffer", :namespace "state.event_log", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_install_mixin", :namespace "state.game_state", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_is_land", :namespace "state.land_adjacency", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "land_adjacency.ensure_complete", :namespace "state.land_adjacency", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "pending_confirmation.is_item_phase_confirmed", :namespace "state.pending_confirmation", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2939,7 +2923,6 @@
   {:name "_display_player_id", :namespace "ui.coord.item_slots", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_sync_one_slot", :namespace "ui.coord.item_slots", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_emit_ui_event", :namespace "ui.coord.item_slots_events", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_clear_option_id_set", :namespace "ui.coord.item_slots_options", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_close_market_if_needed", :namespace "ui.coord.modal", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_open_item_phase_passive_choice", :namespace "ui.coord.modal", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_open_special_screen", :namespace "ui.coord.modal", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2972,7 +2955,6 @@
   {:name "_open_pre_confirm_screen", :namespace "ui.input.pre_confirm", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_acquire_lock", :namespace "ui.input.role_control_lock", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_assert_sync_args", :namespace "ui.input.role_control_lock", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_clear_seen_roles", :namespace "ui.input.role_control_lock", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_lock_entry", :namespace "ui.input.role_control_lock", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_lock_state", :namespace "ui.input.role_control_lock", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_slot_intent_builder", :namespace "ui.input.route_item_slots", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3056,7 +3038,6 @@
   {:name "_render_name", :namespace "ui.render.board.tile", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_tile_cfg", :namespace "ui.render.board.tile", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_build_owner_set", :namespace "ui.render.board.visual_sync_batch", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_clear_table", :namespace "ui.render.board.visual_sync_batch", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_dedupe_into", :namespace "ui.render.board.visual_sync_batch", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_normalize_payload", :namespace "ui.render.board.visual_sync_batch", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_sync_owner_visual", :namespace "ui.render.board.visual_sync_tile", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3114,8 +3095,6 @@
   {:name "_pending_roadblock", :namespace "ui.render.status3d.status_resolve", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_notice_matches_player", :namespace "ui.render.status3d.status_signals", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.init_ui_assets", :namespace "ui.render.support.assets", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_count_unique", :namespace "ui.render.support.assets", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_active_count", :namespace "ui.render.support.effect_track", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "resolver.resolve_from_event", :namespace "ui.render.support.local_actor_resolver", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_apply_item_slot", :namespace "ui.render.support.node_ops", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_hide_target_button", :namespace "ui.render.support.node_ops", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3200,7 +3179,6 @@
   {:name "panel_overlay.is_settling", :namespace "ui.state.panel_overlay", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_update_item_slots_model", :namespace "ui.view", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_update_player_meta_model", :namespace "ui.view", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_clear_table", :namespace "ui.view.board_slice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_populate_board", :namespace "ui.view.board_slice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_assemble_view", :namespace "ui.view.choice_builder", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_build_choice", :namespace "ui.view.choice_slice", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3214,7 +3192,6 @@
   {:name "_bfs_component", :namespace "ui.view.contiguous_count", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_map_ready", :namespace "ui.view.contiguous_count", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_invested_price", :namespace "ui.view.gameplay_read_port", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_clear", :namespace "ui.view.item_slice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_build_player_status", :namespace "ui.view.panel_builder", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_build_status_row", :namespace "ui.view.panel_builder", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_fill_status_rows", :namespace "ui.view.panel_builder", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3223,7 +3200,6 @@
   {:name "_trim_status_rows", :namespace "ui.view.panel_builder", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_valid_name", :namespace "ui.view.panel_builder", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "panel.build_player_statuses", :namespace "ui.view.panel_builder", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_clear", :namespace "ui.view.panel_slice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_update_auto_labels", :namespace "ui.view.panel_slice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_update_turn_label", :namespace "ui.view.panel_slice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "player_colors.resolve_owner_color", :namespace "ui.view.player_colors", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3346,14 +3322,16 @@
   {:name "_wrapped_release", :namespace "foundation.tips", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "tip_queue.clear", :namespace "foundation.tips", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "tip_queue.configure_runtime", :namespace "foundation.tips", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "host_runtime.query_unit", :namespace "host", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "host_runtime.query_units", :namespace "host", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "host_runtime.register_custom_event", :namespace "host", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "host_runtime.register_trigger_event", :namespace "host", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "host_runtime.resolve_role_with", :namespace "host", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "host_runtime.resolve_roles", :namespace "host", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_warn_str", :namespace "host.archive_ports", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "runtime_context.current", :namespace "host.context", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "runtime_context.install_runtime_helper_globals", :namespace "host.context", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "runtime_context.set_current", :namespace "host.context", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "_current_game_api", :namespace "host.default_ports", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "_current_lua_api", :namespace "host.default_ports", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_access_field", :namespace "host.entity_pool", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "frame_timer.repeat_every", :namespace "host.frame_timer", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_handle_subscribe_click", :namespace "host.like_collect_subscribe", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3647,6 +3625,8 @@
   {:name "event_log.clear", :namespace "state.event_log", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "event_log.get_seq", :namespace "state.event_log", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "input_lock.is_phase_input_blocked", :namespace "state.input_lock", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "pending_confirmation.cancel", :namespace "state.pending_confirmation", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "pending_confirmation.confirm", :namespace "state.pending_confirmation", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "pending_confirmation.is_active", :namespace "state.pending_confirmation", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_get_landing_visual_hold", :namespace "state.runtime", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_hold_bool_getter", :namespace "state.runtime", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3894,7 +3874,6 @@
   {:name "EButton:__get_font_size", :namespace "ui.manager.ebutton", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EButton:__get_text", :namespace "ui.manager.ebutton", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EButton:__get_text_color", :namespace "ui.manager.ebutton", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "EButton:__set_disabled", :namespace "ui.manager.ebutton", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EButton:__set_font_size", :namespace "ui.manager.ebutton", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EButton:__set_text", :namespace "ui.manager.ebutton", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EButton:__set_text_color", :namespace "ui.manager.ebutton", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3923,6 +3902,7 @@
   {:name "EImage:init", :namespace "ui.manager.eimage", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EImage:set_texture_keep_size", :namespace "ui.manager.eimage", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EImage:set_texture_native_size", :namespace "ui.manager.eimage", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_set_texture", :namespace "ui.manager.eimage", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EInputField:__get_text", :namespace "ui.manager.einputfield", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EInputField:__set_text", :namespace "ui.manager.einputfield", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "EInputField:__update_text", :namespace "ui.manager.einputfield", :complexity 1, :coverage 100.0, :crap 1.0}
