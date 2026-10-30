@@ -69,11 +69,6 @@ local function _is_secondary_confirm_active(ui)
   return ui ~= nil and ui.active_choice_screen_key == "secondary_confirm"
 end
 
-local function _current_choice(state)
-  local current_model = runtime_state.get_ui_model(state)
-  return current_model and current_model.choice or nil
-end
-
 local function _apply_secondary_confirm_copy(state, ui, screen, choice, option_id)
   local option_label = choice_common.resolve_option_label_by_id(choice, option_id)
   if screen.title then
@@ -105,7 +100,7 @@ function M.refresh_copy(state, option_id)
     return
   end
   local screen = _confirm_screen(ui)
-  local choice = _current_choice(state)
+  local choice = runtime_state.get_ui_model_choice(state)
   if not _refresh_ready(screen, choice) then
     return
   end

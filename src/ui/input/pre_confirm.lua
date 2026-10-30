@@ -43,13 +43,8 @@ local function _open_pre_confirm_screen(state, choice, params)
   return true
 end
 
-local function _current_choice(state)
-  local current_model = runtime_state.get_ui_model(state)
-  return current_model and current_model.choice or nil
-end
-
 function pre_confirm_flow.enter(state, intent)
-  local choice = _current_choice(state)
+  local choice = runtime_state.get_ui_model_choice(state)
   if not choice or not choice.id then
     return false
   end
@@ -82,7 +77,7 @@ function pre_confirm_flow.cancel(state)
   local source = record and record.source_screen or nil
   runtime_state.set_pending_choice_id(state, nil)
 
-  local choice = _current_choice(state)
+  local choice = runtime_state.get_ui_model_choice(state)
   if not choice then return end
 
   _restore_prior_screen(state, source, _modal_ports(state), choice)
