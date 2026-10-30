@@ -1102,7 +1102,6 @@
   {:name "_append_unique", :namespace "ui.render.board.visual_sync_batch", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_expand_affected_tiles", :namespace "ui.render.board.visual_sync_batch", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_is_owned_land_tile", :namespace "ui.render.board.visual_sync_batch", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "visual_sync_batch.sync_many", :namespace "ui.render.board.visual_sync_batch", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_match_in_anim_queue", :namespace "ui.render.board.visual_sync_overlay", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "visual_sync_overlay.sync_overlay_visual", :namespace "ui.render.board.visual_sync_overlay", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_board_and_scene", :namespace "ui.render.board.visual_sync_tile", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -2101,6 +2100,7 @@
   {:name "_set_billboard_text", :namespace "ui.render.board.tile", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_collect_owned_land_tiles", :namespace "ui.render.board.visual_sync_batch", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_sync_overlays", :namespace "ui.render.board.visual_sync_batch", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "visual_sync_batch.sync_many", :namespace "ui.render.board.visual_sync_batch", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_has_pending_trigger_anim", :namespace "ui.render.board.visual_sync_overlay", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_matches_trigger", :namespace "ui.render.board.visual_sync_overlay", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_spawn_mine_overlay", :namespace "ui.render.board.visual_sync_overlay", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2489,7 +2489,6 @@
   {:name "_has_eui_lookup", :namespace "host.scene_ui", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_has_set_visible", :namespace "host.scene_ui", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_invoke_show_panel", :namespace "host.share_panel", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_invalid_positive_integer_id", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_pos", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_rotation", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_scale_invalid", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3344,6 +3343,7 @@
   {:name "_is_synthetic_adapter", :namespace "host.role_die", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_warn", :namespace "host.role_model", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "role_model.install", :namespace "host.role_model", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_invalid_positive_integer_id", :namespace "host.sound", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_play_sfx_call", :namespace "host.sound", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_warn_skip", :namespace "host.sound", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_zero_pos", :namespace "host.synthetic_actor_registry", :complexity 1, :coverage 100.0, :crap 1.0}
