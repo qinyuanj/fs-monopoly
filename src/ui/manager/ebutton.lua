@@ -22,11 +22,6 @@ function EButton:init(node, name)
     self.__protected_text = ""
 end
 
-function EButton:__set_disabled(value)
-    self.__protected_disabled = value
-    self:__update_disabled()
-end
-
 function EButton:__update_disabled()
     -- 两个宿主方法按角色成对下发(touch 后 enabled),顺序与拆成两次 push 不同,故合在一个 apply 内。
     push(function(role)
