@@ -107,14 +107,6 @@ function purchase.setup_for_game(game)
   paid_purchase_gateway.setup_for_game(game, paid_purchase_callback.handle)
 end
 
-local function _resolve_product_id(product_id)
-  local resolved = number_utils.to_integer(product_id)
-  if resolved == nil or resolved <= 0 then
-    return nil
-  end
-  return resolved
-end
-
 local function _validate_purchase_entry(game, player, entry)
   local decision = policy.validate_entry(game, player, entry)
   if not decision.ok then
@@ -129,7 +121,7 @@ local function _handle_paid_purchase(game, player, entry, product_id)
 end
 
 function purchase.execute(game, player, product_id)
-  local resolved_product_id = _resolve_product_id(product_id)
+  local resolved_product_id = number_utils.to_positive_integer(product_id)
   if resolved_product_id == nil then
     logger.warn("invalid market product id:", tostring(product_id))
     return false

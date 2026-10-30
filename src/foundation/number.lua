@@ -141,6 +141,14 @@ function number_utils.resolve_numeric(value, fallback)
   return nil
 end
 
+function number_utils.to_positive_integer(value)
+  local resolved = number_utils.to_integer(value)
+  if resolved == nil or resolved <= 0 then
+    return nil
+  end
+  return resolved
+end
+
 function number_utils.diff_or_zero(timestamp_1, timestamp_2)
   if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
     return timestamp_1 - timestamp_2

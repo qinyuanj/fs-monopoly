@@ -60,14 +60,6 @@ local function _resolve_role(subject)
   return role_resolver.resolve_role_with(player_id, _can_write_progress)
 end
 
-local function _positive_amount(amount)
-  local value = number_utils.to_integer(amount)
-  if value == nil or value <= 0 then
-    return nil
-  end
-  return value
-end
-
 local function _record(subject, event_name, amount)
   if event_name == nil then
     return false
@@ -80,7 +72,7 @@ local function _record(subject, event_name, amount)
 end
 
 local function _record_positive_amount(player, event_name, amount)
-  local value = _positive_amount(amount)
+  local value = number_utils.to_positive_integer(amount)
   if value == nil then
     return false
   end
