@@ -64,7 +64,7 @@ function runtime_context.install_globals(ctx)
   runtime_context.install_runtime_helpers(ctx, { install_globals = true })
 end
 
-local _required_lua_api_methods = {
+runtime_context.REQUIRED_LUA_API_METHODS = {
   "call_delay_time",
   "global_register_custom_event",
   "global_register_trigger_event",
@@ -85,7 +85,7 @@ end
 function runtime_context.install_environment(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
   local lua_api = ctx.env.LuaAPI
-  runtime_context.validate_lua_api_methods(lua_api, _required_lua_api_methods)
+  runtime_context.validate_lua_api_methods(lua_api, runtime_context.REQUIRED_LUA_API_METHODS)
   return ctx.env
 end
 

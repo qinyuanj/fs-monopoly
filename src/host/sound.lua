@@ -45,8 +45,8 @@ local function _resolve_pos(pos)
 end
 
 local function _invalid_positive_integer_id(value)
-  local resolved = number_utils.to_integer(value)
-  return resolved == nil or resolved <= 0, resolved
+  local resolved = number_utils.to_positive_integer(value)
+  return resolved == nil, resolved
 end
 
 local function _scale_invalid(scale, resolved_scale)

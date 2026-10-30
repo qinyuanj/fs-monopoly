@@ -4,19 +4,9 @@ local runtime_context = require("src.host.context")
 
 local host_runtime_bridge = {}
 
-local _REQUIRED_LUA_API_METHODS = {
-  "call_delay_time",
-  "global_register_custom_event",
-  "global_register_trigger_event",
-  "global_unregister_trigger_event",
-  "unit_register_custom_event",
-  "unit_register_trigger_event",
-  "global_send_custom_event",
-}
-
 function host_runtime_bridge.install(env)
   assert(env ~= nil, "missing runtime env")
-  local lua_api = runtime_context.validate_lua_api_methods(env.LuaAPI, _REQUIRED_LUA_API_METHODS)
+  local lua_api = runtime_context.validate_lua_api_methods(env.LuaAPI, runtime_context.REQUIRED_LUA_API_METHODS)
 
   if env.GameAPI ~= nil then
     GameAPI = env.GameAPI

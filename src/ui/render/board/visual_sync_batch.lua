@@ -103,7 +103,7 @@ end
 
 function visual_sync_batch.sync_many(state, payload)
   local normalized = _normalize_payload(payload)
-  for k in pairs(_sync_seen) do _sync_seen[k] = nil end
+  tables.clear(_sync_seen)
   local handled = _sync_tile_dedup(state, normalized.tile_ids)
   if _sync_tile_dedup(state, _expand_affected_tiles(state, normalized.affected_owner_ids)) then
     handled = true
