@@ -15,6 +15,7 @@
 -- (package.path 经 tools/cli.lua 装配,可直接 require foundation.* / packages.*)。
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
+local tables = require("foundation.tables")
 local deploy = require("packages.ops.deploy")
 
 local M = {}
@@ -67,14 +68,6 @@ function M.render_ui_manager_nodes(data)
   return table.concat(lines, "\n") .. "\n"
 end
 
-local function _count_keys(map)
-  local count = 0
-  for _ in pairs(map) do
-    count = count + 1
-  end
-  return count
-end
-
 -- 回同步主流程:deploy_dir/Data/{Prefab.lua,UINodes.lua}
 --   → repo_root/Data/{Prefab.lua,UIManagerNodes.lua};
 -- deploy_dir/{EggyAPI.lua,EggyEditorAPI.lua} → repo_root 同名文件(字节原样)。
@@ -117,7 +110,7 @@ function M.sync_from_deploy(deploy_dir, repo_root)
   end
 
   local parsed = M.parse_uinodes(uinodes_text)
-  local node_count = _count_keys(parsed)
+  local node_count = tables.count(parsed)
   if node_count == 0 then
     return nil, "UINodes.lua 未解析出任何节点,导出格式可能已变化: " .. tostring(uinodes_src)
   end

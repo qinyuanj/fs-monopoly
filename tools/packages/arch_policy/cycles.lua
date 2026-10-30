@@ -1,5 +1,6 @@
 -- 投影环路径兼容旧 arch_view:小 SCC 最小反馈边集,大 SCC Eades 顺序,
 -- 在剩余 DAG 上为每条反馈边找 BFS 最短闭合路径。无需外部 rock。
+local tables = require("foundation.tables")
 local M = {}
 local function key(e) return e.from .. "\0" .. e.to end
 local function sorted_keys(set)
@@ -13,11 +14,6 @@ local function maps(nodes, edges)
   for _, id in ipairs(nodes) do incoming[id], outgoing[id] = {}, {} end
   for _, e in ipairs(edges) do incoming[e.to][e.from], outgoing[e.from][e.to] = true, true end
   return incoming, outgoing
-end
-local function size(set)
-  local n = 0
-  for _ in pairs(set) do n = n + 1 end
-  return n
 end
 local function dag(nodes, edges)
   local incoming, outgoing = maps(nodes, edges)
@@ -80,7 +76,7 @@ local function greedy(nodes, edges)
     if not id then
       local best = -math.huge
       for _, candidate in ipairs(ids) do
-        local diff = size(outgoing[candidate]) - size(incoming[candidate])
+        local diff = tables.count(outgoing[candidate]) - tables.count(incoming[candidate])
         if diff >= best then id, best = candidate, diff end
       end
     end
