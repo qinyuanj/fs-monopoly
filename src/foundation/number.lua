@@ -141,6 +141,13 @@ function number_utils.resolve_numeric(value, fallback)
   return nil
 end
 
+function number_utils.non_negative_or_zero(value)
+  if not number_utils.is_numeric(value) or value < 0 then
+    return 0
+  end
+  return value
+end
+
 function number_utils.to_positive_integer(value)
   local resolved = number_utils.to_integer(value)
   if resolved == nil or resolved <= 0 then

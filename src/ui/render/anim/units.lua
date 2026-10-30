@@ -129,16 +129,9 @@ end
 
 units.play_forced_relocation = units.play_teleport_effect
 
-local function _sanitize_delay(value)
-  if not number_utils.is_numeric(value) or value < 0 then
-    return 0
-  end
-  return value
-end
-
 local function _resolve_minimum_delay(delay, minimum_delay)
-  local resolved_delay = _sanitize_delay(delay)
-  local floor = _sanitize_delay(minimum_delay)
+  local resolved_delay = number_utils.non_negative_or_zero(delay)
+  local floor = number_utils.non_negative_or_zero(minimum_delay)
   if resolved_delay < floor then
     return floor
   end
@@ -201,7 +194,7 @@ function units.play_mine_trigger(state, anim, duration, opts)
   local schedule = opts and opts.schedule or nil
   if type(schedule) == "function" then
     _play_mine_feedback(state, anim, player_id, tile_index, hit_pos)
-    local snap_delay = _sanitize_delay(duration)
+    local snap_delay = number_utils.non_negative_or_zero(duration)
     _schedule_mine_trigger_snap(opts, state, board_scene, player_id, anim, to_index, snap_delay, schedule)
     return snap_delay
   end

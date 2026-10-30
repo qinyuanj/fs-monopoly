@@ -56,13 +56,6 @@ local function _build_auto_or_fallback_action(game, choice, allow_first_option_f
   return _select_option_action(choice, _pick_first_choice_option(choice))
 end
 
-local function _normalize_visible_seconds(value)
-  if not number_utils.is_numeric(value) or value < 0 then
-    return 0
-  end
-  return value
-end
-
 local function _can_computer_actor_choose(is_computer_controlled_actor, min_visible, elapsed)
   if not is_computer_controlled_actor then
     return false
@@ -142,8 +135,8 @@ function choice_auto_policy.decide(game, _state, choice, ctx)
 
   local mode = ctx.mode or "wait_choice"
   local is_computer_controlled_actor = _resolve_computer_controlled_actor(game, choice, ctx)
-  local min_visible = _normalize_visible_seconds(ctx.min_visible_seconds)
-  local elapsed = _normalize_visible_seconds(ctx.elapsed_seconds)
+  local min_visible = number_utils.non_negative_or_zero(ctx.min_visible_seconds)
+  local elapsed = number_utils.non_negative_or_zero(ctx.elapsed_seconds)
   return _dispatch_mode_or_fallback(game, choice, ctx, mode, is_computer_controlled_actor, min_visible, elapsed)
 end
 
