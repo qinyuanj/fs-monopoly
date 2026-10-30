@@ -64,14 +64,17 @@ function EImage:__set_transition_time(value)
     self.__protected_transition_time = math.tofixed(value)
 end
 
-function EImage:set_texture_keep_size(image_key)
+local function _set_texture(self, image_key, reset_size)
     self.__protected_image_texture = image_key
-    self:__apply_image_texture(false)
+    self:__apply_image_texture(reset_size)
+end
+
+function EImage:set_texture_keep_size(image_key)
+    _set_texture(self, image_key, false)
 end
 
 function EImage:set_texture_native_size(image_key)
-    self.__protected_image_texture = image_key
-    self:__apply_image_texture(true)
+    _set_texture(self, image_key, true)
 end
 
 return EImage
