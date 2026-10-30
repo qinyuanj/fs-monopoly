@@ -1,18 +1,9 @@
 -- 时钟端口默认实现(自 default_ports.lua 拆分,行为保持):wall/cpu 时刻与差值
 -- 的宿主 API 适配,经 runtime_context 取当前 env 的 GameAPI 时间戳方法。
 local number_utils = require("src.foundation.number")
+local host_context = require("src.host.context")
 
 local clock_ports = {}
-
-local function _current_env(runtime_context)
-  local ctx = runtime_context.current and runtime_context.current() or nil
-  return ctx and ctx.env or nil
-end
-
-local function _current_game_api(runtime_context)
-  local env = _current_env(runtime_context)
-  return env and env["Game" .. "API"] or nil
-end
 
 local function _try_timestamp_from_api(game_api)
   if game_api and type(game_api.get_timestamp) == "function" then
@@ -25,7 +16,7 @@ local function _try_timestamp_from_api(game_api)
 end
 
 local function _api_now_seconds(runtime_context)
-  local ts = _try_timestamp_from_api(_current_game_api(runtime_context))
+  local ts = _try_timestamp_from_api(host_context.current_api(runtime_context, "Game" .. "API"))
   return ts or 0
 end
 
@@ -58,7 +49,7 @@ local function _parts_complete(h, m, s)
 end
 
 local function _wall_now_hms(runtime_context)
-  local game_api = _current_game_api(runtime_context)
+  local game_api = host_context.current_api(runtime_context, "Game" .. "API")
   if game_api == nil then
     return ""
   end
@@ -105,7 +96,7 @@ function clock_ports.install(defaults, runtime_context)
   end
 
   defaults.wall_diff_seconds = function(timestamp_1, timestamp_2)
-    return _timestamp_diff(_current_game_api(runtime_context), timestamp_1, timestamp_2)
+    return _timestamp_diff(host_context.current_api(runtime_context, "Game" .. "API"), timestamp_1, timestamp_2)
       or number_utils.diff_or_zero(timestamp_1, timestamp_2)
   end
 

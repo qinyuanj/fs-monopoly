@@ -5,28 +5,11 @@ local clock_ports = require("src.host.clock_ports")
 local role_ports = require("src.host.role_ports")
 local archive_ports = require("src.host.archive_ports")
 local logger = require("src.foundation.log")
+local host_context = require("src.host.context")
 
 local default_ports = {}
 local game_api_key = "Game" .. "API"
 local lua_api_key = "Lua" .. "API"
-
-local function _current_env(runtime_context)
-  local ctx = runtime_context.current and runtime_context.current() or nil
-  return ctx and ctx.env or nil
-end
-
-local function _current_api(runtime_context, env_key)
-  local env = _current_env(runtime_context)
-  return env and env[env_key] or nil
-end
-
-local function _current_game_api(runtime_context)
-  return _current_api(runtime_context, game_api_key)
-end
-
-local function _current_lua_api(runtime_context)
-  return _current_api(runtime_context, lua_api_key)
-end
 
 function default_ports.build(runtime_context)
   local defaults = {}
@@ -37,14 +20,14 @@ function default_ports.build(runtime_context)
 
   function defaults.rng_next_int(min, max)
     assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
-    local game_api = _current_game_api(runtime_context)
+    local game_api = host_context.current_api(runtime_context, game_api_key)
     assert(game_api and game_api.random_int, "missing game api random_int")
     return game_api.random_int(min, max)
   end
 
   function defaults.schedule(delay, fn)
     assert(type(fn) == "function", "schedule requires callback")
-    local lua_api = _current_lua_api(runtime_context)
+    local lua_api = host_context.current_api(runtime_context, lua_api_key)
     if lua_api and type(lua_api.call_delay_time) == "function" then
       lua_api.call_delay_time(delay or 0, fn)
       return
@@ -74,7 +57,7 @@ function default_ports.build(runtime_context)
   -- 成功判定偏离「明确返回值」标准:返回值真机未取证,暂以「无异常即成功」
   -- 为暂定契约(ADR 0065 已登记例外),取证后按结果收紧。
   function defaults.end_game()
-    local game_api = _current_game_api(runtime_context)
+    local game_api = host_context.current_api(runtime_context, game_api_key)
     if game_api == nil or type(game_api.game_end) ~= "function" then
       logger.warn("end_game skip: game api or game_end missing")
       return false

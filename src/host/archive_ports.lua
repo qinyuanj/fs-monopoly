@@ -8,18 +8,9 @@
 -- 与 EggyAPI.lua 注解一致),故按普通函数直调,不用冒号约定。
 local number_utils = require("src.foundation.number")
 local logger = require("src.foundation.log")
+local host_context = require("src.host.context")
 
 local archive_ports = {}
-
-local function _current_env(runtime_context)
-  local ctx = runtime_context.current and runtime_context.current() or nil
-  return ctx and ctx.env or nil
-end
-
-local function _current_game_api(runtime_context)
-  local env = _current_env(runtime_context)
-  return env and env["Game" .. "API"] or nil
-end
 
 local function _int_archive_type()
   return Enums and Enums.ArchiveType and Enums.ArchiveType.Int or nil
@@ -87,7 +78,7 @@ local function _write_archive_str(defaults, role_id, key, value)
 end
 
 function archive_ports.archives_enabled(runtime_context)
-  local game_api = _current_game_api(runtime_context)
+  local game_api = host_context.current_api(runtime_context, "Game" .. "API")
   if game_api and type(game_api.is_archives_enabled) == "function" then
     local ok, enabled = pcall(game_api.is_archives_enabled)
     if ok then

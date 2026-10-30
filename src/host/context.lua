@@ -43,6 +43,13 @@ function runtime_context.current()
   return current_context
 end
 
+-- 各宿主端口共用同一份当前 env 读取，避免分别解释上下文缺失时的降级语义。
+function runtime_context.current_api(context_source, env_key)
+  local ctx = context_source.current and context_source.current() or nil
+  local env = ctx and ctx.env or nil
+  return env and env[env_key] or nil
+end
+
 local function _refresh_roles(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
   ctx.roles = _resolve_game_api_roles(function()

@@ -3,18 +3,9 @@
 local logger = require("src.foundation.log")
 local role_die = require("src.host.role_die")
 local role_model = require("src.host.role_model")
+local host_context = require("src.host.context")
 
 local role_ports = {}
-
-local function _current_env(runtime_context)
-  local ctx = runtime_context.current and runtime_context.current() or nil
-  return ctx and ctx.env or nil
-end
-
-local function _current_game_api(runtime_context)
-  local env = _current_env(runtime_context)
-  return env and env["Game" .. "API"] or nil
-end
 
 local function _try_get_role_id(role)
   if role == nil then
@@ -30,7 +21,7 @@ local function _try_get_role_id(role)
 end
 
 local function _query_game_roles(runtime_context)
-  local game_api = _current_game_api(runtime_context)
+  local game_api = host_context.current_api(runtime_context, "Game" .. "API")
   if game_api and type(game_api.get_all_valid_roles) == "function" then
     local ok, roles = pcall(game_api.get_all_valid_roles)
     if ok and type(roles) == "table" then
@@ -78,7 +69,7 @@ local function _find_role_by_id(roles, player_id)
 end
 
 local function _resolve_role_via_game_api(player_id, runtime_context)
-  local game_api = _current_game_api(runtime_context)
+  local game_api = host_context.current_api(runtime_context, "Game" .. "API")
   if not (game_api and type(game_api.get_role) == "function") then
     return nil
   end
