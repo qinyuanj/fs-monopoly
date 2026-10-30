@@ -26,6 +26,25 @@ local function lua_api_fn(fn_name)
   return lua_api[fn_name]
 end
 
+local function _register_event(fn_name, event, event_type, handler)
+  if type(event) ~= event_type or type(handler) ~= "function" then
+    return false
+  end
+  local register = lua_api_fn(fn_name)
+  if not register then
+    return false
+  end
+  return true, register(event, handler)
+end
+
+local function _query(fn_name, value)
+  local query = lua_api_fn(fn_name)
+  if not query then
+    return nil
+  end
+  return query(value)
+end
+
 function host_runtime.schedule(delay, fn)
   return runtime_ports.schedule(delay or 0, fn)
 end
@@ -33,17 +52,10 @@ end
 host_runtime.enqueue_tip = tip_queue.enqueue
 
 function host_runtime.register_custom_event(event_name, handler)
-  if type(event_name) ~= "string" or type(handler) ~= "function" then
-    return false
-  end
-  local register = lua_api_fn("global_register_custom_event")
-  if not register then
-    return false
-  end
   -- Return the trigger handle as a second value so callers that need the
   -- host trigger id (e.g. ENode event listeners) can capture it, while
   -- existing boolean-asserting callers keep seeing `true`.
-  return true, register(event_name, handler)
+  return _register_event("global_register_custom_event", event_name, "string", handler)
 end
 
 function host_runtime.unregister_custom_event(trigger)
@@ -61,14 +73,7 @@ end
 -- 注册宿主触发器事件(事件名+注册参数的数组形态,如 {ET_SPEC_ROLE_EXIT_GAME, role})。
 -- 回调签名 (event_name, actor, data) 以 EggyAPI 注解为线索,逐事件真机取证。
 function host_runtime.register_trigger_event(event_desc, handler)
-  if type(event_desc) ~= "table" or type(handler) ~= "function" then
-    return false
-  end
-  local register = lua_api_fn("global_register_trigger_event")
-  if not register then
-    return false
-  end
-  return true, register(event_desc, handler)
+  return _register_event("global_register_trigger_event", event_desc, "table", handler)
 end
 
 -- #199:输入框「输入完成」触发器(注册参数为 EInputField 节点 id,回调 data 带
@@ -83,19 +88,11 @@ function host_runtime.register_input_text_end(node_id, handler)
 end
 
 function host_runtime.query_units(names)
-  local query = lua_api_fn("query_units")
-  if not query then
-    return nil
-  end
-  return query(names)
+  return _query("query_units", names)
 end
 
 function host_runtime.query_unit(name)
-  local query = lua_api_fn("query_unit")
-  if not query then
-    return nil
-  end
-  return query(name)
+  return _query("query_unit", name)
 end
 
 function host_runtime.resolve_role_with(player_id, predicate)
