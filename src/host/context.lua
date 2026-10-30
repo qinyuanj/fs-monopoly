@@ -74,17 +74,18 @@ local _required_lua_api_methods = {
   "global_send_custom_event",
 }
 
-local function _validate_lua_api_methods(lua_api)
+function runtime_context.validate_lua_api_methods(lua_api, required_methods)
   assert(lua_api ~= nil, "missing LuaAPI")
-  for _, name in ipairs(_required_lua_api_methods) do
+  for _, name in ipairs(required_methods) do
     assert(type(lua_api[name]) == "function", "missing LuaAPI." .. name)
   end
+  return lua_api
 end
 
 function runtime_context.install_environment(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
   local lua_api = ctx.env.LuaAPI
-  _validate_lua_api_methods(lua_api)
+  runtime_context.validate_lua_api_methods(lua_api, _required_lua_api_methods)
   return ctx.env
 end
 

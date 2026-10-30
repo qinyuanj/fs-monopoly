@@ -1,5 +1,7 @@
 -- Host runtime seam for Eggy globals.
 -- This file is a bridge exception, not a business compatibility alias layer.
+local runtime_context = require("src.host.context")
+
 local host_runtime_bridge = {}
 
 local _REQUIRED_LUA_API_METHODS = {
@@ -12,17 +14,9 @@ local _REQUIRED_LUA_API_METHODS = {
   "global_send_custom_event",
 }
 
-local function _require_lua_api(lua_api)
-  assert(lua_api ~= nil, "missing LuaAPI")
-  for _, method_name in ipairs(_REQUIRED_LUA_API_METHODS) do
-    assert(type(lua_api[method_name]) == "function", "missing LuaAPI." .. method_name)
-  end
-  return lua_api
-end
-
 function host_runtime_bridge.install(env)
   assert(env ~= nil, "missing runtime env")
-  local lua_api = _require_lua_api(env.LuaAPI)
+  local lua_api = runtime_context.validate_lua_api_methods(env.LuaAPI, _REQUIRED_LUA_API_METHODS)
 
   if env.GameAPI ~= nil then
     GameAPI = env.GameAPI
