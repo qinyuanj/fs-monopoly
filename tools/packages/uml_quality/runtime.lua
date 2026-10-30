@@ -17,8 +17,9 @@ local function _normalize(path)
   return (tostring(path or ""):gsub("\\", "/"):gsub("/+$", ""))
 end
 
+-- 按字节比较,不折叠大小写(ADR 0073)。
 local function _within(path, prefix)
-  local candidate, base = _normalize(path):lower(), _normalize(prefix):lower() .. "/"
+  local candidate, base = _normalize(path), _normalize(prefix) .. "/"
   return candidate:sub(1, #base) == base
 end
 

@@ -96,8 +96,15 @@ end)
 
 it("accepts a python tool from its own checkout with python 3.11 or newer", function()
   local verdict = runtime.python_verdict("crapper",
-    "3.12.10\r\n\\REPO\\.uml-viewer\\crapper\\src\\crapper\\__init__.py\r\n", ROOT)
+    "3.12.10\r\n\\repo\\.uml-viewer\\crapper\\src\\crapper\\__init__.py\r\n", ROOT)
   check.is_true(verdict.ok)
+end)
+
+-- 按字节比较(ADR 0073):只差大小写的路径不算在检出内。
+it("rejects a python tool whose path differs from its checkout only in case", function()
+  local verdict = runtime.python_verdict("crapper",
+    "3.12.10\n/REPO/.uml-viewer/crapper/src/crapper/__init__.py\n", ROOT)
+  check.is_false(verdict.ok)
 end)
 
 it("rejects python older than 3.11", function()

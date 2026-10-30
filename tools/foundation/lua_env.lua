@@ -250,11 +250,12 @@ function lua_env.preflight(opts)
   return true, nil, { roots = roots, versions = versions, modules = modules }
 end
 
--- file 是否位于任一 root 之内(按路径段比较,root-evil 不算在 root 内;Windows 不分大小写)。
+-- file 是否位于任一 root 之内(按路径段比较,root-evil 不算在 root 内;按字节比较,
+-- 不折叠大小写,ADR 0073)。
 function lua_env.is_inside(file, roots)
-  local target = _normalize(file):lower()
+  local target = _normalize(file)
   for _, root in ipairs(roots or {}) do
-    local base = _normalize(root):lower()
+    local base = _normalize(root)
     if target:sub(1, #base + 1) == base .. "/" then
       return true
     end

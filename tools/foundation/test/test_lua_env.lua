@@ -280,6 +280,10 @@ describe("controlled lua environment module origin", function()
     check.is_false(lua_env.is_inside(ROOT .. "-evil/share/lua/5.4/x.lua", roots))
     check.is_true(lua_env.is_inside(ROOT .. "/share/lua/5.4/x.lua", roots))
   end)
+
+  it("compares paths byte for byte, so a case variant of the tree is outside it", function()
+    check.is_false(lua_env.is_inside(ROOT:upper() .. "/share/lua/5.4/x.lua", roots))
+  end)
 end)
 
 -- P1-b(#150):require_controlled 必须约束整条装载链,而不只是入口模块。
