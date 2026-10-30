@@ -12,13 +12,7 @@ local game_victory = require("src.rules.endgame")
 local skin_ownership_seam = require("src.ui.seams.skin_ownership")
 local skin_ownership = require("src.rules.skin_ownership")
 local game_defaults = require("src.app.game_defaults")
-
-local function _install_class_mixin(target_class, source_table, source_name)
-  for key, fn in pairs(source_table) do
-    assert(target_class[key] == nil, "compose_game mixin collision: " .. tostring(source_name) .. "." .. tostring(key))
-    target_class[key] = fn
-  end
-end
+local mixin = require("src.foundation.mixin")
 
 local _player_state_groups = {
   { name = "status_ops", source = status_ops },
@@ -28,7 +22,7 @@ local _player_state_groups = {
 }
 
 for _, group in ipairs(_player_state_groups) do
-  _install_class_mixin(game_state, group.source, group.name)
+  mixin.install("compose_game", game_state, group.source, group.name)
 end
 
 game_state.check_victory = game_victory.check_victory

@@ -2,20 +2,14 @@ local game_state_players = require("src.state.player_state")
 local game_state_tiles = require("src.state.board_state")
 local game_state_turn = require("src.state.turn_state")
 local Class = require("src.foundation.class")
+local mixin = require("src.foundation.mixin")
 
 
 local game = Class("Game")
 
-local function _install_mixin(target, source, source_name)
-  for key, fn in pairs(source) do
-    assert(target[key] == nil, "game_state mixin collision: " .. tostring(source_name) .. "." .. tostring(key))
-    target[key] = fn
-  end
-end
-
-_install_mixin(game, game_state_players, "players")
-_install_mixin(game, game_state_tiles, "board")
-_install_mixin(game, game_state_turn, "turn")
+mixin.install("game_state", game, game_state_players, "players")
+mixin.install("game_state", game, game_state_tiles, "board")
+mixin.install("game_state", game, game_state_turn, "turn")
 
 function game:init(opts)
   self.auto_play_port = opts and opts.auto_play_port or self.auto_play_port
