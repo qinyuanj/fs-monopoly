@@ -508,16 +508,6 @@ local function _validate_cases(cases, label)
   end
 end
 
-local function _cases_for_group(cases, group)
-  local selected = {}
-  for _, case in ipairs(cases or {}) do
-    if case.group == group then
-      selected[#selected + 1] = case
-    end
-  end
-  return selected
-end
-
 local function _cases_for_owner(cases, owner)
   local selected = {}
   for _, case in ipairs(cases or {}) do
@@ -535,6 +525,5 @@ return {
   name = "script_tools_contract",
   tests = contract_tests,
   tooling_tests = tooling_tests,
-  cases_for_group = _cases_for_group,
   cases_for_owner = _cases_for_owner,
 }
