@@ -44,8 +44,8 @@ local function _resolve_pos(pos)
   return runtime_constants.v3_zero
 end
 
-local function _invalid_sfx_key(sfx_key)
-  local resolved = number_utils.to_integer(sfx_key)
+local function _invalid_positive_integer_id(value)
+  local resolved = number_utils.to_integer(value)
   return resolved == nil or resolved <= 0, resolved
 end
 
@@ -54,7 +54,7 @@ local function _scale_invalid(scale, resolved_scale)
 end
 
 local function _resolve_sfx_params(sfx_key, scale, duration, rate, pos, rot, cue_name)
-  local invalid_key, resolved_sfx_key = _invalid_sfx_key(sfx_key)
+  local invalid_key, resolved_sfx_key = _invalid_positive_integer_id(sfx_key)
   if invalid_key then
     _warn_skip("skip play_sfx_by_key: invalid sfx_key", "cue_name=" .. tostring(cue_name), "sfx_key=" .. tostring(sfx_key))
     return nil
@@ -95,9 +95,9 @@ local function _with_sound_flag(with_sound)
   return with_sound == true or default_with_sound
 end
 
-local function _game_api_sfx()
+local function _game_api_with(method_name)
   local game_api = GameAPI
-  if game_api and type(game_api.play_sfx_by_key) == "function" then
+  if game_api and type(game_api[method_name]) == "function" then
     return game_api
   end
   return nil
@@ -123,7 +123,7 @@ function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, w
     return nil
   end
   local resolved_with_sound = _with_sound_flag(with_sound)
-  local game_api = _game_api_sfx()
+  local game_api = _game_api_with("play_sfx_by_key")
   if game_api == nil then
     _warn_skip("skip play_sfx_by_key: missing GameAPI.play_sfx_by_key")
     return nil
@@ -144,26 +144,13 @@ function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, w
   return sfx_id
 end
 
-local function _invalid_sound_id(sound_id)
-  local resolved = number_utils.to_integer(sound_id)
-  return resolved == nil or resolved <= 0, resolved
-end
-
-local function _game_api_3d()
-  local game_api = GameAPI
-  if game_api and type(game_api.play_3d_sound) == "function" then
-    return game_api
-  end
-  return nil
-end
-
 function sfx_runtime.play_3d_sound(pos, sound_id, duration, volume)
-  local invalid, resolved_sound_id = _invalid_sound_id(sound_id)
+  local invalid, resolved_sound_id = _invalid_positive_integer_id(sound_id)
   if invalid then
     _warn_skip("skip play_3d_sound: invalid sound_id", tostring(sound_id))
     return nil
   end
-  local game_api = _game_api_3d()
+  local game_api = _game_api_with("play_3d_sound")
   if game_api == nil then
     _warn_skip("skip play_3d_sound: missing GameAPI.play_3d_sound")
     return nil
