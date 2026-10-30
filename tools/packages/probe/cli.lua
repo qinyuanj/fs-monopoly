@@ -19,6 +19,7 @@
 local M = {}
 
 local boundary = require("foundation.platform_boundary")
+local fs = require("foundation.fs")
 local script = require("packages.probe.script")
 local tool_cli = require("foundation.tool_cli")
 
@@ -57,22 +58,11 @@ local function _default_command_exists(name)
 end
 
 local function _default_file_exists(path)
-  local handle = io.open(path, "rb")
-  if handle == nil then
-    return false
-  end
-  handle:close()
-  return true
+  return fs.is_readable(path)
 end
 
 local function _default_read_file(path)
-  local handle = io.open(path, "rb")
-  if handle == nil then
-    return nil
-  end
-  local text = handle:read("a")
-  handle:close()
-  return text
+  return fs.read_raw(path)
 end
 
 local function _default_write_file(path, text)

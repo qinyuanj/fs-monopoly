@@ -82,7 +82,7 @@ end
 -- 判定用纯 Lua 的 `path/.` 探测:io.open("dir/.") 对目录成功、对普通文件失败;
 -- io.open(path) 对文件和目录都成功。这样既不起子进程,也不受 shell 引号与
 -- 文件名特殊字符影响。
-local function _openable(path)
+function fs.is_readable(path)
   local handle = io.open(path, "rb")
   if handle == nil then
     return false
@@ -96,7 +96,7 @@ function fs.path_exists(path)
     return false
   end
   local normalized = path_lib.normalize_path(path)
-  if _openable(normalized) or _openable(normalized .. "/.") then
+  if fs.is_readable(normalized) or fs.is_readable(normalized .. "/.") then
     return true
   end
   -- 不可读目录:rename 自身在无读权限时仍成立。
@@ -107,7 +107,7 @@ function fs.is_dir(path)
   if path == nil or path == "" then
     return false
   end
-  return _openable(path_lib.normalize_path(path) .. "/.")
+  return fs.is_readable(path_lib.normalize_path(path) .. "/.")
 end
 
 function fs.remove_path(path)
