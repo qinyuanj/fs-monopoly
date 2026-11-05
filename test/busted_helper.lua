@@ -11,6 +11,8 @@ return function(busted, _, helper_options)
   package.loaded["packages.test_runner.cache_loader"] = cache_loader
   local root = require("lfs").currentdir():gsub("\\", "/"):gsub("/+$", "") .. "/"
   cache_loader.adopt_preloaded(root)
+  -- 注册期不构造完整 traceback(与 busted_backend 同一实现,见 registration_trace)。
+  dofile("tools/packages/test_runner/registration_trace.lua").install(busted)
   -- Resolve bootstrap from worker source before it adds tools/test templates.
   -- install revalidates the worker/source binding and confines paths to the
   -- worker plus the controlled Lua environment.
