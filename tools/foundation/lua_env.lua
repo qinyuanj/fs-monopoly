@@ -129,18 +129,27 @@ local function _parse_roots(output)
   return roots
 end
 
--- 该包在各 tree 中已装的全部副本。`luarocks list` 默认只列当前 tree,而模块按
--- rocks_trees 顺序装载,所以必须逐 tree 询问:任一越界副本都可能先被解析到。
-local function _installed_copies(run, exe, name, roots)
+-- 各 tree 的已装清单。`luarocks list` 默认只列当前 tree,而模块按 rocks_trees
+-- 顺序装载,所以必须逐 tree 询问:任一越界副本都可能先被解析到。每个 tree 只问
+-- 一次全量清单(不带包名),各包在 Lua 侧精确过滤:每个 runner 进程启动都付这笔,
+-- 逐包逐 tree 询问要 1 + 包数 × tree 数 次子进程。
+local function _list_trees(run, exe, roots)
+  local listings = {}
+  for index, root in ipairs(roots) do
+    local result = run({ exe, "--lua-version", LUA_VERSION, "list", "--tree=" .. root, "--porcelain" })
+    listings[index] = { root = root, output = result.ok == true and tostring(result.output or "") or "" }
+  end
+  return listings
+end
+
+-- 该包在各 tree 中已装的全部副本(按 roots 顺序)。
+local function _installed_copies(listings, name)
   local copies = {}
-  for _, root in ipairs(roots) do
-    local result = run({ exe, "--lua-version", LUA_VERSION, "list", "--tree=" .. root, name, "--porcelain" })
-    if result.ok == true then
-      for line in tostring(result.output or ""):gmatch("[^\r\n]+") do
-        local pkg, version = line:match("^([^\t]+)\t([^\t]+)\tinstalled")
-        if pkg == name then
-          copies[#copies + 1] = { version = version, root = root }
-        end
+  for _, listing in ipairs(listings) do
+    for line in listing.output:gmatch("[^\r\n]+") do
+      local pkg, version = line:match("^([^\t]+)\t([^\t]+)\tinstalled")
+      if pkg == name then
+        copies[#copies + 1] = { version = version, root = listing.root }
       end
     end
   end
@@ -189,8 +198,9 @@ function lua_env.preflight(opts)
 
   local problems, versions, modules = {}, {}, {}
   local search = _module_search_path(roots)
+  local listings = _list_trees(run, exe, roots)
   for _, requirement in ipairs(lua_env.REQUIREMENTS) do
-    local copies = _installed_copies(run, exe, requirement.name, roots)
+    local copies = _installed_copies(listings, requirement.name)
     local described, out_of_range, chosen, verified_roots = {}, 0, nil, {}
     for _, copy in ipairs(copies) do
       described[#described + 1] = copy.version .. " (" .. copy.root .. ")"

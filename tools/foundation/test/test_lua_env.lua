@@ -44,10 +44,17 @@ local function _fake_run(copies, calls, roots)
       local value = argument:match("^%-%-tree=(.*)$")
       if value ~= nil then tree = value end
     end
-    local name = command[#command - 1]
+    -- 与真实 luarocks 一致:list 后不带名称参数即列出该 tree 的全部包。
+    local name
+    for index = 2, #command do
+      if command[index - 1] ~= "--lua-version" and command[index] ~= "list"
+        and not command[index]:match("^%-%-") and command[index] ~= "5.4" then
+        name = command[index]
+      end
+    end
     local lines = {}
     for _, copy in ipairs(copies) do
-      if name ~= nil and copy.name:find(name, 1, true) ~= nil
+      if (name == nil or copy.name:find(name, 1, true) ~= nil)
         and (tree == nil or copy.root == tree) then
         lines[#lines + 1] = copy.name .. "\t" .. copy.version .. "\tinstalled\t"
           .. copy.root .. "\\lib\\luarocks\\rocks-5.4"
@@ -90,6 +97,12 @@ describe("controlled lua environment preflight", function()
     local ok, err, info = _preflight(GOOD)
     check.is_true(ok, err)
     check.equal(ROOT, info.roots[1])
+  end)
+
+  it("asks luarocks once per tree, not once per package", function()
+    local _, _, _, calls = _preflight(GOOD, { roots = { ROOT, "/usr/local" } })
+    -- lint-allow: call-count 子进程数是预检的性能契约(每个 runner 进程启动都付这笔)
+    check.equal(1 + 2, #calls)
   end)
 
   it("never installs or writes: only config and list are invoked", function()
