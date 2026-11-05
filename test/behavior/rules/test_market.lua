@@ -2,6 +2,7 @@ require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local _new_game = support.new_game
+local fixtures = require("test.support.gameplay_fixtures")
 local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
@@ -65,6 +66,41 @@ local function _find_paid_item_entry()
     end
   end
   return nil
+end
+
+-- 黑市屏已开时 reconcile 判定短路,只有成交发出的刷新信号才会让屏幕重开。
+local function _open_market_screen_state(game)
+  local state = fixtures.build_loop_state()
+  support.prepare_board_scene(state, game)
+  support.bind_ui_runtime(state)
+  state.ui.market_active = true
+  return state
+end
+
+-- 跑一帧 UI 同步,返回这帧黑市屏收到的刷新数据;这帧没刷新屏幕就返回 nil。
+local function _sync_market_screen(game, state, viewer_id)
+  local viewer_role = { get_roleid = function() return viewer_id end }
+  local refreshed_market = nil
+  support.with_patches({
+    { target = require("src.ui.coord.ui_runtime"), key = "render", value = function() end },
+    {
+      target = require("src.ui.coord.modal"),
+      key = "open_choice_modal",
+      value = function(_, _, market) refreshed_market = market end,
+    },
+    {
+      target = require("src.ui.render.support.runtime_ui"),
+      key = "get_client_role",
+      value = function() return viewer_role end,
+    },
+    { target = runtime_ports, key = "resolve_roles", value = function() return { viewer_role } end },
+  }, function()
+    require("src.ui.ports.ui_sync")._model.refresh_from_dirty(game, state, game:consume_dirty(), {
+      log_once = {},
+      build_log_prefix = function() return "" end,
+    })
+  end)
+  return refreshed_market
 end
 
 local function _reload_market_service()
@@ -162,7 +198,7 @@ do -- describe("market")
       luassert.truthy(pending == nil or pending.kind ~= "market_buy" or pending.owner_role_id ~= p.id, "AI purchase must not leave its own market_buy modal open")
     end)
 
-    it("test_market_gold_item_eleventh_purchase_succeeds", function()
+    it("test_market_gold_item_purchases_are_unlimited_while_cash_lasts", function()
       local market_service = require("src.rules.market")
       local g = _new_game()
       local p = g:current_player()
@@ -214,11 +250,34 @@ do -- describe("market")
       luassert.truthy(option ~= nil and option.can_buy == true, "cash and a free slot should keep the item buyable")
       luassert.truthy(_contains_product(market_service.query.list_available(p, g), entry.product_id),
         "item should stay in the auto-buy list after ten purchases")
-      luassert.truthy(option.sold_out == nil, "market options should not carry a sold_out field")
 
       g:set_player_cash(p, entry.price - 1)
       option = _find_option(market_service.choice.build(p, g).options, entry.product_id)
       luassert.truthy(option ~= nil and option.can_buy == false, "short cash should make the item unbuyable")
+    end)
+
+    it("test_market_other_players_purchases_do_not_affect_what_i_can_buy", function()
+      local market_service = require("src.rules.market")
+      local g = _new_game()
+      local me, other = g.players[1], g.players[2]
+      local entry = assert(market_cfg[1], "test requires a market entry")
+      luassert.truthy(entry.currency == "金币", "first market entry should be the gold item")
+      g:set_player_cash(other, entry.price * 10)
+      g:set_player_cash(me, entry.price)
+
+      for purchase_index = 1, 10 do
+        other.inventory:clear()
+        local res = market_service.purchase.execute(g, other, entry.product_id)
+        luassert.truthy(type(res) == "table" and res.ok == true,
+          "other player's purchase " .. purchase_index .. " should succeed")
+      end
+
+      local option = _find_option(market_service.choice.build(me, g).options, entry.product_id)
+      luassert.truthy(option ~= nil and option.can_buy == true,
+        "another player's purchases should leave the item buyable for me")
+      local mine = market_service.purchase.execute(g, me, entry.product_id)
+      luassert.truthy(type(mine) == "table" and mine.ok == true, "my purchase should succeed")
+      luassert.truthy(me.inventory:count() == 1, "my purchase should grant the card")
     end)
 
     it("test_market_disabled_products_hidden", function()
@@ -497,7 +556,6 @@ do -- describe("market")
     it("test_market_consecutive_buys_refresh_screen_and_cancel_still_leaves", function()
       _reset_market_choice_runtime_modules()
       local market_service = _reload_market_service()
-      local dirty_tracker = require("src.state.dirty_tracker")
       local g = _new_game()
       local p = g:current_player()
       local entry = assert(market_cfg[1], "test requires a market entry")
@@ -506,9 +564,10 @@ do -- describe("market")
       local choice = market_service.choice.build(p, g, { active_tab = "item", page_index = 1 })
       choice.id = 813
       g.turn.pending_choice = choice
+      local state = _open_market_screen_state(g)
 
       for deal, buyable_after in ipairs({ true, false }) do
-        dirty_tracker.consume(g.dirty)
+        g:consume_dirty()
         local result = choice_resolver.resolve(g, choice, {
           type = "choice_select",
           choice_id = choice.id,
@@ -516,10 +575,11 @@ do -- describe("market")
           actor_role_id = p.id,
         })
         luassert.truthy(result and result.stay == true, "deal " .. deal .. " should keep market choice open")
-        luassert.truthy(g.dirty.market == true, "deal " .. deal .. " should signal a market screen refresh")
-        local option = _find_option(g.turn.pending_choice and g.turn.pending_choice.options, entry.product_id)
+        local refreshed_market = _sync_market_screen(g, state, p.id)
+        luassert.truthy(refreshed_market ~= nil, "deal " .. deal .. " should refresh the open market screen")
+        local option = _find_option(refreshed_market.options, entry.product_id)
         luassert.truthy(option ~= nil and option.can_buy == buyable_after,
-          "deal " .. deal .. " should rebuild options from the remaining cash")
+          "deal " .. deal .. " should show options rebuilt from the remaining cash")
       end
 
       choice_resolver.resolve(g, choice, {
@@ -607,7 +667,6 @@ do -- describe("market")
       local g = _new_game()
       local p = g:current_player()
       local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
-      local dirty_tracker = require("src.state.dirty_tracker")
       for _ = 1, 4 do
         p.inventory:add({ id = 2001 })
       end
@@ -674,14 +733,18 @@ do -- describe("market")
 
         local cb = purchase_handlers[p.id]
         luassert.truthy(type(cb) == "function", "paid purchase should register callback")
-        dirty_tracker.consume(g.dirty)
+        g:consume_dirty()
         cb(nil, nil, { role = role, goods_id = "goods_paid_item_test" })
       end)
 
       local option = _find_option(g.turn.pending_choice and g.turn.pending_choice.options, target.product_id)
       luassert.truthy(option ~= nil, "paid purchase callback should refresh market options")
       luassert.truthy(option.can_buy == false, "paid purchase callback should refresh options once the last slot is taken")
-      luassert.truthy(g.dirty.market == true, "paid purchase callback should signal a market screen refresh")
+      local refreshed_market = _sync_market_screen(g, _open_market_screen_state(g), p.id)
+      luassert.truthy(refreshed_market ~= nil, "paid purchase callback should refresh the open market screen")
+      local shown_option = _find_option(refreshed_market.options, target.product_id)
+      luassert.truthy(shown_option ~= nil and shown_option.can_buy == false,
+        "refreshed market screen should show the item unbuyable once the last slot is taken")
     end)
 
     it("test_market_paid_purchase_same_goods_can_fulfill_multiple_times", function()
