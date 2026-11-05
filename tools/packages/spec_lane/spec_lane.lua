@@ -28,9 +28,9 @@ local runner_bin = require("packages.test_runner.lua54")
 local M = {}
 
 -- 内置文件分片（与 behavior_parallel 共用 packages/test_runner）：
--- 命名 profile 的文件数超过阈值时,按文件边界拆成 N 条 runner 子进程 lane
--- 并行（不拆文件内顺序）；窄目录点跑（--profile <目录>）、文件数少、
--- worker=1、--verbose、--serial 一律走原单进程路径,命令形态逐字节不变。
+-- profile(命名或目录点跑)的文件数超过阈值时,按文件边界拆成 N 条 runner 子进程
+-- lane 并行（不拆文件内顺序）；文件数少、worker=1、--verbose、--serial 一律走原
+-- 单进程路径,命令形态逐字节不变。目录点跑的时长缓存按目录路径单独落盘。
 -- CLI 默认分片并行(#107 恢复;#73 迁移期安全网曾默认 --serial):实测
 -- behavior 45.8s → 18.5s、tooling 230.1s → 85.5s(w=3,热时长缓存)。阈值 30:
 -- 每 lane 收容进程固定开销约 3s,contract(22 文件)串行 4.0s / 分片 7.0s,
@@ -47,7 +47,14 @@ local function _profile_roots(profile)
   return lane_tools.profile_roots(profile)
 end
 
-local _profile_config = lane_tools.profile_config
+-- 目录点跑与 runner 同口径:非命名 profile 的目录取 behavior 的 helper/pattern。
+local function _profile_config(profile)
+  local config = lane_tools.profile_config(profile)
+  if next(config) == nil and fs_lib.is_dir(profile) then
+    return lane_tools.profile_config("behavior")
+  end
+  return config
+end
 local _discover_files = sharding.discover_files
 
 -- worker 数:options.workers 显式覆写(测试注入用);否则 EGGY_SPEC_LANE_WORKERS
@@ -278,15 +285,14 @@ function M.run(options)
   -- 导出值,这里的解析只是复核。子进程树继承后不再各自重复 where/luarocks 探测。
   local spawn_env = bootstrap.tool_discovery_env()
 
-  -- 分片判定:命名 profile(非目录窄点跑)、文件数超阈值、worker > 1、非
-  -- --verbose 才走并行;否则原单进程路径。
+  -- 分片判定:文件数超阈值、worker > 1、非 --verbose / --serial 才走并行;
+  -- 否则原单进程路径。
   local roots = _profile_roots(options.profile)
   local files = {}
   if roots ~= nil then
     files = _discover_files(roots, _profile_config(options.profile).pattern or "test_")
   end
   local shardable = roots ~= nil
-    and fs_lib.is_dir(options.profile) ~= true
     and #files > _SHARD_THRESHOLD
     and _resolve_workers(#files, options) > 1
     and options.verbose ~= true

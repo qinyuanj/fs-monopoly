@@ -180,6 +180,37 @@ sharded_profile_runs_one_runner_lane_per_worker()
     .. table.concat(labels, ", ") .. "\n", result.stdout)
 end
 
+-- 目录点跑与命名 profile 同一分片口径:文件数超阈值即分片,helper/pattern 取
+-- runner 对目录的同一默认(behavior profile),lane 只含该目录下的文件。
+local function
+directory_profile_over_threshold_shards_with_behavior_defaults()
+  local captured_lanes
+  spec_lane.run({
+    profile = "test/behavior/ui",
+    workers = 3,
+    run_command = function()
+      error("serial path must not run when sharded")
+    end,
+    run_lanes = function(lanes)
+      captured_lanes = lanes
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = { label = lane.label, ok = true, output = _all_pass_tap(), exit_code = 0 }
+      end
+      return true, results
+    end,
+  })
+  check.equal(3, #captured_lanes)
+  for _, lane in ipairs(captured_lanes) do
+    local argv = table.concat(lane.cmd, "\n")
+    check.matches("--helper=test/helper.lua", argv, 1, true)
+    check.matches("--pattern=test_", argv, 1, true)
+    for _, file in ipairs(lane.files) do
+      check.matches("test/behavior/ui/", file, 1, true)
+    end
+  end
+end
+
 -- 分片失败聚合:任一 lane 输出带 not ok → failed 计数进摘要、exit code 1。
 local function
 sharded_failure_aggregates_into_failed_summary()
@@ -608,6 +639,7 @@ describe("spec lane public contracts", function()
   it("runner_spawn_carries_tool_discovery_env", runner_spawn_carries_tool_discovery_env)
   it("small_profile_below_threshold_stays_serial", small_profile_below_threshold_stays_serial)
   it("sharded_profile_runs_one_runner_lane_per_worker", sharded_profile_runs_one_runner_lane_per_worker)
+  it("directory_profile_over_threshold_shards_with_behavior_defaults", directory_profile_over_threshold_shards_with_behavior_defaults)
   it("sharded_failure_aggregates_into_failed_summary", sharded_failure_aggregates_into_failed_summary)
   it("sharded_failure_prints_lane_file_list_in_execution_order",
     sharded_failure_prints_lane_file_list_in_execution_order)
