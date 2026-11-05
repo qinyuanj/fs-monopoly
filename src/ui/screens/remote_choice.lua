@@ -15,7 +15,8 @@ function M.descriptor()
     key = "remote",
     root = schema.canvas,
     title = schema.title,
-    body = schema.body,
+    -- 不带 body:遥控骰子_正文保留编辑器配置的文本。规则侧 body_lines 拼成「点数 1…6」,
+    -- 写进标签只露首行「点数 1」,与选项按钮重复。
     underlay = schema.underlay,
     -- 灰底关触摸、点击穿透:真机实测开触摸(代码强开或编辑器配置)点灰底都不发 CLICK,
     -- 点背景取消(#177)停用,取消只走基础_取消按钮,与玩家选择屏同口径。

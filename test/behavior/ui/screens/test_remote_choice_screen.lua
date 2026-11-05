@@ -33,7 +33,9 @@ it("test_exposes_a_descriptor_with_the_pinned_remote_fields", function()
   luassert.truthy(d.key == "remote", "descriptor key is remote")
   luassert.is_not_nil(d.root, "has root/canvas node")
   luassert.is_not_nil(d.title, "has title")
-  luassert.is_not_nil(d.body, "has body")
+  -- 遥控骰子_正文保留编辑器配置的文本:descriptor 不带 body,开屏不写入规则侧
+  -- body_lines 的拼接(「点数 1…6」只露首行「点数 1」,与选项按钮重复)。
+  luassert.is_nil(d.body, "remote body label keeps its editor text")
   luassert.is_not_nil(d.option_buttons, "has option_buttons")
 end)
 
