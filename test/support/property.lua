@@ -47,8 +47,9 @@ function Rng:bool()
 end
 
 -- Uniformly pick one element of a non-empty array.
+-- 断言只在空表时才调:fuzz 每分片 pick 数千次,成功路径不付 luassert 的消息格式化。
 function Rng:pick(items)
-  luassert.truthy(#items > 0, "cannot pick from an empty list")
+  if #items == 0 then luassert.truthy(false, "cannot pick from an empty list") end
   return items[self:int(1, #items)]
 end
 
