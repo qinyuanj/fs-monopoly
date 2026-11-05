@@ -29,10 +29,10 @@ local FIXTURE = table.concat({
   "",
 }, "\n")
 
--- 字节 0..11 依次映射到字符集前 12 个字符:ABCDEFGHJKMN;其 SHA-256 由外部
+-- 字节 0..7 依次映射到字符集前 8 个字符:ABCDEFGH;其 SHA-256 由外部
 -- sha256sum 算出。
-local SEQUENTIAL_CODE = "ABCD-EFGH-JKMN"
-local SEQUENTIAL_HASH = "f798776cb4d1e5975b47ed94fcc91314bc8d5c6935ff56b33c03b08c52356818"
+local SEQUENTIAL_CODE = "ABCD-EFGH"
+local SEQUENTIAL_HASH = "9ac2197d9258257b1ae8463e4214e4cd0a578bc1517f2415928b91be4283fc48"
 
 local function _byte_source(bytes)
   local cursor = 1
@@ -116,7 +116,7 @@ it("new appends a hashed entry under the next free id and prints the plaintext o
   check.truthy(line:find("rewards = { 5005, 5006 }", 1, true), line)
   check.truthy(line:find("expires_at = " .. (NOW + 60 * DAY), 1, true), "default expiry should be 60 days: " .. line)
   check.truthy(line:find('note = "#203 补偿"', 1, true), line)
-  check.is_nil(content:find("ABCDEFGHJKMN", 1, true), "plaintext must not land in the file")
+  check.is_nil(content:find("ABCDEFGH", 1, true), "plaintext must not land in the file")
   check.is_nil(content:find(SEQUENTIAL_CODE, 1, true), "grouped plaintext must not land in the file")
 
   check.truthy(out:find("id: 6", 1, true), out)
@@ -132,7 +132,7 @@ it("days overrides the default expiry", function()
   check.truthy(_appended(content):find("expires_at = " .. (NOW + 30 * DAY), 1, true))
 end)
 
-it("generated codes are 12 characters from the unambiguous alphabet", function()
+it("generated codes are 8 characters from the unambiguous alphabet", function()
   local seed = 7
   local function _pseudo_bytes(n)
     local out = {}
@@ -146,7 +146,7 @@ it("generated codes are 12 characters from the unambiguous alphabet", function()
     local code, out, err = _run({ "new", "--rewards", "5005", "--note", "#203" }, { random_bytes = _pseudo_bytes })
     check.equal(0, code, err)
     local printed = out:match("码: (%S+)")
-    check.truthy(printed:match("^%w%w%w%w%-%w%w%w%w%-%w%w%w%w$"), "code should print as XXXX-XXXX-XXXX: " .. printed)
+    check.truthy(printed:match("^%w%w%w%w%-%w%w%w%w$"), "code should print as XXXX-XXXX: " .. printed)
     local raw = printed:gsub("%-", "")
     check.is_nil(raw:find("[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]"), "code should avoid 0/O/1/I/L and lowercase: " .. raw)
   end

@@ -21,7 +21,7 @@ local SPONGEBOB = 5003 -- 海绵宝宝,存档 key 1055
 local SPONGEBOB_KEY = 1055
 
 -- code_hash 由外部 sha256sum 对规范化后的明文算出:EGG2026 / BUNDLE / SUMMER /
--- ABCDEFGHJKMN(CLI 生成格式的 12 位码)。
+-- ABCDEFGHJKMN(三段分组的 12 位码,规范化与码长无关)。
 local GROUPED_CODE = "ABCD-EFGH-JKMN"
 local CODES = {
   { id = 3, code_hash = "682f05b696b1ca1d9b2818d793b2b352f4128f8ba4fa9db8770cfb279fce1f3f", rewards = { NAILONG } },

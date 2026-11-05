@@ -13,7 +13,7 @@
 -- 加载期校验与哈希口径见皮肤归属模块的 src.rules.skin_ownership.gift_code_table。
 local gift_codes = {
   codes = {
-    { id = 105, code_hash = "e1e0e5a3d630c1a48e3f628fe8ea5420c961912e64c4757844363cfad8c211c6", rewards = { 5005 }, expires_at = 1799035444, note = "#223 奶龙补偿(按玩家计次)" },
+    { id = 105, code_hash = "19ddf6ac90518eb21eaadb26c5afbe72c3cd928bf6ccc0014f10f24fdbf4b834", rewards = { 5005 }, expires_at = 1799042624, note = "#223 奶龙补偿(按玩家计次)" },
   },
   -- 停用 id,永不再分配:1 = 旧明文测试码 TEST2026(#203 停用);2 / 103 / 104 = #200 验收与试玩测试码(验收后停用);
   -- 3–102 = 一人一码的奶龙补偿码批次(#223 改按玩家计次后整批停用,仓外明文作废)。
@@ -32,9 +32,9 @@ local gift_codes = {
 gift_codes.redeem_record_archive_key = 1056
 
 -- 礼包码入口开关:false 时开局压灭基础屏入口按钮及其装饰节点,不路由点击、不挂输入
--- 监听;兑换核心与码表保留,改回 true 即恢复。地图做不到全服每码一次(无服务端
--- 记录),功能暂下线。
-gift_codes.entry_enabled = false
+-- 监听;兑换核心与码表保留。地图做不到全服每码一次(无云端变量),#223 起按玩家
+-- 计次重新开启。
+gift_codes.entry_enabled = true
 
 -- 兑换结果提示文本(按兑换门面的状态取用);granted 的 %s 为本次发放的皮肤名,顿号分隔。
 gift_codes.messages = {

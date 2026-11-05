@@ -4,7 +4,7 @@
 --   M.main(args, env) -> 退出码(0 成功 / 1 失败 / 2 用法错误 / 3 随机源不可用)
 --   M.usage()         -> 完整 usage 文本(包内单一真源)
 --
--- gift-code new 一条命令生成一个礼包码(按玩家计次,同码可共用):读安全随机源生成 12 位码 →
+-- gift-code new 一条命令生成一个礼包码(按玩家计次,同码可共用):读安全随机源生成 8 位码 →
 -- 分配 id(max(现有 id, 停用 id) + 1)→ 用 skin_ownership.gift_code_table.code_hash(与游戏
 -- 查码同一份规范化 + SHA-256)算哈希 → 在码表 codes 列表末尾追加一条,其余
 -- 内容逐字保留 → 立即用码表模块重新加载校验,不过则回滚文件退 1。明文码只
@@ -25,7 +25,7 @@ local skins = require("src.config.content.skins")
 local CODE_TABLE = "src/config/content/gift_codes.lua"
 -- 31 个字符:去掉 0、O、1、I、L。
 local ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-local CODE_LENGTH = 12
+local CODE_LENGTH = 8
 -- 字节落在 [0, 248) 才取模,248 = 31 × 8,避免取模偏差。
 local UNBIASED_LIMIT = (256 // #ALPHABET) * #ALPHABET
 local DEFAULT_DAYS = 60
@@ -161,7 +161,7 @@ local function _generate_code(random_bytes)
 end
 
 local function _format_grouped(code)
-  return code:sub(1, 4) .. "-" .. code:sub(5, 8) .. "-" .. code:sub(9, 12)
+  return code:sub(1, 4) .. "-" .. code:sub(5, 8)
 end
 
 local function _entry_line(id, code, rewards, expires_at, note)
