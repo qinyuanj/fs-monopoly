@@ -5,7 +5,8 @@
 -- 也由本屏发射,受入口开关 gift_codes.entry_enabled 控制:关闭时不路由入口点击,
 -- 开局压灭入口按钮及其装饰节点。
 -- 宿主没有读取输入框文本的接口:监听「输入框输入完成」事件按玩家缓存最近一次输入,
--- 点确认时把缓存交给兑换门面(经 seams/gift_code 注入),没有缓存按空输入处理;
+-- 点确认时登记待兑换,延后一小段再把缓存交给兑换门面(经 seams/gift_code 注入;#226:
+-- 宿主先派发点击、后派发输入完成),没有缓存按空输入处理;
 -- 开屏时把该玩家的草稿回填进输入框(无草稿写空串)。清草稿与输入框只有两条路径:
 -- 点取消(#201:明确放弃),以及兑换结果为 granted / all_owned 时的自动收屏(#224);
 -- 被打断或其余兑换结果后重开都保留草稿。
@@ -37,7 +38,7 @@ local TIP_DURATION = 2.0
 
 local function _ensure(state)
   local ui = assert(assert(state, "missing state").ui, "missing state.ui")
-  ui.gift_code = ui.gift_code or { input_by_role = {} }
+  ui.gift_code = ui.gift_code or { input_by_role = {}, pending_by_role = {}, next_pending = 0 }
   return ui.gift_code
 end
 
@@ -115,6 +116,7 @@ local function _close_and_clear(state, role_id)
   local key = _role_key(role_id)
   if key ~= nil then
     screen.input_by_role[key] = nil
+    screen.pending_by_role[key] = nil
   end
   _write_input_field(state, role_id, "")
   screen.open = false
@@ -200,7 +202,7 @@ end
 -- 多个在用码时,兑完其中一个入口也当场隐藏,下局开局 refresh_entry 再按归属重算。
 local _CLOSING_STATUSES = { granted = true, all_owned = true }
 
-function gift_code.confirm(state, role_id)
+local function _redeem_draft(state, role_id)
   local screen = _ensure(state)
   local key = _role_key(role_id)
   local input_text = key ~= nil and screen.input_by_role[key] or nil
@@ -210,6 +212,31 @@ function gift_code.confirm(state, role_id)
     _close_and_clear(state, role_id)
     _set_entry_visible(state, role_id, false)
   end
+end
+
+-- #226:宿主先派发兑换按钮点击,再派发输入框失焦带出的「输入完成」(真机取证),点击
+-- 当下的草稿是点击前的旧值。确认只登记该玩家的待兑换令牌,延后 confirm_settle_seconds
+-- 再读草稿兑换;待兑换期间重复点击不再登记,取消清掉令牌,到点令牌不符即不兑换。
+function gift_code.confirm(state, role_id)
+  local screen = _ensure(state)
+  local key = _role_key(role_id)
+  if key == nil then
+    _redeem_draft(state, role_id)
+    return screen
+  end
+  if screen.pending_by_role[key] ~= nil then
+    return screen
+  end
+  screen.next_pending = screen.next_pending + 1
+  local token = screen.next_pending
+  screen.pending_by_role[key] = token
+  runtime_ports.schedule(gift_codes.confirm_settle_seconds, function()
+    if screen.pending_by_role[key] ~= token then
+      return
+    end
+    screen.pending_by_role[key] = nil
+    _redeem_draft(state, role_id)
+  end)
   return screen
 end
 

@@ -36,6 +36,10 @@ gift_codes.redeem_record_archive_key = 1056
 -- 计次重新开启。
 gift_codes.entry_enabled = true
 
+-- 点兑换后等待多久再读草稿兑换(秒,#226)。宿主先派发按钮点击、后派发输入框失焦的
+-- 「输入完成」,须等后者写入草稿;取值待真机核实,不够时调大。
+gift_codes.confirm_settle_seconds = 0.2
+
 -- 兑换结果提示文本(按兑换门面的状态取用);granted 的 %s 为本次发放的皮肤名,顿号分隔。
 gift_codes.messages = {
   granted = "兑换成功，获得：%s",

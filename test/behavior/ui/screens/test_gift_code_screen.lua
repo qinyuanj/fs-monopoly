@@ -140,6 +140,15 @@ local function _install_world()
     wall_now_seconds = function()
       return 0
     end,
+    -- #226:world.timers 为 nil 时同步执行(宿主无延时接口时的口径);置为表后排队,
+    -- 由 _run_timers 模拟到点,用来复现「点击先于输入完成」的宿主事件顺序。
+    schedule = function(delay, fn)
+      if world.timers == nil then
+        fn()
+        return
+      end
+      world.timers[#world.timers + 1] = { delay = delay, fn = fn }
+    end,
   })
   host_events.configure({
     register_input_text_end = function(node_id, handler)
@@ -260,6 +269,22 @@ local function _tips_for(world, role_id)
   return texts
 end
 
+local function _run_timers(world)
+  local timers = world.timers
+  world.timers = {}
+  for _, timer in ipairs(timers) do
+    timer.fn()
+  end
+end
+
+local function _redeemed_texts(calls)
+  local texts = {}
+  for _, call in ipairs(calls) do
+    texts[#texts + 1] = tostring(call.input_text)
+  end
+  return texts
+end
+
 describe("TestGiftCodeScreen", function()
   local world
   local state
@@ -357,6 +382,64 @@ describe("TestGiftCodeScreen", function()
         case.status .. ": reopening after auto-close should not refill the old draft")
       gift_code_screen.cancel(state, 1)
     end
+  end)
+
+  -- #226 真机取证:宿主先派发兑换按钮点击,再派发输入框失焦带出的「输入完成」。
+  -- 兑换须等这次点击带出的输入落进草稿,而不是读点击前的缓存。
+  it("test_confirm_redeems_the_input_committed_by_the_same_click", function()
+    _click(state, world, ENTRY, 1)
+    world.timers = {}
+    _click(state, world, CONFIRM, 1)
+    _type(world, 1, "EGG2026")
+
+    luassert.same({}, _tips_for(world, 1), "nothing should be redeemed before the input settles")
+    luassert.is_true(world.timers[1] ~= nil and world.timers[1].delay > 0, "confirm should defer the redeem")
+    _run_timers(world)
+
+    luassert.same({ "EGG2026" }, _redeemed_texts(redeem_calls), "the freshly committed input should be redeemed")
+    luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "the redeem result should be tipped")
+    luassert.is_true(_last_index(world.roles["1"].events, SHOW_SCREEN)
+      < _last_index(world.roles["1"].events, HIDE_SCREEN), "a granted redeem should close the screen")
+  end)
+
+  it("test_confirm_redeems_the_new_input_rather_than_a_stale_draft", function()
+    _click(state, world, ENTRY, 1)
+    _type(world, 1, "WRONG2026")
+    world.timers = {}
+    _click(state, world, CONFIRM, 1)
+    _type(world, 1, "EGG2026")
+    _run_timers(world)
+
+    luassert.same({ "EGG2026" }, _redeemed_texts(redeem_calls), "the stale draft should not be redeemed")
+    luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "only the new code's result should be tipped")
+  end)
+
+  it("test_repeated_confirms_while_pending_redeem_once", function()
+    _click(state, world, ENTRY, 1)
+    world.timers = {}
+    _click(state, world, CONFIRM, 1)
+    _type(world, 1, "RETRY2026")
+    _click(state, world, CONFIRM, 1)
+    _run_timers(world)
+
+    luassert.same({ "RETRY2026" }, _redeemed_texts(redeem_calls), "a pending confirm should absorb repeated clicks")
+
+    _click(state, world, CONFIRM, 1)
+    _run_timers(world)
+    luassert.same({ "RETRY2026", "RETRY2026" }, _redeemed_texts(redeem_calls),
+      "once settled, the next confirm should redeem again")
+  end)
+
+  it("test_cancel_while_pending_drops_the_redeem", function()
+    _click(state, world, ENTRY, 1)
+    world.timers = {}
+    _click(state, world, CONFIRM, 1)
+    _type(world, 1, "EGG2026")
+    _click(state, world, CANCEL, 1)
+    _run_timers(world)
+
+    luassert.same({}, _redeemed_texts(redeem_calls), "a cancelled confirm should not redeem")
+    luassert.same({}, _tips_for(world, 1), "a cancelled confirm should tip nothing")
   end)
 
   it("test_other_redeem_outcomes_keep_the_screen_the_draft_and_the_entry", function()
