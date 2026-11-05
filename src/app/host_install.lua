@@ -86,11 +86,14 @@ local function _load_required_modules(opts)
       return require("src.ui.screens.market").close(...)
     end,
   })
-  -- #199 / #204:礼包码屏经 seams/gift_code 调皮肤归属模块的兑换;闭包调用时读
+  -- #199 / #204 / #224:礼包码屏经 seams/gift_code 调皮肤归属模块的兑换与入口查询;闭包调用时读
   -- 模块字段,测试补丁仍可打在模块字段上。
   gift_code_port.configure({
     redeem = function(...)
       return skin_ownership.redeem(...)
+    end,
+    owns_all_rewards = function(...)
+      return skin_ownership.owns_all_gift_code_rewards(...)
     end,
   })
   sign_in_rewards.install(opts)

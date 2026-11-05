@@ -111,20 +111,25 @@ local function _validate_expires_at(entry)
   end
 end
 
--- 返回 { find = function(input_text) -> entry|nil };entry 即码表原条目。
+-- 返回 { find = function(input_text) -> entry|nil, entries = { entry... } };entry 即
+-- 码表原条目,entries 按码表顺序。停用 id 不得留在码表(上面校验),所以 entries
+-- 只含未停用的码;过期由调用方按墙钟判定。
 function gift_code_table.build(codes, skin_catalog, retired_ids)
   local skin_by_product = _skins_by_product(skin_catalog or skins)
   local retired = _retired_set(retired_ids)
   local seen_ids = {}
   local by_hash = {}
+  local entries = {}
   for _, entry in ipairs(codes or {}) do
     _validate_id(entry, seen_ids, retired)
     local code_hash = _validate_code_hash(entry, by_hash)
     _validate_rewards(entry, skin_by_product)
     _validate_expires_at(entry)
     by_hash[code_hash] = entry
+    entries[#entries + 1] = entry
   end
   return {
+    entries = entries,
     find = function(input_text)
       if gift_code_table.normalize(input_text) == "" then
         return nil

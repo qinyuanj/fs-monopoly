@@ -300,3 +300,125 @@ describe("TestSkinOwnershipRedeem", function()
     luassert.truthy(tostring(err):find("gift code id is retired: 1", 1, true), tostring(err))
   end)
 end)
+
+-- #224:礼包码入口按玩家显隐的只读查询——玩家是否已拥有所有在用礼包码(未停用、
+-- 未过期)的全部奖励。依据本局归属(开局读档恢复的结果),不读写存档、不建状态。
+describe("TestSkinOwnershipOwnsAllGiftCodeRewards", function()
+  local original_codes, original_retired_ids
+
+  before_each(function()
+    original_codes = gift_codes.codes
+    original_retired_ids = gift_codes.retired_ids
+    gift_codes.retired_ids = RETIRED_IDS
+  end)
+
+  after_each(function()
+    gift_codes.codes = original_codes
+    gift_codes.retired_ids = original_retired_ids
+    support.restore_runtime_services()
+  end)
+
+  local function _restored(role_id, opts)
+    _install_host(opts)
+    local state = _state()
+    skin_ownership.restore(state, role_id)
+    return state
+  end
+
+  local function _owns_all(state, role_id)
+    return skin_ownership.owns_all_gift_code_rewards(state, role_id)
+  end
+
+  it("test_restored_owner_of_every_active_reward_owns_all", function()
+    gift_codes.codes = { CODES[1] }
+    local state = _restored(1, { seed = { [host_double.seed_key(1, NAILONG_KEY)] = 1 } })
+
+    _assert_eq(_owns_all(state, 1), true, "owning the only active reward should count as owning all")
+  end)
+
+  it("test_restored_player_without_the_reward_does_not_own_all", function()
+    gift_codes.codes = { CODES[1] }
+    local state = _restored(1)
+
+    _assert_eq(_owns_all(state, 1), false, "a player without the reward should still see the entry")
+  end)
+
+  it("test_unreadable_archive_does_not_own_all", function()
+    gift_codes.codes = { CODES[1] }
+    local state
+    local warns = _with_warns(function()
+      state = _restored(1, { enabled = false, seed = { [host_double.seed_key(1, NAILONG_KEY)] = 1 } })
+    end)
+
+    luassert.truthy(#warns > 0, "an unreadable archive should be diagnosable")
+    _assert_eq(_owns_all(state, 1), false, "ownership unknown this session should keep the entry visible")
+  end)
+
+  it("test_redeeming_this_session_owns_all", function()
+    gift_codes.codes = { CODES[1] }
+    local state = _restored(1)
+
+    _assert_eq(_redeem(state, 1, "EGG2026").status, "granted", "sanity: redeem grants")
+    _assert_eq(_owns_all(state, 1), true, "a reward granted this session should count")
+  end)
+
+  it("test_ownership_is_judged_per_player", function()
+    gift_codes.codes = { CODES[1] }
+    local state = _restored(1)
+    _redeem(state, 1, "EGG2026")
+    skin_ownership.restore(state, 2)
+
+    _assert_eq(_owns_all(state, 2), false, "another player's redemption should not count for this player")
+  end)
+
+  it("test_every_reward_of_every_active_code_is_required", function()
+    gift_codes.codes = { CODES[1], CODES[2] }
+    local state = _restored(1, { seed = { [host_double.seed_key(1, NAILONG_KEY)] = 1 } })
+
+    _assert_eq(_owns_all(state, 1), false, "missing rewards of a multi-skin code should keep the entry")
+  end)
+
+  it("test_expired_codes_are_not_counted", function()
+    gift_codes.codes = { CODES[1], CODES[3] }
+    local seed = { [host_double.seed_key(1, NAILONG_KEY)] = 1 }
+
+    _assert_eq(_owns_all(_restored(1, { now = 1001, seed = seed }), 1), true, "an expired code should not count")
+    _assert_eq(_owns_all(_restored(1, { now = 1000, seed = seed }), 1), false, "a code at expiry is still active")
+  end)
+
+  it("test_codes_are_not_judged_expired_without_a_wall_clock", function()
+    gift_codes.codes = { CODES[1], CODES[3] }
+    local seed = { [host_double.seed_key(1, NAILONG_KEY)] = 1 }
+
+    _assert_eq(_owns_all(_restored(1, { now = 0, seed = seed }), 1), false, "now=0 should not expire")
+    _assert_eq(_owns_all(_restored(1, { now = nil, seed = seed }), 1), false, "missing wall clock should not expire")
+  end)
+
+  it("test_retired_codes_are_not_counted", function()
+    gift_codes.codes = { CODES[1], CODES[2] }
+    local seed = { [host_double.seed_key(1, NAILONG_KEY)] = 1 }
+    _assert_eq(_owns_all(_restored(1, { seed = seed }), 1), false, "sanity: the multi-skin code is active")
+
+    gift_codes.codes = { CODES[1] }
+    gift_codes.retired_ids = { 1, 2, 7 }
+    _assert_eq(_owns_all(_restored(1, { seed = seed }), 1), true, "a retired code should no longer count")
+  end)
+
+  it("test_no_active_codes_owns_all", function()
+    gift_codes.codes = { CODES[3] }
+    _install_host({ now = 1001 })
+
+    _assert_eq(_owns_all(_state(), 1), true, "with nothing left to redeem the entry has no use")
+  end)
+
+  it("test_query_neither_reads_the_archive_nor_creates_session_state", function()
+    gift_codes.codes = { CODES[1] }
+    local host = _install_host()
+    local state = _state()
+
+    _owns_all(state, 1)
+
+    _assert_eq(host.reads(), 0, "the query should not read the archive")
+    luassert.same({ ui = {} }, state, "the query should not add session state")
+  end)
+end)

@@ -7,6 +7,7 @@ local tick_clock = require("src.turn.loop.tick_clock")
 local frame_timer = require("src.host.frame_timer")
 local leaderboard_settlement = require("src.app.host_integrations.leaderboard_settlement")
 local skin_ownership = require("src.rules.skin_ownership")
+local gift_code_screen = require("src.ui.screens.gift_code")
 
 local M = {}
 
@@ -61,10 +62,13 @@ local function _prime_first_turn(game)
 end
 
 -- ADR 0074:开局即读皮肤存档并恢复穿戴;AI 无宿主 role、无存档,跳过。
+-- #224:礼包码入口按刚恢复的归属对这名玩家刷新,所以排在恢复之后;GAME_INIT 时
+-- 尚未读档,不在那里做。
 local function _restore_skins(state, game)
   for _, player in ipairs(game and game.players or {}) do
     if not player.is_ai then
       skin_ownership.restore(state, player.id)
+      gift_code_screen.refresh_entry(state, player.id)
     end
   end
 end

@@ -95,6 +95,9 @@ end
 -- 礼包码兑换,返回 { status, granted }。
 skin_ownership.redeem = redeem.redeem
 
+-- 纯查询(#224):玩家是否已拥有所有在用礼包码(未停用、未过期)的全部奖励。
+skin_ownership.owns_all_gift_code_rewards = redeem.owns_all_active_rewards
+
 -- 按价格升序、同价按 order、再按源下标稳定排序的皮肤目录(#495 裁定)。
 skin_ownership.catalog = catalog.sorted
 

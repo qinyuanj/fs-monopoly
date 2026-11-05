@@ -101,6 +101,22 @@ local function _grant_and_record(root_state, role_id, entry, record_text)
   return _result("granted", granted)
 end
 
+-- #224 礼包码入口的只读查询:玩家是否已拥有所有在用码(码表里的码即未停用;未过期,
+-- 口径同兑换)的全部奖励。只看本局归属(开局读档恢复的结果),不读写存档、不建状态;
+-- 读不到存档时本局没有归属,自然返回 false。没有在用码时返回 true。
+function redeem.owns_all_active_rewards(root_state, role_id)
+  for _, entry in ipairs(gift_code_table.default().entries) do
+    if not _expired(entry) then
+      for _, product_id in ipairs(entry.rewards) do
+        if not session.owns(root_state, role_id, product_id) then
+          return false
+        end
+      end
+    end
+  end
+  return true
+end
+
 function redeem.redeem(root_state, role_id, input_text)
   if not archive.enabled() then
     return _result("archive_unavailable")

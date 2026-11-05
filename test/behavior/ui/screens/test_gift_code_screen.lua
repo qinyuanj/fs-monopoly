@@ -3,7 +3,8 @@
 -- canvas 显隐事件、按玩家写入输入框的文本、按玩家入队的提示。兑换经礼包码 seam
 -- 注入假实现(#204:屏只把 { status, granted } 映射为提示,兑换规则由
 -- test/behavior/rules/test_skin_ownership_redeem.lua 覆盖);角色只在 runtime_ports
--- 边界替身;输入事件只在 host_events 端口替身;输入框节点只在 UIManager 查询边界替身。
+-- 边界替身;输入事件只在 host_events 端口替身;输入框与入口节点只在 UIManager 查询
+-- 边界替身(#224:入口按钮及装饰节点按玩家记录显隐写入)。
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143
@@ -41,13 +42,24 @@ local CAPYBARA = 5006 -- 水豚嘟嘟
 local REDEEM_RESULTS = {
   EGG2026 = { status = "granted", granted = { NAILONG } },
   CAPY2026 = { status = "granted", granted = { CAPYBARA } },
+  RETRY2026 = { status = "write_failed", granted = {} },
+}
+-- 入口按钮与装饰节点(「基础_礼包码动效」同名两个)。
+local ENTRY_NODES = {
+  "基础_礼包码", "基础_礼包码文本", "基础_礼包码图标",
+  "基础_礼包码环", "基础_礼包码环_1", "基础_礼包码动效", "基础_礼包码动效",
 }
 
-local function _fake_redeem(calls)
+-- 兑换 seam 假实现:redeem 按输入原文给结果,其余一律 invalid_code;
+-- owns_all_rewards 按 owners 表(role_id 字符串 → true)回答。
+local function _fake_redeem(calls, owners)
   return {
     redeem = function(redeem_state, role_id, input_text)
       calls[#calls + 1] = { state = redeem_state, role_id = role_id, input_text = input_text }
       return REDEEM_RESULTS[input_text] or { status = "invalid_code", granted = {} }
+    end,
+    owns_all_rewards = function(_, role_id)
+      return owners[tostring(role_id)] == true
     end,
   }
 end
@@ -94,6 +106,7 @@ local function _install_world()
     roles = { ["1"] = _make_role(1), ["2"] = _make_role(2) },
     store = {},
     input_writes = {},
+    entry_writes = {},
     tips = {},
     input_handler = nil,
   }
@@ -164,6 +177,55 @@ local function _input_node(world)
   })
 end
 
+-- 入口节点替身:写 visible 时记下 { role_id, name, visible }(role_id 为当前推送的玩家)。
+local function _entry_node(world, name)
+  return setmetatable({ name = name }, {
+    __newindex = function(_, key, value)
+      if key == "visible" then
+        local role = runtime_ui.get_client_role()
+        world.entry_writes[#world.entry_writes + 1] = {
+          role_id = role and role.get_roleid() or nil,
+          name = name,
+          visible = value,
+        }
+      end
+    end,
+  })
+end
+
+local function _entry_nodes(world)
+  local by_name = {}
+  for _, name in ipairs(ENTRY_NODES) do
+    by_name[name] = by_name[name] or {}
+    table.insert(by_name[name], _entry_node(world, name))
+  end
+  return by_name
+end
+
+-- 期望的入口显隐写入:按玩家把入口按钮与每个装饰节点(同名全量)写成 visible。
+local function _entry_writes_for(role_id, visible)
+  local writes = {}
+  for _, name in ipairs(ENTRY_NODES) do
+    writes[#writes + 1] = { role_id = role_id, name = name, visible = visible }
+  end
+  return writes
+end
+
+-- 收集 warn;经 with_patches 保证测试体抛错时也装回 logger.warn。
+local function _with_warns(fn)
+  local warns = {}
+  support.with_patches({
+    {
+      target = logger,
+      key = "warn",
+      value = function(...)
+        warns[#warns + 1] = table.concat({ ... }, " ")
+      end,
+    },
+  }, fn, { skip_runtime_context_refresh = true })
+  return warns
+end
+
 local function _new_state()
   return { ui = {}, view_command_port = view_command_ports.build() }
 end
@@ -203,18 +265,24 @@ describe("TestGiftCodeScreen", function()
   local state
   local original_query
   local redeem_calls
+  local owners
 
   before_each(function()
     -- 本文件验证礼包码屏接线本身,入口开关打开(关闭态另有用例)。
     gift_code_screen.configure_entry_for_tests(true)
     redeem_calls = {}
-    gift_code_port.configure(_fake_redeem(redeem_calls))
+    owners = {}
+    gift_code_port.configure(_fake_redeem(redeem_calls, owners))
     world = _install_world()
     original_query = UIManager.query_nodes_by_name
     local input_node = _input_node(world)
+    local entry_nodes = _entry_nodes(world)
     UIManager.query_nodes_by_name = function(name)
       if name == INPUT then
         return { input_node }
+      end
+      if entry_nodes[name] ~= nil then
+        return entry_nodes[name]
       end
       return original_query(name)
     end
@@ -240,14 +308,131 @@ describe("TestGiftCodeScreen", function()
       "opening should blank the input field for the clicker only")
   end)
 
-  it("test_confirm_after_input_enqueues_the_redeem_message_for_that_player_and_keeps_screen_open", function()
+  it("test_confirm_after_input_enqueues_the_redeem_message_for_that_player", function()
     _click(state, world, ENTRY, 1)
     _type(world, 1, "EGG2026")
     _click(state, world, CONFIRM, 1)
 
     luassert.same({ "兑换成功，获得：奶龙" }, _tips_for(world, 1), "redeem message should be tipped to the redeemer")
     luassert.same({}, _tips_for(world, 2), "other players should get no tip")
-    _assert_eq(_count(world.roles["1"].events, HIDE_SCREEN), 0, "screen should stay open after redeeming")
+  end)
+
+  -- #224:兑换成功或奖励已全部拥有时自动收屏(同取消:清草稿、清输入框、切回基础屏),
+  -- 并只对这名玩家隐藏入口按钮及装饰节点;提示照常入队。
+  it("test_granted_or_all_owned_closes_the_screen_clears_the_draft_and_hides_the_entry_for_that_player", function()
+    local cases = {
+      { status = "granted", granted = { NAILONG }, text = "兑换成功，获得：奶龙" },
+      { status = "all_owned", text = gift_codes.messages.all_owned },
+    }
+    for _, case in ipairs(cases) do
+      gift_code_port.configure({
+        redeem = function()
+          return { status = case.status, granted = case.granted or {} }
+        end,
+        owns_all_rewards = function()
+          return false
+        end,
+      })
+      world.roles["1"].events = {}
+      world.input_writes = {}
+      world.entry_writes = {}
+      world.tips = {}
+      tip_queue.clear()
+      _click(state, world, ENTRY, 1)
+      _type(world, 1, "EGG2026")
+      _click(state, world, CONFIRM, 1)
+
+      luassert.same({ case.text }, _tips_for(world, 1), case.status .. ": the result should still be tipped")
+      luassert.is_true(_last_index(world.roles["1"].events, SHOW_SCREEN)
+        < _last_index(world.roles["1"].events, HIDE_SCREEN), case.status .. ": the screen should close")
+      _assert_eq(_count(world.roles["2"].events, HIDE_SCREEN), 0, case.status .. ": others' screens are untouched")
+      luassert.same({ { role_id = 1, text = "" }, { role_id = 1, text = "" } }, world.input_writes,
+        case.status .. ": opening and auto-closing should both leave the input blank")
+      luassert.same(_entry_writes_for(1, false), world.entry_writes,
+        case.status .. ": the entry and its decorations should be hidden for the redeemer only")
+
+      world.input_writes = {}
+      gift_code_screen.open(state, 1)
+      luassert.same({ { role_id = 1, text = "" } }, world.input_writes,
+        case.status .. ": reopening after auto-close should not refill the old draft")
+      gift_code_screen.cancel(state, 1)
+    end
+  end)
+
+  it("test_other_redeem_outcomes_keep_the_screen_the_draft_and_the_entry", function()
+    local results = {
+      { status = "invalid_code" }, { status = "expired" }, { status = "already_redeemed" },
+      { status = "archive_unavailable" }, { status = "write_failed", granted = { NAILONG } },
+      false,
+    }
+    for _, result in ipairs(results) do
+      local label = result and result.status or "nil result"
+      gift_code_port.configure({
+        redeem = function()
+          if not result then
+            return nil
+          end
+          return { status = result.status, granted = result.granted or {} }
+        end,
+      })
+      world.roles["1"].events = {}
+      world.entry_writes = {}
+      _click(state, world, ENTRY, 1)
+      _type(world, 1, "EGG2026")
+      _click(state, world, CONFIRM, 1)
+
+      _assert_eq(_count(world.roles["1"].events, HIDE_SCREEN), 0, label .. ": the screen should stay open")
+      luassert.same({}, world.entry_writes, label .. ": the entry should stay as it is")
+      world.input_writes = {}
+      _click(state, world, ENTRY, 1)
+      luassert.same({ { role_id = 1, text = "EGG2026" } }, world.input_writes,
+        label .. ": the draft should be kept for a retry")
+    end
+  end)
+
+  -- #224:按玩家刷新入口——seam 查询为「已拥有全部在用码奖励」时只对这名玩家
+  -- 隐藏入口,否则只对这名玩家显示。
+  it("test_refreshing_the_entry_follows_the_player_s_ownership_and_touches_only_that_player", function()
+    owners["1"] = true
+
+    gift_code_screen.refresh_entry(state, 1)
+    gift_code_screen.refresh_entry(state, 2)
+
+    local expected = _entry_writes_for(1, false)
+    for _, write in ipairs(_entry_writes_for(2, true)) do
+      expected[#expected + 1] = write
+    end
+    luassert.same(expected, world.entry_writes, "each player's entry should follow their own ownership")
+  end)
+
+  it("test_refreshing_the_entry_does_nothing_when_the_entry_is_switched_off", function()
+    gift_code_screen.configure_entry_for_tests(false)
+    owners["1"] = true
+
+    gift_code_screen.refresh_entry(state, 1)
+    gift_code_screen.refresh_entry(state, 2)
+
+    luassert.same({}, world.entry_writes, "the global switch-off is handled at GAME_INIT, not per player")
+  end)
+
+  -- 按玩家写入不得退化为全服写入:解析不出玩家时不写任何入口节点,留 warn。
+  it("test_refreshing_the_entry_for_an_unresolved_player_writes_nothing_and_warns", function()
+    local warns = _with_warns(function()
+      gift_code_screen.refresh_entry(state, 99)
+    end)
+
+    luassert.same({}, world.entry_writes, "no player's entry should be touched")
+    luassert.truthy(#warns > 0, "skipping should be diagnosable")
+  end)
+
+  it("test_refreshing_the_entry_without_an_installed_query_keeps_it_visible_and_warns", function()
+    gift_code_port.reset_for_tests()
+    local warns = _with_warns(function()
+      gift_code_screen.refresh_entry(state, 1)
+    end)
+
+    luassert.same(_entry_writes_for(1, true), world.entry_writes, "unknown ownership should keep the entry")
+    luassert.truthy(#warns > 0, "a missing seam should be diagnosable")
   end)
 
   it("test_confirm_passes_the_root_state_role_and_draft_to_redeem", function()
@@ -345,18 +530,18 @@ describe("TestGiftCodeScreen", function()
       "each player should be refilled with their own draft only")
   end)
 
-  -- #195 Story 23:兑换后屏不关,玩家能看清刚兑的码;草稿保留到点取消为止。
-  it("test_redeeming_keeps_the_draft_until_cancel", function()
+  -- #195 Story 23(#224 起只覆盖不收屏的结果):兑换失败屏不关,草稿保留到点取消为止。
+  it("test_a_failed_redeem_keeps_the_draft_until_cancel", function()
     _click(state, world, ENTRY, 1)
-    _type(world, 1, "EGG2026")
+    _type(world, 1, "RETRY2026")
     _click(state, world, CONFIRM, 1)
     world.input_writes = {}
     _click(state, world, ENTRY, 1)
-    luassert.same({ { role_id = 1, text = "EGG2026" } }, world.input_writes,
-      "redeeming should not clear the draft")
+    luassert.same({ { role_id = 1, text = "RETRY2026" } }, world.input_writes,
+      "a failed redeem should not clear the draft")
 
     _click(state, world, CANCEL, 1)
-    luassert.same({ { role_id = 1, text = "EGG2026" }, { role_id = 1, text = "" } }, world.input_writes,
+    luassert.same({ { role_id = 1, text = "RETRY2026" }, { role_id = 1, text = "" } }, world.input_writes,
       "cancel should blank the input field as well as the draft")
 
     world.input_writes = {}

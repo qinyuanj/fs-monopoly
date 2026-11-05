@@ -250,6 +250,8 @@ describe("skin restore on start", function()
   local leaderboard_settlement = require("src.app.host_integrations.leaderboard_settlement")
 
   after_each(function()
+    require("src.ui.screens.gift_code").reset_entry_for_tests()
+    require("src.ui.seams.gift_code").reset_for_tests()
     support.restore_runtime_services()
   end)
 
@@ -293,6 +295,52 @@ describe("skin restore on start", function()
     _assert_eq(archive_reads["2"], nil, "AI players have no archive and should not be read")
     _assert_eq(skin_ownership.equipped(state, 2), nil, "AI players should be skipped")
     _assert_eq(state.ui.skin_panel, nil, "restoring should not touch the skin shop")
+  end)
+
+  -- #224:恢复真人玩家皮肤之后按玩家刷新礼包码入口;入口判定看的是刚恢复的归属,
+  -- AI 无宿主 role、无存档,跳过。
+  it("test_start_refreshes_the_gift_code_entry_after_restoring_each_human_player", function()
+    local gift_code_port = require("src.ui.seams.gift_code")
+    local gift_code_screen = require("src.ui.screens.gift_code")
+    local queried = {}
+    gift_code_screen.configure_entry_for_tests(true)
+    gift_code_port.configure({
+      redeem = function() return nil end,
+      owns_all_rewards = function(query_state, role_id)
+        queried[#queried + 1] = {
+          role_id = role_id,
+          equipped = skin_ownership.equipped(query_state, role_id),
+        }
+        return true
+      end,
+    })
+    local archive = { [1053] = 1, [1051] = 5006 }
+    runtime_ports.configure({
+      archives_enabled = function() return true end,
+      get_archive_int = function(_, key) return archive[key] or 0 end,
+      set_archive_int = function(_, key, value)
+        archive[key] = value
+        return true
+      end,
+      set_role_model = function() return true end,
+    })
+    local fake_game = {
+      players = { { id = 1 }, { id = 2, is_ai = true } },
+      turn = { turn_count = 1, phase = "moving", pending_choice = nil },
+    }
+    local state = { ui = {} }
+    _with_patches({
+      { target = gameplay_loop, key = "new_game", value = function() return fake_game end },
+      { target = gameplay_loop, key = "set_game", value = function() end },
+      { target = presentation_ports, key = "build", value = function() return { debug = {} } end },
+      { target = frame_timer, key = "repeat_every", value = function() return {} end },
+      { target = leaderboard_settlement, key = "watch_game", value = function() return true end },
+    }, function()
+      gameplay_start.start(state, { nil })
+    end, { skip_runtime_context_refresh = true })
+
+    luassert.same({ { role_id = 1, equipped = 5006 } }, queried,
+      "the entry should be refreshed once per human player, after their skins are restored")
   end)
 end)
 end)

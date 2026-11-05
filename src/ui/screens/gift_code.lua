@@ -6,11 +6,15 @@
 -- 开局压灭入口按钮及其装饰节点。
 -- 宿主没有读取输入框文本的接口:监听「输入框输入完成」事件按玩家缓存最近一次输入,
 -- 点确认时把缓存交给兑换门面(经 seams/gift_code 注入),没有缓存按空输入处理;
--- 开屏时把该玩家的草稿回填进输入框(无草稿写空串),点取消才清掉草稿与输入框
--- (#201:取消 = 明确放弃,是唯一清草稿的路径;被打断或兑换后重开都保留草稿)。
+-- 开屏时把该玩家的草稿回填进输入框(无草稿写空串)。清草稿与输入框只有两条路径:
+-- 点取消(#201:明确放弃),以及兑换结果为 granted / all_owned 时的自动收屏(#224);
+-- 被打断或其余兑换结果后重开都保留草稿。
 -- 兑换结果是领域状态 { status, granted }(#204),本屏按 status 取配置里的提示模板,
--- granted 时填入皮肤名,按玩家入队;屏内不加结果节点;
--- 兑换后屏不关闭,点取消关闭。草稿只活在本局内存,不写存档。
+-- granted 时填入皮肤名,按玩家入队;屏内不加结果节点。granted / all_owned 时提示
+-- 入队后自动收屏,并对这名玩家隐藏入口;其余结果屏不关闭,由玩家改码重试或取消。
+-- 入口按玩家显隐(#224):开局读档后经 refresh_entry 按 seam 查询「已拥有所有在用码
+-- 的全部奖励」隐藏或显示,全服开关关闭时由 install_entry 统一压灭。
+-- 草稿只活在本局内存,不写存档。
 local append_intent_spec = require("src.ui.input.route_specs")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
@@ -22,6 +26,7 @@ local host_events = require("src.ui.seams.host_events")
 local gift_code_port = require("src.ui.seams.gift_code")
 local tip_queue = require("src.foundation.tips")
 local role_id_utils = require("src.foundation.identity")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local logger = require("src.foundation.log")
 local gift_codes = require("src.config.content.gift_codes")
 local skins = require("src.config.content.skins")
@@ -102,10 +107,10 @@ function gift_code.open(state, role_id)
   return screen
 end
 
--- 取消 = 明确放弃:清掉该玩家草稿与输入框,再收屏。唯一清草稿的路径。
--- 收屏只动 open 与 canvas,不动草稿;#202 起黑市开屏不再经此收屏(礼包码屏不注册
--- panel_interrupt closer),所以“收屏但保留草稿”只有取消一条路。
-function gift_code.cancel(state, role_id)
+-- 取消 = 明确放弃:清掉该玩家草稿与输入框,再收屏。兑换成功 / 已全部拥有的自动收屏
+-- (#224)共用 _close_and_clear,两者是仅有的清草稿路径;#202 起黑市开屏不再经此收屏(礼包码屏
+-- 不注册 panel_interrupt closer)。
+local function _close_and_clear(state, role_id)
   local screen = _ensure(state)
   local key = _role_key(role_id)
   if key ~= nil then
@@ -115,6 +120,10 @@ function gift_code.cancel(state, role_id)
   screen.open = false
   canvas.switch_by_role_id(state.ui, base_nodes.canvas, role_id)
   return screen
+end
+
+function gift_code.cancel(state, role_id)
+  return _close_and_clear(state, role_id)
 end
 
 -- ===== 兑换提交 =====
@@ -160,11 +169,47 @@ local function _enqueue_result(role_id, result)
   })
 end
 
+local function _entry_node_names()
+  local names = { base_nodes.gift_code_button }
+  for _, name in ipairs(base_nodes.gift_code_decor_nodes) do
+    names[#names + 1] = name
+  end
+  return names
+end
+
+-- 按玩家写入口按钮及其装饰节点的显隐(同名节点全量命中)。必须按角色推送:玩家解析
+-- 不出时不写,否则 node_ops 会退成全服写入。写入失败带 err 留 warn。
+local function _set_entry_visible(state, role_id, visible)
+  if runtime_ports.resolve_role(role_id) == nil then
+    logger.warn("gift_code entry visibility skipped: role unresolved", tostring(role_id))
+    return false
+  end
+  panel_helpers.with_owner_role(state, role_id, function()
+    for _, name in ipairs(_entry_node_names()) do
+      local ok, err = pcall(node_ops.set_visible_all, nil, name, visible)
+      if not ok then
+        logger.warn("gift_code entry visibility write failed:", name, tostring(err))
+      end
+    end
+  end)
+  return true
+end
+
+-- #224:奖励已到手(本次发放或早已全部拥有)的结果才收屏;already_redeemed 不代表
+-- 奖励到手,write_failed 等失败要留着草稿重试。收屏后直接隐藏入口、不重查:同时有
+-- 多个在用码时,兑完其中一个入口也当场隐藏,下局开局 refresh_entry 再按归属重算。
+local _CLOSING_STATUSES = { granted = true, all_owned = true }
+
 function gift_code.confirm(state, role_id)
   local screen = _ensure(state)
   local key = _role_key(role_id)
   local input_text = key ~= nil and screen.input_by_role[key] or nil
-  _enqueue_result(role_id, gift_code_port.redeem(state, role_id, input_text))
+  local result = gift_code_port.redeem(state, role_id, input_text)
+  _enqueue_result(role_id, result)
+  if type(result) == "table" and _CLOSING_STATUSES[result.status] then
+    _close_and_clear(state, role_id)
+    _set_entry_visible(state, role_id, false)
+  end
   return screen
 end
 
@@ -230,6 +275,16 @@ function gift_code.bind_input(state)
   return true
 end
 
+-- 开局读档后(app/gameplay_start 调用,#224):按 seam 查询对这名玩家显示或隐藏入口。
+-- 全服开关关闭时不动作,交给 install_entry 的全服压灭。
+function gift_code.refresh_entry(state, role_id)
+  if not _entry_enabled() then
+    return false
+  end
+  local visible = not gift_code_port.owns_all_rewards(state, role_id)
+  return _set_entry_visible(state, role_id, visible)
+end
+
 local function _hide_entry_node(name)
   local ok, err = pcall(node_ops.set_visible_all, nil, name, false)
   if not ok then
@@ -244,8 +299,7 @@ function gift_code.install_entry(state)
   if _entry_enabled() then
     return gift_code.bind_input(state)
   end
-  _hide_entry_node(base_nodes.gift_code_button)
-  for _, name in ipairs(base_nodes.gift_code_decor_nodes) do
+  for _, name in ipairs(_entry_node_names()) do
     _hide_entry_node(name)
   end
   return false
