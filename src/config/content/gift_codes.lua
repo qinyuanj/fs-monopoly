@@ -13,7 +13,7 @@
 -- 加载期校验与哈希口径见皮肤归属模块的 src.rules.skin_ownership.gift_code_table。
 local gift_codes = {
   codes = {
-    { id = 105, code_hash = "19ddf6ac90518eb21eaadb26c5afbe72c3cd928bf6ccc0014f10f24fdbf4b834", rewards = { 5005 }, expires_at = 1799042624, note = "#223 奶龙补偿(按玩家计次)" },
+    { id = 105, code_hash = "19ddf6ac90518eb21eaadb26c5afbe72c3cd928bf6ccc0014f10f24fdbf4b834", rewards = { 5005 }, expires_at = 1799042624, note = "#223 奶龙补偿(按玩家计次);明文由奶农提供,2026-11-05 登记在仓外 ~/.codex/fs-monopoly-gift-codes.md" },
   },
   -- 停用 id,永不再分配:1 = 旧明文测试码 TEST2026(#203 停用);2 / 103 / 104 = #200 验收与试玩测试码(验收后停用);
   -- 3–102 = 一人一码的奶龙补偿码批次(#223 改按玩家计次后整批停用,仓外明文作废)。
