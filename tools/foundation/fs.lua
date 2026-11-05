@@ -49,6 +49,11 @@ function fs.ensure_dir(path)
   end
 
   local normalized = path_lib.normalize_path(path)
+  -- 已是目录时 `mkdir -p` 什么也不做;纯 Lua 探测先答掉,免去每次 write_file /
+  -- copy_file 都起一个 shell(批量复制时是数千次子进程)。
+  if fs.is_dir(normalized) then
+    return true
+  end
   local ok, kind, code = os.execute("mkdir -p " .. shell_lib.shell_quote(normalized))
   local success = shell_lib.exit_status(ok, kind, code)
   if not success then

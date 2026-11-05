@@ -71,6 +71,26 @@ it("native files round trip discover copy and remove", function()
   check.is_true(ok, err)
 end)
 
+it("ensure_dir on an existing directory spawns no shell; a file path still fails", function()
+  local root = env.make_temp_path("native_ensure_dir", "")
+  local real_execute = os.execute
+  local spawned = {}
+  local ok, err = xpcall(function()
+    check.truthy(fs.write_file(root .. "/sub/file.txt", "x"))
+    rawset(os, "execute", function(command) spawned[#spawned + 1] = command; return real_execute(command) end)
+    check.is_true(fs.ensure_dir(root .. "/sub"))
+    check.truthy(fs.write_file(root .. "/sub/again.txt", "y"))
+    -- lint-allow: call-count 已有目录不起 mkdir 子进程是 write_file/copy_file 的性能契约
+    check.same({}, spawned)
+    check.is_nil(fs.ensure_dir(root .. "/sub/file.txt"))
+    check.truthy(fs.ensure_dir(root .. "/sub/new/deeper"))
+    check.is_true(fs.is_dir(root .. "/sub/new/deeper"))
+  end, debug.traceback)
+  rawset(os, "execute", real_execute)
+  check.truthy(fs.remove_path(root))
+  check.is_true(ok, err)
+end)
+
 it("run_command env option exports variables to the child", function()
   local result = proc.run_command(
     { lua54.lua54_bin(), "-e", 'io.write(os.getenv("MONOPOLY_TEST_ENV_124") or "missing")' },
