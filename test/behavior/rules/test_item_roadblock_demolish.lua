@@ -87,7 +87,7 @@ describe("TestItemRoadblockAndDemolish", function()
     p.inventory:add({ id = item_id })
 
     local candidate_names = {
-      "香港路",
+      "深圳路",
       "广州路",
       "澳门路",
       "医院",
@@ -106,7 +106,7 @@ describe("TestItemRoadblockAndDemolish", function()
       "海口路",
       "道具卡",
       "广州路",
-      "香港路",
+      "深圳路",
       "澳门路",
       "医院",
       "南宁路",

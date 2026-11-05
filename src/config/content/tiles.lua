@@ -3,7 +3,7 @@ local tiles = {
   { id = 2, name = "台北路", type = "land", row = 9, col = 7, build_row = 8, build_col = 7, price = 1050, upgrade_costs = { 1050, 2100, 4200 }, rents = { 525, 1050, 3150, 8400 } },
   { id = 3, name = "海口路", type = "land", row = 9, col = 6, build_row = 8, build_col = 6, price = 1100, upgrade_costs = { 1100, 2200, 4400 }, rents = { 550, 1100, 3300, 8800 } },
   { id = 4, name = "广州路", type = "land", row = 9, col = 4, build_row = 8, build_col = 4, price = 1150, upgrade_costs = { 1150, 2300, 4600 }, rents = { 575, 1150, 3450, 9200 } },
-  { id = 5, name = "香港路", type = "land", row = 9, col = 3, build_row = 8, build_col = 3, price = 1200, upgrade_costs = { 1200, 2400, 4800 }, rents = { 600, 1200, 3600, 9600 } },
+  { id = 5, name = "深圳路", type = "land", row = 9, col = 3, build_row = 8, build_col = 3, price = 1200, upgrade_costs = { 1200, 2400, 4800 }, rents = { 600, 1200, 3600, 9600 } },
   { id = 6, name = "澳门路", type = "land", row = 9, col = 2, build_row = 8, build_col = 2, price = 1250, upgrade_costs = { 1250, 2500, 5000 }, rents = { 625, 1250, 3750, 10000 } },
   { id = 7, name = "南宁路", type = "land", row = 8, col = 1, build_row = 8, build_col = 0, price = 1300, upgrade_costs = { 1300, 2600, 5200 }, rents = { 650, 1300, 3900, 10400 } },
   { id = 8, name = "贵阳路", type = "land", row = 7, col = 1, build_row = 7, build_col = 0, price = 1350, upgrade_costs = { 1350, 2700, 5400 }, rents = { 675, 1350, 4050, 10800 } },
