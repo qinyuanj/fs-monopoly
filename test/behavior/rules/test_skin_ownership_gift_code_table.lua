@@ -55,10 +55,20 @@ describe("TestSkinOwnershipGiftCodeTable", function()
   end)
 
   -- #203:测试码 TEST2026(id 1)已停用,码表里只剩哈希,明文不再命中。
+  -- #223:一人一码的补偿码批次 3–102 整批停用,不得留在码条目里。
   it("test_default_code_table_retires_the_used_test_codes", function()
     local gift_codes = require("src.config.content.gift_codes")
 
-    luassert.same({ 1, 2, 103, 104 }, gift_codes.retired_ids, "test code ids should be registered as retired")
+    local retired = {}
+    for _, id in ipairs(gift_codes.retired_ids) do
+      retired[id] = true
+    end
+    for id = 1, 104 do
+      luassert.is_true(retired[id], "gift code id should be retired: " .. id)
+    end
+    for _, entry in ipairs(gift_codes.codes) do
+      luassert.is_nil(retired[entry.id], "retired id should not be a live code: " .. tostring(entry.id))
+    end
     luassert.is_nil(gift_code_table.default().find("TEST2026"), "the retired plaintext test code should not match")
     luassert.is_nil(gift_code_table.default().find("R65K-RSZS-H49T"), "the retired #200 acceptance code should not match")
   end)

@@ -4,7 +4,7 @@
 --   M.main(args, env) -> 退出码(0 成功 / 1 失败 / 2 用法错误 / 3 随机源不可用)
 --   M.usage()         -> 完整 usage 文本(包内单一真源)
 --
--- gift-code new 一条命令为一名受损玩家生成补偿码:读安全随机源生成 12 位码 →
+-- gift-code new 一条命令生成一个礼包码(按玩家计次,同码可共用):读安全随机源生成 12 位码 →
 -- 分配 id(max(现有 id, 停用 id) + 1)→ 用 skin_ownership.gift_code_table.code_hash(与游戏
 -- 查码同一份规范化 + SHA-256)算哈希 → 在码表 codes 列表末尾追加一条,其余
 -- 内容逐字保留 → 立即用码表模块重新加载校验,不过则回滚文件退 1。明文码只
@@ -28,14 +28,15 @@ local ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 local CODE_LENGTH = 12
 -- 字节落在 [0, 248) 才取模,248 = 31 × 8,避免取模偏差。
 local UNBIASED_LIMIT = (256 // #ALPHABET) * #ALPHABET
-local DEFAULT_DAYS = 180
+local DEFAULT_DAYS = 60
 local DAY_SECONDS = 86400
 
 function M.usage()
   return table.concat({
     "用法: lua5.4 tools/cli.lua gift-code new --rewards <product_id>[,...] --note <文本> [--days N]",
     "",
-    "为一名受损玩家生成一人一码的补偿码,并追加到 " .. CODE_TABLE .. "。",
+    "生成一个礼包码并追加到 " .. CODE_TABLE .. "。",
+    "礼包码按玩家计次:每名玩家每个码限兑一次,同一个码不限兑换人数;一款需要补偿的皮肤一个码。",
     "  --rewards  奖励皮肤 product_id,逗号分隔;须在 skins.lua 且配了 archive_key",
     "  --note     工单号或补偿原因(必填,不写玩家昵称)",
     "  --days     有效天数,正整数,默认 " .. DEFAULT_DAYS,

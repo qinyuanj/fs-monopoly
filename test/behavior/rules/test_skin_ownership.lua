@@ -112,7 +112,10 @@ describe("TestSkinOwnership", function()
     entry.on_purchase()
     local granted = skin_ownership.grant(state, 1, CAPYBARA)
     local redeemed
-    _patch({ { target = gift_codes, key = "codes", value = SPONGEBOB_CODE } }, function()
+    _patch({
+      { target = gift_codes, key = "codes", value = SPONGEBOB_CODE },
+      { target = gift_codes, key = "retired_ids", value = {} },
+    }, function()
       redeemed = skin_ownership.redeem(state, 1, "EGG2026")
     end)
 

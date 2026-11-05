@@ -31,6 +31,8 @@ local CODES = {
     rewards = { CAPYBARA }, expires_at = 1000 },
   { id = 11, code_hash = "f798776cb4d1e5975b47ed94fcc91314bc8d5c6935ff56b33c03b08c52356818", rewards = { SPONGEBOB } },
 }
+-- 停用 id 也用替身,与真实码表的停用批次解耦。
+local RETIRED_IDS = { 1, 2 }
 
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -65,15 +67,18 @@ local function _with_warns(fn)
 end
 
 describe("TestSkinOwnershipRedeem", function()
-  local original_codes
+  local original_codes, original_retired_ids
 
   before_each(function()
     original_codes = gift_codes.codes
+    original_retired_ids = gift_codes.retired_ids
     gift_codes.codes = CODES
+    gift_codes.retired_ids = RETIRED_IDS
   end)
 
   after_each(function()
     gift_codes.codes = original_codes
+    gift_codes.retired_ids = original_retired_ids
     support.restore_runtime_services()
   end)
 

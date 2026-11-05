@@ -114,14 +114,14 @@ it("new appends a hashed entry under the next free id and prints the plaintext o
   check.truthy(line:find("id = 6,", 1, true), "new id should skip retired ids: " .. line)
   check.truthy(line:find('code_hash = "' .. SEQUENTIAL_HASH .. '"', 1, true), "hash should match the printed code: " .. line)
   check.truthy(line:find("rewards = { 5005, 5006 }", 1, true), line)
-  check.truthy(line:find("expires_at = " .. (NOW + 180 * DAY), 1, true), "default expiry should be 180 days: " .. line)
+  check.truthy(line:find("expires_at = " .. (NOW + 60 * DAY), 1, true), "default expiry should be 60 days: " .. line)
   check.truthy(line:find('note = "#203 补偿"', 1, true), line)
   check.is_nil(content:find("ABCDEFGHJKMN", 1, true), "plaintext must not land in the file")
   check.is_nil(content:find(SEQUENTIAL_CODE, 1, true), "grouped plaintext must not land in the file")
 
   check.truthy(out:find("id: 6", 1, true), out)
   check.truthy(out:find("码: " .. SEQUENTIAL_CODE, 1, true), out)
-  check.truthy(out:find("%d%d%d%d%-%d%d%-%d%d %(" .. (NOW + 180 * DAY) .. "%)"), out)
+  check.truthy(out:find("%d%d%d%d%-%d%d%-%d%d %(" .. (NOW + 60 * DAY) .. "%)"), out)
   check.truthy(out:find("奶龙、水豚嘟嘟", 1, true), out)
 end)
 
