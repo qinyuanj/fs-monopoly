@@ -287,7 +287,18 @@ evidence_write_preserves_lane_output_and_report()
   if not ok then error(err) end
 end
 
+-- 默认并行(#107 已为 spec-lane 恢复并行;#73 的串行安全网是 Windows 迁移期产物):
+-- 不带 flag 即并行,--serial 显式退回串行复现。
+local function
+default_is_parallel_and_serial_is_explicit()
+  check.is_false(verify_full.parse_args({}).serial)
+  check.is_true(verify_full.parse_args({ "--serial" }).serial)
+  check.is_false(verify_full.parse_args({ "--parallel" }).serial)
+  check.equal("tmp/ev", verify_full.parse_args({ "--evidence-dir", "tmp/ev", "--tooling" }).evidence_dir)
+end
+
 describe("verify public output and lane plan", function()
+  it("default_is_parallel_and_serial_is_explicit", default_is_parallel_and_serial_is_explicit)
   it("happy_path_emits_at_most_3_lines", happy_path_emits_at_most_3_lines)
   it("happy_path_includes_aggregate_summary_with_passed_failed_skipped_counts", happy_path_includes_aggregate_summary_with_passed_failed_skipped_counts)
   it("happy_path_suppresses_per_lane_stdout", happy_path_suppresses_per_lane_stdout)

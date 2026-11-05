@@ -90,8 +90,44 @@ local function _main(opts)
   }
 end
 
+-- argv -> opts。默认并行(#107 已为 spec-lane 恢复并行;#73 的串行默认是 Windows
+-- 迁移期安全网):--serial 显式退回串行复现。用法错误返回 nil, 诊断文本。
+-- while 而非数值 for:--evidence-dir 的空格形式要多吃一个 argv,数值 for 的循环
+-- 变量在循环体内改了也不影响迭代(#130 曾被 luacheck W311 点出这个写法)。
+local function _parse_args(argv)
+  local opts = { serial = false }
+  local i = 1
+  while i <= #argv do
+    local token = argv[i]
+    if token == "--serial" then
+      opts.serial = true
+    elseif token == "--parallel" then
+      opts.serial = false
+    elseif token == "--tooling" then
+      opts.tooling = true
+    elseif token == "--verbose" then
+      opts.verbose = true
+    elseif token == "--evidence-dir" or token:match("^%-%-evidence%-dir=") then
+      local value = token:match("^%-%-evidence%-dir=(.*)$")
+      if value == nil then
+        value = argv[i + 1]
+        i = i + 1
+      end
+      if value == nil or value == "" then
+        return nil, "missing --evidence-dir value"
+      end
+      opts.evidence_dir = value
+    else
+      return nil, "unknown flag: " .. tostring(token)
+    end
+    i = i + 1
+  end
+  return opts
+end
+
 local M = {
   run = _main,
+  parse_args = _parse_args,
   build_output = runner.build_output,
   _resolve_lanes = lanes_mod.resolve,
 }
@@ -100,36 +136,10 @@ if ... == "packages.verify.main" then
   return M
 end
 
-local opts = { serial = true }
--- while 而非数值 for:--evidence-dir 的空格形式要多吃一个 argv,数值 for 的循环
--- 变量在循环体内改了也不影响迭代(#130 曾被 luacheck W311 点出这个写法)。
-local i = 1
-while i <= #(arg or {}) do
-  local token = arg[i]
-  if token == "--serial" then
-    opts.serial = true
-  elseif token == "--parallel" then
-    opts.serial = false
-  elseif token == "--tooling" then
-    opts.tooling = true
-  elseif token == "--verbose" then
-    opts.verbose = true
-  elseif token == "--evidence-dir" or token:match("^%-%-evidence%-dir=") then
-    local value = token:match("^%-%-evidence%-dir=(.*)$")
-    if value == nil then
-      value = arg[i + 1]
-      i = i + 1
-    end
-    if value == nil or value == "" then
-      io.stderr:write("missing --evidence-dir value\n")
-      os.exit(2)
-    end
-    opts.evidence_dir = value
-  else
-    io.stderr:write("unknown flag: " .. tostring(token) .. "\n")
-    os.exit(2)
-  end
-  i = i + 1
+local opts, usage_err = _parse_args(arg or {})
+if opts == nil then
+  io.stderr:write(usage_err .. "\n")
+  os.exit(2)
 end
 local result = _main(opts)
 os.exit(result.exit_code)
