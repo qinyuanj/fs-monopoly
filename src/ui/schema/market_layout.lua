@@ -55,5 +55,11 @@ for i = 1, 10 do
   market_layout.sold_out_labels[i] = "黑市-售罄" .. idx .. "文本"
 end
 
+-- ADR 0078 场内库存已取消:售罄美术节点保留在编辑器,与关闭提示文本一样常隐。
+for i = 1, #market_layout.sold_out_badges do
+  table.insert(market_layout.hidden_nodes, market_layout.sold_out_badges[i])
+  table.insert(market_layout.hidden_nodes, market_layout.sold_out_labels[i])
+end
+
 return market_layout
 

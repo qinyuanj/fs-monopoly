@@ -1,7 +1,6 @@
 local market_catalog = require("src.config.content.market_catalog")
 local items_cfg = require("src.config.content.items")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
-local dirty_tracker = require("src.state.dirty_tracker")
 local inventory = require("src.rules.items.inventory")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 
@@ -45,12 +44,6 @@ function context.entry_market_enabled(entry)
   return entry.market_enabled ~= false
 end
 
-function context.remaining_global_limit(game, product_id)
-  assert(game ~= nil, "missing game")
-  assert(product_id ~= nil, "missing product_id")
-  return game.market_limits[product_id]
-end
-
 context.is_paid_currency = paid_currency_bridge.is_paid_currency
 
 -- 收银防线：本地读扣路径只认默认金币币种。付费币种或未知币种必须硬失败，
@@ -65,32 +58,21 @@ function context.try_charge_player(game, player, price, opts)
   return true
 end
 
-function context.consume_global_limit(game, product_id)
-  assert(game ~= nil, "missing game")
-  assert(product_id ~= nil, "missing product_id")
-  local remaining = assert(game.market_limits[product_id], "missing global limit")
-  game.market_limits[product_id] = math.max(remaining - 1, 0)
-  dirty_tracker.mark(game.dirty, "market")
-end
-
 local eligibility = {}
 
 local function _is_market_item(entry)
   return entry ~= nil and entry.kind == "item"
 end
 
--- 与货币无关的准入闸门:是商品、已上架、背包有位、全局限量未售罄。
-local function _entry_available(game, player, entry)
+-- 与货币无关的准入闸门:是商品、已上架、背包有位。数量上限只由宿主限购承担(ADR 0078)。
+local function _entry_available(player, entry)
   if not _is_market_item(entry) then
     return false
   end
   if not context.entry_market_enabled(entry) then
     return false
   end
-  if inventory.is_full(player) then
-    return false
-  end
-  return context.remaining_global_limit(game, entry.product_id) > 0
+  return not inventory.is_full(player)
 end
 
 -- 付费货币走宿主下单校验,现金货币比 player_cash。
@@ -106,14 +88,10 @@ local function _can_afford_entry(game, player, entry)
 end
 
 function eligibility.can_buy_entry(game, player, entry)
-  if not _entry_available(game, player, entry) then
+  if not _entry_available(player, entry) then
     return false
   end
   return _can_afford_entry(game, player, entry)
-end
-
-function eligibility.is_sold_out(game, entry)
-  return context.remaining_global_limit(game, entry.product_id) <= 0
 end
 
 function eligibility.sorted_entries()

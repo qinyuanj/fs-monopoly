@@ -382,7 +382,6 @@ it("test_paid_purchase_callback_fulfills_item", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game)
-  local before_limit = game.market_limits[2009]
   local before_count = p.inventory:count()
 
   _with_currency_cfg({
@@ -399,7 +398,29 @@ it("test_paid_purchase_callback_fulfills_item", function()
       luassert.truthy(type(cb) == "function", "purchase callback should be registered")
       cb(nil, nil, { role = env.role_by_player_id[p.id], goods_id = "goods_strong_card" })
       luassert.truthy(p.inventory:count() == before_count + 1, "purchase callback should grant item")
-      luassert.truthy(game.market_limits[2009] == before_limit - 1, "purchase callback should consume global market limit")
+    end)
+  end)
+end)
+
+it("test_paid_purchase_callback_keeps_granting_past_old_ten_item_cap", function()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game)
+
+  _with_currency_cfg({
+    ["金豆"] = { source = "external" },
+    ["乐园币"] = { source = "external" },
+  }, function()
+    _with_patches(env.patch_list, function()
+      local market = _reload_market()
+      for purchase_index = 1, 11 do
+        p.inventory:clear()
+        local result = market.purchase.execute(game, p, 2009)
+        luassert.truthy(type(result) == "table" and result.ok == true and result.deferred_fulfillment == true,
+          "paid purchase " .. purchase_index .. " should enter deferred mode")
+        env.trigger_handlers[p.id](nil, nil, { role = env.role_by_player_id[p.id], goods_id = "goods_strong_card" })
+        luassert.truthy(p.inventory:count() == 1, "paid callback " .. purchase_index .. " should grant the card")
+      end
     end)
   end)
 end)

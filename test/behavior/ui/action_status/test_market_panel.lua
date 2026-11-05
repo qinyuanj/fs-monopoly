@@ -14,9 +14,6 @@ local market_layout = require("src.ui.schema.market_layout")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
 local ui_view = require("src.ui.coord.ui_runtime")
 local market_cfg = require("src.config.content.market")
-local market_service = require("src.rules.market")
-local choice_slice = require("src.ui.view.choice_slice")
-local market_sold_out_fixture = require("test.support.market_sold_out_fixture")
 local runtime_state = require("src.state.runtime")
 local slot_assets = require("src.ui.render.market.slot_assets")
 local runtime_ref_images = require("src.config.content.runtime_ref_images")
@@ -679,61 +676,36 @@ describe("TestMarketPanel", function()
     _assert_eq(show_tip_calls, 0, "market_cancel should not show unadapted tip")
   end)
 
-  it("test_17_market_view_sets_sold_out_visibility_per_option", function()
+  it("test_17_market_sold_out_nodes_stay_hidden_for_any_option_data", function()
     local entry_a = assert(market_cfg[1], "missing market cfg entry a")
     local entry_b = assert(market_cfg[2], "missing market cfg entry b")
-    local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    local state, visible, _, touch = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    _bind_ui_runtime(state)
+
+    local function assert_all_hidden(phase)
+      for i = 1, #market_layout.sold_out_badges do
+        for _, node in ipairs({ market_layout.sold_out_badges[i], market_layout.sold_out_labels[i] }) do
+          _assert_eq(visible[node], false, node .. " should be hidden " .. phase)
+          _assert_eq(touch[node], false, node .. " should not be touchable " .. phase)
+        end
+      end
+    end
 
     market_view.refresh_market(state, {
       choice_id = 31,
       options = {
         { id = entry_a.product_id, label = entry_a.name, can_buy = false, sold_out = true },
-        { id = entry_b.product_id, label = entry_b.name, can_buy = true,  sold_out = false },
+        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
       },
       allow_cancel = true,
     })
+    assert_all_hidden("while the market is open")
 
-    _assert_eq(visible[market_layout.sold_out_badges[1]], true,
-      "slot 1 badge should be visible when sold_out = true")
-    _assert_eq(visible[market_layout.sold_out_labels[1]], true,
-      "slot 1 label should be visible when sold_out = true")
-    _assert_eq(visible[market_layout.sold_out_badges[2]], false,
-      "slot 2 badge should be hidden when sold_out = false")
-    _assert_eq(visible[market_layout.sold_out_labels[2]], false,
-      "slot 2 label should be hidden when sold_out = false")
+    market_view.close_market_panel(state)
+    assert_all_hidden("after the market closes")
   end)
 
-  it("test_18_market_sold_out_profile_projects_sold_out_to_badges", function()
-    local game = _new_game({
-      players = { "P1", "P2", "P3", "P4" },
-      ai = { [2] = true, [3] = true, [4] = true },
-    })
-    market_sold_out_fixture.apply(game)
-    local player = game:current_player()
-    local choice = market_service.choice.build(player, game, { active_tab = "item", page_index = 1 })
-    choice.id = 32
-    game.turn.pending_choice = choice
-
-    local _, market_model = choice_slice.build_choice_and_market(game, { game = game }, {})
-    local product_ids = {}
-    for index, option in ipairs(market_model.options or {}) do
-      product_ids[index] = option.id
-    end
-    local state, visible = _build_market_state(product_ids)
-
-    market_view.refresh_market(state, market_model)
-
-    for index = 1, 5 do
-      local option = assert(market_model.options[index], "missing sold out option at slot " .. tostring(index))
-      _assert_eq(option.sold_out, true, "market model should preserve sold_out for slot " .. tostring(index))
-      _assert_eq(visible[market_layout.sold_out_badges[index]], true,
-        "sold_out badge should be visible for slot " .. tostring(index))
-      _assert_eq(visible[market_layout.sold_out_labels[index]], true,
-        "sold_out label should be visible for slot " .. tostring(index))
-    end
-  end)
-
-  it("test_19_market_confirm_button_stays_visible_when_sold_out_item_selected", function()
+  it("test_19_market_confirm_button_stays_visible_when_unbuyable_item_selected", function()
     local entry_a = assert(market_cfg[1], "missing market cfg entry a")
     local entry_b = assert(market_cfg[2], "missing market cfg entry b")
     local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
@@ -741,8 +713,8 @@ describe("TestMarketPanel", function()
     market_view.refresh_market(state, {
       choice_id = 33,
       options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = false, sold_out = true },
-        { id = entry_b.product_id, label = entry_b.name, can_buy = true,  sold_out = false },
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false },
+        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
       },
       allow_cancel = true,
     })
@@ -753,27 +725,12 @@ describe("TestMarketPanel", function()
     market_view.select_market_option(state, entry_a.product_id)
 
     _assert_eq(visible[market_layout.confirm_button], true,
-      "confirm button should stay visible when sold_out item is selected")
+      "confirm button should stay visible when an unbuyable item is selected")
 
     market_view.select_market_option(state, entry_b.product_id)
 
     _assert_eq(visible[market_layout.confirm_button], true,
       "confirm button should remain visible when buyable item is re-selected")
-  end)
-
-  it("test_20_market_close_hides_all_sold_out_nodes", function()
-    local state, visible = _build_market_state({})
-    _bind_ui_runtime(state)
-    state.ui.market_active = true
-
-    market_view.close_market_panel(state)
-
-    for i = 1, #market_layout.sold_out_badges do
-      _assert_eq(visible[market_layout.sold_out_badges[i]], false,
-        "sold_out badge " .. i .. " should be hidden after close")
-      _assert_eq(visible[market_layout.sold_out_labels[i]], false,
-        "sold_out label " .. i .. " should be hidden after close")
-    end
   end)
 
   it("test_21_market_cash_display_shows_current_player_balance", function()

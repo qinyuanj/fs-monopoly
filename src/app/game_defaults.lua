@@ -1,9 +1,7 @@
 -- 初始游戏对象构造助手(自 compose_game.lua 拆分,行为保持):玩家索引、
--- 地块初始态、市场限额、初始 turn 与默认字段装配。组合根保留装载时序,
+-- 地块初始态、初始 turn 与默认字段装配。组合根保留装载时序,
 -- 这里只承载纯构造逻辑。
-local market_cfg = require("src.config.content.market")
 local game_factory = require("src.app.game_factory")
-local number_utils = require("src.foundation.number")
 local role_id_utils = require("src.foundation.identity")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local dirty_tracker = require("src.state.dirty_tracker")
@@ -35,17 +33,6 @@ function game_defaults.init_tile_state(board)
       t.level = 0
     end
   end
-end
-
-function game_defaults.build_market_limits()
-  local limits = {}
-  for _, entry in ipairs(market_cfg) do
-    local limit = number_utils.to_integer(entry.limit)
-    if limit and limit >= 1 then
-      limits[entry.product_id] = limit
-    end
-  end
-  return limits
 end
 
 function game_defaults.build_initial_turn()
@@ -102,7 +89,6 @@ function game_defaults.apply_game_defaults(game, opts, board, players, dirty)
   game.turn.turn_start_prompt_seq = 0
   game.turn.turn_start_prompt_player_id = nil
   game.dirty = dirty
-  game.market_limits = game_defaults.build_market_limits()
   game.rng = opts.rng or game_factory.build_rng()
   game.finished = false
   game.winner = nil

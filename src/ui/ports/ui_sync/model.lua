@@ -68,7 +68,7 @@ end
 -- 关闭时刻 market_active 把买家带回黑市屏,无需补发;黑市未开(market_active=false,
 -- 如机会卡传送流)的首开不拦,否则收屏回屏解析不到 market_active、黑市永不补开。
 -- 2026-08-25 买家免展示口径:弹窗排除买家本人时它不占买家屏,重建照常放行,
--- 买家即时看到库存刷新。
+-- 买家即时看到成交后的黑市屏刷新。
 -- 弹窗存活期跳过判定(CRAP 门禁):三重旗标合取收敛到本谓词,
 -- _should_open_market_modal 只留 dirty 分派。
 local function _market_rebuild_blocked_by_popup(state)

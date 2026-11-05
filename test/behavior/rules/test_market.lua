@@ -18,7 +18,6 @@ after_each(function()
   end
   for name, module in pairs(saved_modules) do package.loaded[name] = module end
 end)
-local market_sold_out_fixture = require("test.support.market_sold_out_fixture")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -66,13 +65,6 @@ local function _find_paid_item_entry()
     end
   end
   return nil
-end
-
-local function _new_four_player_game()
-  return _new_game({
-    players = { "P1", "P2", "P3", "P4" },
-    ai = { [2] = true, [3] = true, [4] = true },
-  })
 end
 
 local function _reload_market_service()
@@ -170,7 +162,7 @@ do -- describe("market")
       luassert.truthy(pending == nil or pending.kind ~= "market_buy" or pending.owner_role_id ~= p.id, "AI purchase must not leave its own market_buy modal open")
     end)
 
-    it("test_market_global_limit", function()
+    it("test_market_gold_item_eleventh_purchase_succeeds", function()
       local market_service = require("src.rules.market")
       local g = _new_game()
       local p = g:current_player()
@@ -182,33 +174,24 @@ do -- describe("market")
         end
       end
       luassert.truthy(entry ~= nil, "should find a market item with coin currency")
-      g:set_player_cash(p, (entry.price or 0) + 1000)
-      g.market_limits[entry.product_id] = 1
+      g:set_player_cash(p, entry.price * 11)
 
-      local res = market_service.purchase.execute(g, p, entry.product_id)
-      local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
-      luassert.truthy(ok, "first purchase should succeed")
-
-      local list = market_service.query.list_available(p, g)
-      for _, item in ipairs(list) do
-        luassert.truthy(item.product_id ~= entry.product_id, "sold out item should be excluded from list")
+      for purchase_index = 1, 11 do
+        p.inventory:clear()
+        local res = market_service.purchase.execute(g, p, entry.product_id)
+        luassert.truthy(type(res) == "table" and res.ok == true,
+          "gold purchase " .. purchase_index .. " should succeed")
+        luassert.truthy(p.inventory:count() == 1, "gold purchase " .. purchase_index .. " should grant the card")
       end
+      luassert.truthy(g:player_cash(p) == 0, "eleven purchases should charge eleven times")
 
-      local spec = market_service.choice.build(p, g)
-      if spec and spec.options then
-        local found = false
-        for _, option in ipairs(spec.options) do
-          if option.id == entry.product_id then
-            found = true
-            luassert.truthy(option.can_buy == false, "sold out item should remain visible but not buyable in choice")
-            luassert.truthy(option.sold_out == true, "sold out item should have sold_out = true in choice option")
-          end
-        end
-        luassert.truthy(found == true, "sold out item should remain visible in choice for explicit feedback")
-      end
+      p.inventory:clear()
+      local broke = market_service.purchase.execute(g, p, entry.product_id)
+      luassert.truthy(type(broke) == "table" and broke.reason == "insufficient_balance",
+        "only the cash balance should stop the next purchase")
     end)
 
-    it("test_market_choice_sold_out_flag_false_when_in_stock", function()
+    it("test_market_choice_buyable_depends_only_on_cash_and_slots", function()
       local market_service = require("src.rules.market")
       local g = _new_game()
       local p = g:current_player()
@@ -220,17 +203,22 @@ do -- describe("market")
         end
       end
       luassert.truthy(entry ~= nil, "should find a market item with coin currency")
-      g:set_player_cash(p, (entry.price or 0) + 1000)
-      g.market_limits[entry.product_id] = 2
-
-      local spec = market_service.choice.build(p, g)
-      if spec and spec.options then
-        for _, option in ipairs(spec.options) do
-          if option.id == entry.product_id then
-            luassert.truthy(option.sold_out == false, "in-stock item should have sold_out = false")
-          end
-        end
+      g:set_player_cash(p, entry.price * 11)
+      for _ = 1, 10 do
+        p.inventory:clear()
+        market_service.purchase.execute(g, p, entry.product_id)
       end
+      p.inventory:clear()
+
+      local option = _find_option(market_service.choice.build(p, g).options, entry.product_id)
+      luassert.truthy(option ~= nil and option.can_buy == true, "cash and a free slot should keep the item buyable")
+      luassert.truthy(_contains_product(market_service.query.list_available(p, g), entry.product_id),
+        "item should stay in the auto-buy list after ten purchases")
+      luassert.truthy(option.sold_out == nil, "market options should not carry a sold_out field")
+
+      g:set_player_cash(p, entry.price - 1)
+      option = _find_option(market_service.choice.build(p, g).options, entry.product_id)
+      luassert.truthy(option ~= nil and option.can_buy == false, "short cash should make the item unbuyable")
     end)
 
     it("test_market_disabled_products_hidden", function()
@@ -290,7 +278,6 @@ do -- describe("market")
     it("test_market_query_rejects_non_item_entries", function()
       local market_query = require("src.rules.market.query")
       local game = {
-        market_limits = { [5001] = 1 },
         player_cash = function()
           return 999999
         end,
@@ -301,7 +288,7 @@ do -- describe("market")
       luassert.truthy(market_query.eligibility.can_buy_entry(game, player, skin_entry) == false, "black market should reject non-item entries before they become purchase options")
     end)
 
-    it("test_market_query_context_defaults_and_limit_consumption_are_explicit", function()
+    it("test_market_query_context_defaults_are_explicit", function()
       local market_query = require("src.rules.market.query")
       local context = market_query.context
 
@@ -313,16 +300,6 @@ do -- describe("market")
       luassert.truthy(context.entry_currency({ product_id = 1, currency = "金豆" }) == "金豆", "entry_currency should keep explicit currency")
       luassert.truthy(context.entry_market_enabled({ product_id = 1 }) == true, "entries should be market-enabled by default")
       luassert.truthy(context.entry_market_enabled({ product_id = 1, market_enabled = false }) == false, "market_enabled=false should disable an entry")
-
-      local game = { market_limits = { [2001] = 2, [2002] = 0 }, dirty = {} }
-      context.consume_global_limit(game, 2001)
-      luassert.truthy(game.market_limits[2001] == 1, "global limit should decrement while above zero")
-      luassert.truthy(game.dirty.market == true, "global limit consumption should mark market dirty")
-
-      context.consume_global_limit(game, 2002)
-      luassert.truthy(game.market_limits[2002] == 0, "global limit should clamp at zero")
-      luassert.truthy(market_query.eligibility.is_sold_out(game, { product_id = 2002 }) == true, "zero remaining limit should be sold out")
-      luassert.truthy(market_query.eligibility.is_sold_out(game, { product_id = 2001 }) == false, "positive remaining limit should not be sold out")
     end)
 
     it("test_market_cash_paths_hard_fail_on_non_cash_currency", function()
@@ -340,7 +317,6 @@ do -- describe("market")
       local g = _new_game()
       local p = g:current_player()
       local entry = { product_id = 2001, kind = "item", currency = "贝壳", price = 5 }
-      g.market_limits[entry.product_id] = 1
       g:set_player_cash(p, 999999)
 
       local ok, err = pcall(market_query.eligibility.can_buy_entry, g, p, entry)
@@ -353,10 +329,9 @@ do -- describe("market")
       local entry = { product_id = 2001, kind = "item", currency = "金币", price = 5 }
       local g = _new_game()
       local p = g:current_player()
-      g.market_limits[entry.product_id] = 1
       g:set_player_cash(p, 5)
 
-      luassert.truthy(market_query.eligibility.can_buy_entry(g, p, entry) == true, "exact balance and one remaining item should be buyable")
+      luassert.truthy(market_query.eligibility.can_buy_entry(g, p, entry) == true, "exact balance should be buyable")
 
       entry.market_enabled = false
       luassert.truthy(market_query.eligibility.can_buy_entry(g, p, entry) == false, "disabled entries should not be buyable")
@@ -370,7 +345,6 @@ do -- describe("market")
       local paid_entry = { product_id = 2002, kind = "item", currency = "金豆", price = 5 }
       local paid_game = _new_game()
       local paid_player = paid_game:current_player()
-      paid_game.market_limits[paid_entry.product_id] = 1
       _with_paid_gateway(function(_, _, candidate)
         return candidate.product_id == paid_entry.product_id
       end, function()
@@ -520,32 +494,40 @@ do -- describe("market")
       luassert.truthy(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy", "market buy failed should keep pending market choice")
     end)
 
-    it("test_market_sold_out_buy_failed_keeps_choice_open_and_refreshes_sold_out_flag", function()
+    it("test_market_consecutive_buys_refresh_screen_and_cancel_still_leaves", function()
       _reset_market_choice_runtime_modules()
       local market_service = _reload_market_service()
-      local g = _new_four_player_game()
-      market_sold_out_fixture.apply(g)
+      local dirty_tracker = require("src.state.dirty_tracker")
+      local g = _new_game()
       local p = g:current_player()
+      local entry = assert(market_cfg[1], "test requires a market entry")
+      luassert.truthy(entry.currency == "金币", "first market entry should be the gold item")
+      g:set_player_cash(p, entry.price * 2)
       local choice = market_service.choice.build(p, g, { active_tab = "item", page_index = 1 })
-      choice.id = 812
+      choice.id = 813
       g.turn.pending_choice = choice
 
-      local before_limit = g.market_limits[2003]
-      local result = choice_resolver.resolve(g, choice, {
-        type = "choice_select",
+      for deal, buyable_after in ipairs({ true, false }) do
+        dirty_tracker.consume(g.dirty)
+        local result = choice_resolver.resolve(g, choice, {
+          type = "choice_select",
+          choice_id = choice.id,
+          option_id = entry.product_id,
+          actor_role_id = p.id,
+        })
+        luassert.truthy(result and result.stay == true, "deal " .. deal .. " should keep market choice open")
+        luassert.truthy(g.dirty.market == true, "deal " .. deal .. " should signal a market screen refresh")
+        local option = _find_option(g.turn.pending_choice and g.turn.pending_choice.options, entry.product_id)
+        luassert.truthy(option ~= nil and option.can_buy == buyable_after,
+          "deal " .. deal .. " should rebuild options from the remaining cash")
+      end
+
+      choice_resolver.resolve(g, choice, {
+        type = "choice_cancel",
         choice_id = choice.id,
-        option_id = 2003,
         actor_role_id = p.id,
       })
-
-      luassert.truthy(result and result.stay == true, "sold out purchase should keep market choice open")
-      luassert.truthy(result and result.status == "waiting", "sold out purchase should keep waiting status")
-      luassert.truthy(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy", "sold out purchase should keep pending market choice")
-      local option = _find_option(g.turn.pending_choice and g.turn.pending_choice.options, 2003)
-      luassert.truthy(option ~= nil, "sold out option should remain visible after failed purchase")
-      luassert.truthy(option.can_buy == false, "sold out option should stay unbuyable after failed purchase")
-      luassert.truthy(option.sold_out == true, "sold out option should stay flagged after failed purchase")
-      luassert.truthy(g.market_limits[2003] == before_limit, "sold out failed purchase should not consume limit")
+      luassert.truthy(g.turn.pending_choice == nil, "cancel should leave the market after buying")
     end)
 
     it("test_market_item_buy_keeps_choice_open_until_inventory_full", function()
@@ -625,7 +607,10 @@ do -- describe("market")
       local g = _new_game()
       local p = g:current_player()
       local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
-      g.market_limits[target.product_id] = 1
+      local dirty_tracker = require("src.state.dirty_tracker")
+      for _ = 1, 4 do
+        p.inventory:add({ id = 2001 })
+      end
 
       local panel_calls = {}
       local purchase_handlers = {}
@@ -689,12 +674,14 @@ do -- describe("market")
 
         local cb = purchase_handlers[p.id]
         luassert.truthy(type(cb) == "function", "paid purchase should register callback")
+        dirty_tracker.consume(g.dirty)
         cb(nil, nil, { role = role, goods_id = "goods_paid_item_test" })
       end)
 
       local option = _find_option(g.turn.pending_choice and g.turn.pending_choice.options, target.product_id)
       luassert.truthy(option ~= nil, "paid purchase callback should refresh market options")
-      luassert.truthy(option.can_buy == false, "paid purchase callback should refresh sold out entry to unbuyable")
+      luassert.truthy(option.can_buy == false, "paid purchase callback should refresh options once the last slot is taken")
+      luassert.truthy(g.dirty.market == true, "paid purchase callback should signal a market screen refresh")
     end)
 
     it("test_market_paid_purchase_same_goods_can_fulfill_multiple_times", function()
@@ -703,7 +690,6 @@ do -- describe("market")
       local p = g:current_player()
       local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
       local before_count = p.inventory:count()
-      local before_limit = g.market_limits[target.product_id]
 
       local panel_calls = {}
       local purchase_handlers = {}
@@ -765,7 +751,6 @@ do -- describe("market")
       end)
 
       luassert.truthy(p.inventory:count() == before_count + 2, "repeated paid callback should grant the item twice")
-      luassert.truthy(g.market_limits[target.product_id] == before_limit - 2, "repeated paid callback should consume limit twice")
     end)
 
     it("test_market_paid_purchase_in_flight_blocks_duplicate", function()

@@ -46,9 +46,7 @@ local function _make_query_mock(overrides)
         luassert.truthy(currency == "金币", "unsupported market currency: " .. tostring(currency))
       end,
       entry_market_enabled = overrides.entry_market_enabled or function() return true end,
-      remaining_global_limit = overrides.remaining_global_limit or function() return 99 end,
       try_charge_player = overrides.try_charge_player or function() return true end,
-      consume_global_limit = overrides.consume_global_limit or function() end,
     },
     eligibility = {},
   }
@@ -150,7 +148,7 @@ describe("TestMarketPurchase", function()
     end)
   end)
 
-  it("test_purchase_execute_rejects_disabled_and_sold_out_entries", function()
+  it("test_purchase_execute_rejects_disabled_entries", function()
     local failures = {}
     _reload_module("src.rules.market.purchase", {
       ["src.rules.market.query"] = _make_query_mock({
@@ -175,38 +173,12 @@ describe("TestMarketPurchase", function()
     luassert.truthy(#failures == 1, "disabled rejection should emit feedback")
     luassert.truthy(failures[1].reason == "disabled", "disabled feedback should keep reason")
     luassert.truthy(failures[1].body == "Buyer 该商品暂不可购买", "disabled feedback should keep body")
-
-    failures = {}
-    _reload_module("src.rules.market.purchase", {
-      ["src.rules.market.query"] = _make_query_mock({
-        entry_by_id = function(product_id)
-          return { product_id = product_id, kind = "item", currency = "金币", name = "Sold Out Item" }
-        end,
-        remaining_global_limit = function()
-          return 0
-        end,
-        is_paid_currency = function()
-          return false
-        end,
-      }),
-      ["src.rules.market.choice"] = _make_choice_mock(function(_, entry, reason, body)
-        failures[#failures + 1] = { entry = entry, reason = reason, body = body }
-      end),
-    }, function(purchase)
-      local result = purchase.execute({ market_limits = { [2001] = 0 } }, { id = 3, name = "Buyer" }, "2001")
-      luassert.truthy(result.ok == false, "sold out entries should be rejected")
-      luassert.truthy(result.reason == "sold_out", "sold out entries should keep sold_out reason")
-    end)
-    luassert.truthy(#failures == 1, "sold out rejection should emit feedback")
-    luassert.truthy(failures[1].reason == "sold_out", "sold out feedback should keep reason")
-    luassert.truthy(failures[1].body == "Buyer 该商品已售罄", "sold out feedback should keep body")
   end)
 
   it("test_purchase_execute_local_item_success_keeps_payload_and_exact_balance_boundary", function()
     local entry = { product_id = 1, kind = "item", currency = "金币", price = 7, name = "路障卡" }
     local give_calls = {}
     local give_contexts = {}
-    local limit_consumed = {}
     local emitted = {}
     local published = {}
     local is_full_calls = 0
@@ -218,9 +190,6 @@ describe("TestMarketPurchase", function()
         end,
         is_paid_currency = function()
           return false
-        end,
-        consume_global_limit = function(_, product_id)
-          limit_consumed[#limit_consumed + 1] = product_id
         end,
       }),
       ["src.rules.items.inventory"] = {
@@ -261,7 +230,6 @@ describe("TestMarketPurchase", function()
 
     luassert.truthy(give_calls[1] == 1, "purchase should give the item")
     luassert.truthy(give_contexts[1] and give_contexts[1].game ~= nil, "purchase should pass game context to inventory give")
-    luassert.truthy(limit_consumed[1] == 1, "purchase should consume global market limit")
     luassert.truthy(emitted[1].kind == "mk.bought_item", "purchase should emit bought item event")
     luassert.truthy(emitted[1].payload.price == 7, "bought item payload should keep price")
     luassert.truthy(emitted[1].payload.currency == "金币", "bought item payload should keep currency")

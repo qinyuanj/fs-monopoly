@@ -12,8 +12,7 @@ local choice_session = market_choice.session
 
 local policy = {}
 
-function policy.validate_entry(game, player, entry)
-  local product_id = entry.product_id
+function policy.validate_entry(player, entry)
   if not query_context.entry_market_enabled(entry) then
     return {
       ok = false,
@@ -26,14 +25,6 @@ function policy.validate_entry(game, player, entry)
       ok = false,
       reason = "unsupported_kind",
       body = player.name .. " 该商品类型暂不支持购买",
-    }
-  end
-  local remaining = query_context.remaining_global_limit(game, product_id)
-  if remaining <= 0 then
-    return {
-      ok = false,
-      reason = "sold_out",
-      body = player.name .. " 该商品已售罄",
     }
   end
   return { ok = true }
@@ -71,7 +62,7 @@ local paid_fulfillment = {}
 function paid_fulfillment.fulfill_entry(game, player, entry)
   local price = query_context.entry_price(entry)
   local currency = query_context.entry_currency(entry)
-  local decision = policy.validate_entry(game, player, entry)
+  local decision = policy.validate_entry(player, entry)
   if not decision.ok then
     choice_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
     return false
@@ -107,8 +98,8 @@ function purchase.setup_for_game(game)
   paid_purchase_gateway.setup_for_game(game, paid_purchase_callback.handle)
 end
 
-local function _validate_purchase_entry(game, player, entry)
-  local decision = policy.validate_entry(game, player, entry)
+local function _validate_purchase_entry(player, entry)
+  local decision = policy.validate_entry(player, entry)
   if not decision.ok then
     choice_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
     return false, decision.reason
@@ -131,7 +122,7 @@ function purchase.execute(game, player, product_id)
   local entry = query_context.entry_by_id(product_id)
   assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
 
-  local ok, reason = _validate_purchase_entry(game, player, entry)
+  local ok, reason = _validate_purchase_entry(player, entry)
   if not ok then
     return { ok = false, reason = reason }
   end
