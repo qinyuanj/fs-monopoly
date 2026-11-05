@@ -62,17 +62,34 @@ it("test_opens_with_underlay_touch_through_and_armed_confirm_cancel_buttons", fu
   _assert_eq(captured.opened.selected, 10, "open_choice should carry the selection")
 end)
 
-it("test_underlay_touch_policy_differs_per_screen", function()
-  -- #177:遥控骰子与玩家选择共享本 helper;仅遥控骰子开灰底触摸(点背景关闭),
-  -- 玩家选择灰底保持穿透到基础屏取消按钮。
+it("test_underlay_stays_touch_through_on_both_option_screens", function()
+  -- 遥控骰子与玩家选择共享本 helper;两屏灰底都关触摸,穿透到基础屏取消按钮。
+  -- 遥控骰子灰底开触摸时真机点灰底不发 CLICK,点背景取消停用。
   local remote = require("src.ui.screens.remote_choice").descriptor()
   local player = require("src.ui.screens.player_choice").descriptor()
 
   local remote_captured = _drive({}, remote)
   local player_captured = _drive({}, player)
 
-  _assert_eq(remote_captured.touch[remote.underlay], true, "remote underlay must catch clicks")
+  _assert_eq(remote_captured.touch[remote.underlay], false, "remote underlay must stay touch-through")
   _assert_eq(player_captured.touch[player.underlay], false, "player underlay must stay touch-through")
+end)
+
+it("test_explicit_underlay_touch_true_arms_the_underlay", function()
+  local captured = _drive({}, { underlay_touch = true })
+
+  _assert_eq(captured.touch.underlay_node, true, "underlay_touch=true must arm the underlay")
+end)
+
+it("test_remote_decor_nodes_are_touch_through_so_the_base_cancel_button_is_reachable", function()
+  -- 真机实证:遥控骰子屏的面板/选项区/标题/正文未显式关触摸时按 Eggy 默认吸触摸
+  -- 且不发 CLICK,盖住右下角基础_取消按钮,遥控骰子无法取消。开屏必须逐个关掉。
+  local remote = require("src.ui.screens.remote_choice").descriptor()
+  local captured = _drive({}, remote)
+
+  for _, name in ipairs({ "遥控骰子_面板", "遥控骰子_选项区", "遥控骰子_标题", "遥控骰子_正文" }) do
+    _assert_eq(captured.touch[name], false, "remote decor node must let clicks pass through: " .. name)
+  end
 end)
 
 it("test_disarms_the_cancel_button_when_the_choice_disallows_cancel", function()

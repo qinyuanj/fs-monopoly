@@ -17,8 +17,10 @@ function M.descriptor()
     title = schema.title,
     body = schema.body,
     underlay = schema.underlay,
-    -- 灰底接点背景关闭(#177),开屏开触摸;输入锁定时随屏一并关闭。
-    underlay_touch = true,
+    -- 灰底关触摸、点击穿透:真机实测开触摸(代码强开或编辑器配置)点灰底都不发 CLICK,
+    -- 点背景取消(#177)停用,取消只走基础_取消按钮,与玩家选择屏同口径。
+    underlay_touch = false,
+    passthrough_nodes = schema.passthrough,
     option_buttons = schema.options,
   }
 end

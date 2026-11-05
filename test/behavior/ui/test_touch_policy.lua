@@ -536,9 +536,10 @@ it("test_set_choice_screen_locked_blocks_all_targets", function()
   _assert_eq(touch["取消按钮"], false, "cancel should be locked")
 end)
 
-it("test_input_lock_disables_the_remote_choice_underlay", function()
-  -- #177:遥控骰子灰底是点背景关闭出口,锁定期间必须关触摸,误触不得推进流程。
+it("test_input_lock_disables_a_touchable_choice_underlay", function()
+  -- #177:可点灰底(underlay_touch=true)是点背景关闭出口,锁定期间必须关触摸,误触不得推进流程。
   local remote = require("src.ui.screens.remote_choice").descriptor()
+  remote.underlay_touch = true
   local touch = { [remote.underlay] = true }
   local state = {
     ui = {

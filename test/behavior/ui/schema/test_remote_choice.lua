@@ -32,6 +32,9 @@ it("test_every_referenced_node_name_exists_in_the_ui_node_table", function()
   for _, name in ipairs(remote_choice.options) do
     referenced[#referenced + 1] = name
   end
+  for _, name in ipairs(remote_choice.passthrough) do
+    referenced[#referenced + 1] = name
+  end
   for _, name in ipairs(referenced) do
     luassert.is_true(known[name] == true, "schema node missing from UI node table: " .. tostring(name))
   end
