@@ -100,7 +100,6 @@ local function _patch_market_query_empty()
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return {} end },
     { target = market_query.eligibility, key = "can_buy_entry", value = function() return false end },
-    { target = market_query.eligibility, key = "is_sold_out", value = function() return false end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function() return "item" end },
     { target = market_query.context, key = "entry_price", value = function() return 100 end },
@@ -335,7 +334,6 @@ describe("TestMarketChoiceSession", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
-      { target = market_query.eligibility, key = "is_sold_out", value = function() return false end },
       { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context, key = "entry_name", value = function() return "item" end },
       { target = market_query.context, key = "entry_price", value = function() return 100 end },
@@ -364,7 +362,6 @@ describe("TestMarketChoiceSession", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
-      { target = market_query.eligibility, key = "is_sold_out", value = function() return false end },
       { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context, key = "entry_name", value = function() return "item" end },
       { target = market_query.context, key = "entry_price", value = function() return 100 end },
@@ -471,7 +468,6 @@ local function _patch_market_query(entries, dirty_mark_calls)
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
     { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
-    { target = market_query.eligibility, key = "is_sold_out", value = function() return false end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function(e) return e.name end },
     { target = market_query.context, key = "entry_price", value = function(e) return e.price end },
@@ -797,7 +793,6 @@ local function _patch_market_query(entries)
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
     { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
-    { target = market_query.eligibility, key = "is_sold_out", value = function() return false end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function(e) return e.name end },
     { target = market_query.context, key = "entry_price", value = function(e) return e.price end },
@@ -989,7 +984,6 @@ local function _make_query_mock()
       entry_currency = function() return "" end,
       is_paid_currency = function() return false end,
       entry_market_enabled = function() return true end,
-      remaining_global_limit = function() return 99 end,
     },
     eligibility = {},
   }
@@ -1182,7 +1176,6 @@ local function _patch_market_query(entries, opts)
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
     { target = market_query.eligibility, key = "can_buy_entry", value = opts.can_buy or function() return true end },
-    { target = market_query.eligibility, key = "is_sold_out", value = opts.is_sold_out or function() return false end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function(entry) return entry.name end },
     { target = market_query.context, key = "entry_price", value = function(entry) return entry.price end },
@@ -1344,24 +1337,11 @@ describe("TestMarketChoiceSurvivors", function()
     local entries = _make_entries(2)
     _with_patches(_patch_market_query(entries, {
       can_buy = function(_, _, entry) return entry.product_id == "p1" end,
-      is_sold_out = function() return false end,
     }), function()
       local spec = choice.builder.build(_stub_player(1), {}, {})
       _assert_eq(#spec.options, 2, "both entries appear as options")
       _assert_eq(spec.options[1].can_buy, true, "p1 can_buy=true")
       _assert_eq(spec.options[2].can_buy, false, "p2 can_buy=false")
-    end)
-  end)
-
-  it("test_sold_out_flag_propagates_to_option_sold_out", function()
-    local entries = _make_entries(2)
-    _with_patches(_patch_market_query(entries, {
-      can_buy = function() return true end,
-      is_sold_out = function(_, entry) return entry.product_id == "p2" end,
-    }), function()
-      local spec = choice.builder.build(_stub_player(1), {}, {})
-      _assert_eq(spec.options[1].sold_out, false, "p1 sold_out=false")
-      _assert_eq(spec.options[2].sold_out, true, "p2 sold_out=true")
     end)
   end)
 
@@ -1448,7 +1428,6 @@ describe("TestMarketChoiceSurvivors", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries",     value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry",      value = function() return true end },
-      { target = market_query.eligibility, key = "is_sold_out",        value = function() return false end },
       -- entry_market_enabled returns true for BOTH — so mutation `and→or` would let wrong_kind slip through.
       { target = market_query.context,     key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context,     key = "entry_name",          value = function(e) return e.name end },
@@ -1471,7 +1450,6 @@ describe("TestMarketChoiceSurvivors", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries",     value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry",      value = function() return true end },
-      { target = market_query.eligibility, key = "is_sold_out",        value = function() return false end },
       -- per-entry market_enabled echoes flag → `and` keeps only the on row, `or` would keep both via kind match.
       { target = market_query.context,     key = "entry_market_enabled", value = function(e) return e.market_enabled end },
       { target = market_query.context,     key = "entry_name",          value = function(e) return e.name end },
@@ -1503,7 +1481,6 @@ describe("TestMarketChoiceSurvivors", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries",     value = function() return _make_entries(25) end },
       { target = market_query.eligibility, key = "can_buy_entry",      value = function() return true end },
-      { target = market_query.eligibility, key = "is_sold_out",        value = function() return false end },
       { target = market_query.context,     key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context,     key = "entry_name",          value = function(e) return e.name end },
       { target = market_query.context,     key = "entry_price",         value = function(e) return e.price end },
@@ -1639,7 +1616,6 @@ local function _base_overrides()
       },
       eligibility = {
         sorted_entries = function() return {} end, can_buy_entry = function() return false end,
-        is_sold_out = function() return false end,
       },
     },
     ["src.config.choice.contract"] = { resolve_owner_role_id = function(c) return c.owner_role_id end },

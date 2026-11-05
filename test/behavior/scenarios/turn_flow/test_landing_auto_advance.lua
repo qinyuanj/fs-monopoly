@@ -24,20 +24,20 @@ local function _run_landing_turn(game, player, move_result)
   game.turn_runtime:run_turn()
 end
 
-local function _set_all_market_goods_unbuyable(game)
-  for product_id in pairs(game.market_limits or {}) do
-    game.market_limits[product_id] = 0
+local function _fill_inventory(player)
+  while not inventory.is_full(player) do
+    inventory.add(player, { id = item_ids.free_rent })
   end
 end
 
 describe("TestLandingAutoAdvance", function()
 
-local function _test_sold_out_market_landing_skips_choice_and_continues_to_inter_turn_wait()
+local function _test_full_inventory_market_landing_skips_choice_and_continues_to_inter_turn_wait()
   local game = _new_manual_game()
   local player = game.players[1]
   local market_index = assert(support.first_tile_by_type(game.board, "market"))
 
-  _set_all_market_goods_unbuyable(game)
+  _fill_inventory(player)
   game:update_player_position(player, market_index)
 
   _run_landing_turn(game, player)
@@ -45,6 +45,18 @@ local function _test_sold_out_market_landing_skips_choice_and_continues_to_inter
   luassert.is_nil(game.turn.pending_choice)
   _assert_identity(game.turn.phase, "inter_turn_wait")
   luassert.is_true(game.turn.inter_turn_wait_active)
+end
+
+local function _test_market_landing_with_free_slot_opens_market_choice()
+  local game = _new_manual_game()
+  local player = game.players[1]
+  local market_index = assert(support.first_tile_by_type(game.board, "market"))
+
+  game:update_player_position(player, market_index)
+
+  _run_landing_turn(game, player)
+
+  _assert_identity(game.turn.pending_choice and game.turn.pending_choice.kind, "market_buy")
 end
 
 local function _test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice()
@@ -166,7 +178,8 @@ local function _test_unknown_rent_card_kind_falls_through_to_paying_rent()
 end
 
 
-it("test_sold_out_market_landing_skips_choice_and_continues_to_inter_turn_wait", _test_sold_out_market_landing_skips_choice_and_continues_to_inter_turn_wait)
+it("test_full_inventory_market_landing_skips_choice_and_continues_to_inter_turn_wait", _test_full_inventory_market_landing_skips_choice_and_continues_to_inter_turn_wait)
+it("test_market_landing_with_free_slot_opens_market_choice", _test_market_landing_with_free_slot_opens_market_choice)
 it("test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice", _test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice)
 it("test_declining_strong_card_uses_free_rent_and_does_not_open_second_choice", _test_declining_strong_card_uses_free_rent_and_does_not_open_second_choice)
 it("test_accepting_strong_card_prompt_executes_the_selected_card", _test_accepting_strong_card_prompt_executes_the_selected_card)

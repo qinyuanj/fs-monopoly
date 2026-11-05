@@ -37,7 +37,6 @@ end
 
 local function _fulfill_item(game, player, entry, opts)
   local inventory = require("src.rules.items.inventory")
-  local query_context = _query_context()
   if inventory.is_full(player) then
     return { ok = false, reason = "inventory_full", body = player.name .. " 卡槽已满" }
   end
@@ -48,7 +47,6 @@ local function _fulfill_item(game, player, entry, opts)
   if given == true then
     require("src.rules.items.gain_reveal").queue(game, player, entry.product_id, { source = "market" })
   end
-  query_context.consume_global_limit(game, entry.product_id)
   _emit_bought_item(game, {
     player = player,
     entry = entry,

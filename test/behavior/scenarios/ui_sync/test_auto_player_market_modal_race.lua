@@ -201,7 +201,7 @@ local function _test_market_dirty_first_open_not_blocked_by_popup()
 end
 
 -- 2026-08-25 买家免展示口径:存活弹窗排除买家本人时(黑市购买展示不占买家屏),
--- dirty.market 重建照常放行——买家即时看到库存刷新,不必等收屏。
+-- dirty.market 重建照常放行——买家即时看到成交后的刷新,不必等收屏。
 local function _test_market_dirty_reopen_runs_when_popup_excludes_operator()
   _assert_identity(_run_dirty_market_reopen(true, true, 1), 1,
     "dirty.market rebuild must run when the alive popup excludes the market operator")

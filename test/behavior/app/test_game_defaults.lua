@@ -82,27 +82,8 @@ local function _test_init_tile_state_resets_only_land_tiles()
   luassert.is.equal(2, board.path[2].level)
 end
 
-local function _test_build_market_limits_filters_non_positive_and_missing_limits()
-  local market_cfg = require("src.config.content.market")
-  local saved = {}
-  for index = 1, #market_cfg do
-    saved[index] = market_cfg[index]
-    market_cfg[index] = nil
-  end
-  market_cfg[1] = { product_id = "keep", limit = 1 }
-  market_cfg[2] = { product_id = "zero", limit = 0 }
-  market_cfg[3] = { product_id = "nil-limit" }
-  local ok, limits = pcall(game_defaults.build_market_limits)
-  for index = 1, #saved do market_cfg[index] = saved[index] end
-  luassert.is_true(ok, "market limits build must not raise")
-  luassert.is.equal(1, limits.keep)
-  luassert.is_nil(limits.zero)
-  luassert.is_nil(limits["nil-limit"])
-end
-
 it("test_identifies_class_like_tables", _test_identifies_class_like_tables)
 it("test_build_player_by_id_handles_missing_players_and_ids", _test_build_player_by_id_handles_missing_players_and_ids)
 it("test_build_initial_turn_returns_expected_defaults", _test_build_initial_turn_returns_expected_defaults)
 it("test_init_tile_state_resets_only_land_tiles", _test_init_tile_state_resets_only_land_tiles)
-it("test_build_market_limits_filters_non_positive_and_missing_limits", _test_build_market_limits_filters_non_positive_and_missing_limits)
 end)

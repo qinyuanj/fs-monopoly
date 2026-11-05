@@ -61,7 +61,6 @@ local function _build_tab_entries(player, game, active_tab)
       merged[#merged + 1] = {
         entry = entry,
         can_buy = can_buy,
-        sold_out = query_eligibility.is_sold_out(game, entry),
       }
     end
   end
@@ -88,7 +87,6 @@ local function _build_options_for_page(visible, page_index, page_size)
       id = entry.product_id,
       label = label,
       can_buy = slot.can_buy,
-      sold_out = slot.sold_out,
     }
   end
   return body_lines, options
