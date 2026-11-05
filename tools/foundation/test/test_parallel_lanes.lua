@@ -25,6 +25,25 @@ local function script(root, name, text)
   return file
 end
 
+-- 迟到写手:打印 START 后等放行文件(arg[2])出现才写 marker(arg[1]),30s 兜底自退。
+-- 测试拿到 timeout 结果后才放行:子进程若没被收容,放行后几毫秒内就会写出 marker;
+-- 比「忙等到写入截止点」更强,也不再白等 7~9s。
+local function late_writer(start_line)
+  return 'print("' .. start_line .. '"); io.stdout:flush()\n'
+    .. 'local give_up = os.time() + 30\n'
+    .. 'while os.time() < give_up do\n'
+    .. '  local release = io.open(arg[2], "rb")\n'
+    .. '  if release then release:close(); break end\n'
+    .. 'end\n'
+    .. 'local f = assert(io.open(arg[1], "wb")); f:write("LATE"); f:close()\n'
+end
+
+-- 放行迟到写手并给它留出写入窗口;之后 marker 仍不存在才说明它已被收容。
+local function release_and_settle(release)
+  assert(fs.write_file(release, "go"))
+  proc.run_command({ "sleep", "1" })
+end
+
 it("distinguishes success failure missing command and empty output", function()
   fixture(function(root)
     local writer = script(root, "writer", 'local d=os.time()+2; while os.time()<d do end; print("中文 success")')
@@ -122,23 +141,30 @@ end)
 
 it("long Lua argv and lanes overlap", function()
   fixture(function(root)
+    -- 会合:每条 lane 先写自己的 started 文件,再等对方的出现(10s 兜底则报 ALONE)。
+    -- 两条都见到对方,才说明二者确实同时在跑。
     local file = script(root, "wait", [[
-local started=os.time()
-local deadline=started+3
-while os.time()<deadline do end
-print('INTERVAL '..started..' '..os.time())
-print(#arg)
-print(arg[1])
+local dir, me, peer = arg[1], arg[2], arg[3]
+local f = assert(io.open(dir .. "/started_" .. me, "wb")); f:close()
+local give_up = os.time() + 10
+local met = false
+while os.time() < give_up do
+  local h = io.open(dir .. "/started_" .. peer, "rb")
+  if h then h:close(); met = true; break end
+end
+print(met and "MET" or "ALONE")
+print(#arg - 3)
+print(arg[4])
 ]])
-    local args = { native_lua, file }
-    for _ = 1, 1000 do args[#args + 1] = "中文 argument space" end
-    local ok, results = parallel.run({
-      { label = "a", cmd = args }, { label = "b", cmd = args },
-    }, { stream = false, timeout = 20 })
+    local function lane(me, peer)
+      local args = { native_lua, file, root, me, peer }
+      for _ = 1, 1000 do args[#args + 1] = "中文 argument space" end
+      return { label = me, cmd = args }
+    end
+    local ok, results = parallel.run({ lane("a", "b"), lane("b", "a") }, { stream = false, timeout = 20 })
     check.is_true(ok)
-    local a_start, a_end = results[1].output:match("INTERVAL (%d+) (%d+)")
-    local b_start, b_end = results[2].output:match("INTERVAL (%d+) (%d+)")
-    check.is_true(math.max(tonumber(a_start), tonumber(b_start)) < math.min(tonumber(a_end), tonumber(b_end)), "actual worker intervals must overlap")
+    check.matches("MET", results[1].output, 1, true)
+    check.matches("MET", results[2].output, 1, true)
     check.matches("1000", results[1].output, 1, true)
     check.matches("中文 argument space", results[2].output, 1, true)
   end)
@@ -147,21 +173,16 @@ end)
 it("timeout stops delayed writes and preserves unowned files", function()
   fixture(function(root)
     local marker = root .. "/late.txt"
-    local file = script(root, "slow", [[
-print("START")
-io.stdout:flush()
-local deadline=os.time()+8
-while os.time()<deadline do end
-local f=assert(io.open(arg[1],"wb")); f:write("LATE"); f:close()
-]])
+    local release = root .. "/release.txt"
+    local file = script(root, "slow", late_writer("START"))
     assert(fs.write_file(root .. "/owned/sentinel.txt", "keep"))
-    local ok, results = parallel.run({ { label = "slow", cmd = { native_lua, file, marker } } },
+    local ok, results = parallel.run({ { label = "slow", cmd = { native_lua, file, marker, release } } },
       { stream = false, timeout = 2, lane_dir = root .. "/owned" })
     check.is_false(ok)
     check.same("timeout", results[1].reason)
     check.matches("START", results[1].output, 1, true)
     check.is_nil(results[1].artifact_dir, "termination and cleanup must succeed")
-    proc.run_command({ native_lua, "-e", "local d=os.time()+9; while os.time()<d do end; print('WAIT')" })
+    release_and_settle(release)
     check.is_false(fs.path_exists(marker), "timed-out child must not perform its delayed write")
     check.same("keep", fs.read_raw(root .. "/owned/sentinel.txt"))
     check.same(1, #assert(proc.collect_files(root .. "/owned")))
@@ -187,16 +208,17 @@ end)
 it("timeout stops detached writer after command parent exits", function()
   fixture(function(root)
     local marker = root .. "/detached_late.txt"
-    local file = script(root, "detached", 'print("DETACHED_START"); io.stdout:flush(); local d=os.time()+6; while os.time()<d do end; local f=assert(io.open(arg[1],"wb")); f:write("LATE"); f:close()')
+    local release = root .. "/detached_release.txt"
+    local file = script(root, "detached", late_writer("DETACHED_START"))
     -- 命令自身再派一个后台写手:收容必须按进程组覆盖,而不只是直接子进程。
     local command = shell.shell_quote(native_lua) .. " " .. shell.shell_quote(file) .. " "
-      .. shell.shell_quote(marker) .. " & wait"
+      .. shell.shell_quote(marker) .. " " .. shell.shell_quote(release) .. " & wait"
     local ok, results = parallel.run({{label="detached", cmd=command}}, {stream=false, timeout=2})
     check.is_false(ok)
     check.same("timeout", results[1].reason)
     check.matches("DETACHED_START", results[1].output, 1, true)
     check.is_nil(results[1].artifact_dir)
-    proc.run_command({native_lua, "-e", "local d=os.time()+7; while os.time()<d do end; print('WAIT')"})
+    release_and_settle(release)
     check.is_false(fs.path_exists(marker), "detached owned writer must stop before timeout result returns")
   end)
 end)
