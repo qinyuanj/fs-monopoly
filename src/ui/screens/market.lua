@@ -26,9 +26,9 @@ local M = { key = "market" }
 local MARKET_SLOTS_FULL_TIP = "道具槽已满，无法购买"
 local MARKET_SLOTS_FULL_TIP_SECONDS = 3.0
 
--- #178 点背景关闭暂时停用(2026-10-29,金豆单次限购改 1 后连续购买易误触关屏)。
+-- #178 点背景关闭在黑市屏永久停用(#216:金豆单次限购改 1 后连续购买易误触关屏)。
 -- 背景仍注册路由且保持触摸,只吞点击、不产出意图,避免点击穿透到下方棋盘;
--- 恢复时改回 true 即可。
+-- 提示文字同步常隐(market_layout.hidden_nodes),只能经关闭按钮退出。
 M.BACKGROUND_CLICK_CLOSE_ENABLED = false
 
 -- 槽满点击拦截(UI 本地闸):购买按钮在 build_intent 处打回 —— tip 告知 + 不生出

@@ -25,8 +25,11 @@ local market_layout = {
   -- 纯展示节点一律关闭触摸,点击落到下方背景或按钮。
   background = "黑市_背景矩形",
   passthrough_nodes = {
-    "黑市_关闭黑市文本提示",
     "黑市_关闭黑市按钮底图",
+  },
+  -- #216 黑市点背景关闭永久停用:提示文字常隐(美术节点保留),恢复点背景关闭时一并恢复。
+  hidden_nodes = {
+    "黑市_关闭黑市文本提示",
   },
   item_buttons = {},
   item_labels = {},
