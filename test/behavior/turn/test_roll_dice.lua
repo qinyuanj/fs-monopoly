@@ -25,107 +25,78 @@ local function _test_apply_roll_total_uses_pending_multiplier()
     "apply_roll_total should pass through raw total without a multiplier")
 end
 
-local _apply_dice_multiplier_tests = {
-  function()
-    local player = { id = 1, name = "P1", position = 1, status = { pending_dice_multiplier = 4 } }
-    local game = {
+it("test_apply_dice_multiplier_applies_and_resets", function()
+  local player = { id = 1, name = "P1", position = 1, status = { pending_dice_multiplier = 4 } }
+  local game = {
+    board = { get_tile = function() return { type = "normal" } end },
+    turn = { move_anim_seq = 0, last_turn = {} },
+    dirty = {},
+    players = { player },
+    anim_gate_port = { wait_move_anim = false },
+    player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+    consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
+  }
+  local turn_mgr = { game = game }
+  local original_movement = package.loaded["src.rules.movement"]
+  local original_move_followup = package.loaded["src.turn.phases.move_followup"]
+  package.loaded["src.rules.movement"] = {
+    move = function(_, _, total)
+      check.is_truthy(total == 12, "total should be multiplied: expected 12, got " .. tostring(total))
+      return { visited = {}, steps = {} }
+    end
+  }
+  package.loaded["src.turn.phases.move_followup"] = {
+    run = function() return "test_result" end
+  }
+  package.loaded["src.turn.phases.move"] = nil
+  local move_module = require("src.turn.phases.move")
+  local result = move_module(turn_mgr, {
+    player = player,
+    total = 3,
+    raw_total = 3,
+  })
+  check.is_truthy(game:player_pending_dice_multiplier(player) == 1, "should reset multiplier to 1")
+  package.loaded["src.rules.movement"] = original_movement
+  package.loaded["src.turn.phases.move_followup"] = original_move_followup
+  package.loaded["src.turn.phases.move"] = nil
+  check.is_truthy(result == "test_result", "should complete move phase")
+end)
+
+it("test_apply_dice_multiplier_nil_raw_total", function()
+  local player = { id = 1, position = 1, status = { pending_dice_multiplier = 3 } }
+  local turn_mgr = {
+    game = {
       board = { get_tile = function() return { type = "normal" } end },
-      turn = { move_anim_seq = 0, last_turn = {} },
+      turn = { move_anim_seq = 0 },
       dirty = {},
       players = { player },
       anim_gate_port = { wait_move_anim = false },
       player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
       consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
-    }
-    local turn_mgr = { game = game }
-    local original_movement = package.loaded["src.rules.movement"]
-    local original_move_followup = package.loaded["src.turn.phases.move_followup"]
-    package.loaded["src.rules.movement"] = {
-      move = function(_, _, total)
-        check.is_truthy(total == 12, "total should be multiplied: expected 12, got " .. tostring(total))
-        return { visited = {}, steps = {} }
-      end
-    }
-    package.loaded["src.turn.phases.move_followup"] = {
-      run = function() return "test_result" end
-    }
-    package.loaded["src.turn.phases.move"] = nil
-    local move_module = require("src.turn.phases.move")
-    local result = move_module(turn_mgr, {
-      player = player,
-      total = 3,
-      raw_total = 3,
-    })
-    check.is_truthy(game:player_pending_dice_multiplier(player) == 1, "should reset multiplier to 1")
-    package.loaded["src.rules.movement"] = original_movement
-    package.loaded["src.turn.phases.move_followup"] = original_move_followup
-    package.loaded["src.turn.phases.move"] = nil
-    check.is_truthy(result == "test_result", "should complete move phase")
-  end,
-  function()
-    local player = { id = 1, position = 1, status = { pending_dice_multiplier = 3 } }
-    local turn_mgr = {
-      game = {
-        board = { get_tile = function() return { type = "normal" } end },
-        turn = { move_anim_seq = 0 },
-        dirty = {},
-        players = { player },
-        anim_gate_port = { wait_move_anim = false },
-        player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
-        consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
-      },
-    }
-    local original_movement = package.loaded["src.rules.movement"]
-    local original_move_followup = package.loaded["src.turn.phases.move_followup"]
-    package.loaded["src.rules.movement"] = {
-      move = function(game, p, total)
-        check.is_truthy(total == 6, "total should not be multiplied when raw_total is nil")
-        return { visited = {}, steps = {} }
-      end
-    }
-    package.loaded["src.turn.phases.move_followup"] = {
-      run = function() return "test_result" end
-    }
-    package.loaded["src.turn.phases.move"] = nil
-    local move_module = require("src.turn.phases.move")
-    local result = move_module(turn_mgr, {
-      player = player,
-      total = 6,
-      raw_total = nil,
-    })
-    package.loaded["src.rules.movement"] = original_movement
-    package.loaded["src.turn.phases.move_followup"] = original_move_followup
-    package.loaded["src.turn.phases.move"] = nil
-    check.is_truthy(result == "test_result", "should skip multiplier when raw_total is nil")
-  end,
-}
-
-local _roll_dice_extended_tests = {
-  function()
-    local results, total = roll._roll_dice(0, nil, { next_int = function() return 3 end })
-    check.is_truthy(#results == 0, "should return empty results for zero dice")
-    check.is_truthy(total == 0, "total should be 0 for zero dice")
-  end,
-  function()
-    local results, total = roll._roll_dice(1, nil, { next_int = function(_, min, max) return min end })
-    check.is_truthy(#results == 1, "should return 1 result")
-    check.is_truthy(results[1] == 1, "should use min value from rng")
-    check.is_truthy(total == 1, "total should be min value")
-  end,
-  function()
-    local results, total = roll._roll_dice(2, { 1, 2, 3, 4 }, { next_int = function() return 6 end })
-    check.is_truthy(#results == 2, "should return only 2 results")
-    check.is_truthy(results[1] == 1 and results[2] == 2, "should use first 2 override values")
-    check.is_truthy(total == 3, "total should be sum of first 2 values")
-  end,
-}
-
-it("test_apply_dice_multiplier_applies_and_resets", function()
-  _apply_dice_multiplier_tests[1]()
-end)
-
-it("test_apply_dice_multiplier_nil_raw_total", function()
-  _apply_dice_multiplier_tests[2]()
+    },
+  }
+  local original_movement = package.loaded["src.rules.movement"]
+  local original_move_followup = package.loaded["src.turn.phases.move_followup"]
+  package.loaded["src.rules.movement"] = {
+    move = function(game, p, total)
+      check.is_truthy(total == 6, "total should not be multiplied when raw_total is nil")
+      return { visited = {}, steps = {} }
+    end
+  }
+  package.loaded["src.turn.phases.move_followup"] = {
+    run = function() return "test_result" end
+  }
+  package.loaded["src.turn.phases.move"] = nil
+  local move_module = require("src.turn.phases.move")
+  local result = move_module(turn_mgr, {
+    player = player,
+    total = 6,
+    raw_total = nil,
+  })
+  package.loaded["src.rules.movement"] = original_movement
+  package.loaded["src.turn.phases.move_followup"] = original_move_followup
+  package.loaded["src.turn.phases.move"] = nil
+  check.is_truthy(result == "test_result", "should skip multiplier when raw_total is nil")
 end)
 
 it("test_apply_move_total_applies_multiplier_updates_last_turn_and_publishes", function()
@@ -319,7 +290,10 @@ it("test_play_roll_dice_timing_defaults_to_zero", function()
 end)
 
 it("test_roll_dice_more_overrides", function()
-  _roll_dice_extended_tests[3]()
+  local results, total = roll._roll_dice(2, { 1, 2, 3, 4 }, { next_int = function() return 6 end })
+  check.is_truthy(#results == 2, "should return only 2 results")
+  check.is_truthy(results[1] == 1 and results[2] == 2, "should use first 2 override values")
+  check.is_truthy(total == 3, "total should be sum of first 2 values")
 end)
 
 
@@ -354,11 +328,16 @@ it("test_roll_dice_screen_tolerates_a_nil_anim", function()
 end)
 
 it("test_roll_dice_single_die_rng", function()
-  _roll_dice_extended_tests[2]()
+  local results, total = roll._roll_dice(1, nil, { next_int = function(_, min, max) return min end })
+  check.is_truthy(#results == 1, "should return 1 result")
+  check.is_truthy(results[1] == 1, "should use min value from rng")
+  check.is_truthy(total == 1, "total should be min value")
 end)
 
 it("test_roll_dice_zero_count", function()
-  _roll_dice_extended_tests[1]()
+  local results, total = roll._roll_dice(0, nil, { next_int = function() return 3 end })
+  check.is_truthy(#results == 0, "should return empty results for zero dice")
+  check.is_truthy(total == 0, "total should be 0 for zero dice")
 end)
 
 end)

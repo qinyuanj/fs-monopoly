@@ -10,559 +10,6 @@ local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local runtime_state = require("src.state.runtime")
 local action_anim_wait = require("src.turn.waits.await_action_anim")
 
-local _update_countdown_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.detained_wait_active = true
-    game.turn.detained_wait_seconds = 5
-    game.turn.detained_wait_elapsed = 2
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_seconds == 3, "should calculate remaining detained wait seconds")
-    check.is_truthy(game.turn.countdown_active == true, "should set countdown active for detained wait")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    state.action_button_active = true
-    state.action_button_elapsed = 1
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should set countdown active for action button")
-  end,
-}
-
-local _is_action_button_wait_active_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == true, "should be active when no blocking UI and game not finished")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    game.finished = true
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == false, "should not be active when game is finished")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    state.ui = { input_blocked = true }
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == false, "should not be active when input is blocked")
-  end,
-}
-
-local _update_countdown_extended_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
-    state.action_button_active = false
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should set countdown active for pending choice")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    state.ui = { popup_active = true, popup_payload = { auto_close_seconds = 10 } }
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should set countdown active for popup")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn = nil
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn == nil, "nil turn should remain nil (no mutation)")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
-    state.ui = { choice_active = true, market_active = false }
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should be active with choice_active")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "market_buy" }
-    state.ui = { choice_active = false, market_active = true }
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should be active with market_active")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
-    state.pending_choice_elapsed = 5
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should be active")
-    check.is_truthy(game.turn.countdown_seconds ~= nil, "should set countdown_seconds")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
-    state.pending_choice_elapsed = -5
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should be active with negative elapsed")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.detained_wait_active = true
-    game.turn.detained_wait_seconds = 10
-    game.turn.detained_wait_elapsed = 3
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_seconds == 7, "should calculate remaining detained wait")
-    check.is_truthy(game.turn.countdown_active == true, "should be active for detained wait")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    state.action_button_active = true
-    state.action_button_elapsed = 2
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should be active for action button")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
-    tick_ui_sync.update_countdown(game, state)
-    local first_countdown = game.turn.countdown_seconds
-    game.dirty.turn_countdown = nil
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_seconds == first_countdown, "countdown should remain same")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
-    state.pending_choice_elapsed = nil
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "should handle nil elapsed")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    state.ui = { popup_active = true, popup_payload = { auto_close_seconds = 0 } }
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == false or game.turn.countdown_active == true, "should handle zero popup timeout")
-  end,
-}
-
-local _is_action_button_wait_active_extended_tests = {
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn.pending_choice = { id = 1 }
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == false, "should not be active when pending_choice exists")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    state.ui = { choice_active = true }
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == false, "should not be active when choice is active")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    state.ui = { market_active = true }
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == true, "market active should NOT block action_button (gentle deadline lets timer keep running)")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    state.ui = { popup_active = true }
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == false, "should not be active when popup is active")
-  end,
-  function()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    local result = turn_timer_policy.is_action_button_wait_active(nil, state, ports)
-    check.is_truthy(result == false, "should return false with nil game")
-  end,
-  function()
-    local g = _new_game()
-    local ports = _build_test_ports()
-    local result = turn_timer_policy.is_action_button_wait_active(g, nil, ports)
-    check.is_truthy(result == false, "should return false with nil state")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, nil)
-    check.is_truthy(result == false, "should return false with nil ports")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports({
-      get_ui_state = nil
-    })
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == true, "should be active when get_ui_state is nil")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports({
-      get_ui_state = function() return nil end
-    })
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == false, "should return false when get_ui_state returns nil")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == true, "should be active when all conditions are normal")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.finished = true
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == false, "should not be active when game is finished")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    state.ui = { input_blocked = true }
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == false, "should not be active when input is blocked")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn = nil
-    local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    check.is_truthy(result == true, "should handle nil turn (no pending_choice check)")
-  end,
-}
-
-local _fill_ui_sync_defaults_tests = {
-  function()
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    check.is_truthy(type(ports.get_ui_state) == "function", "should fill get_ui_state")
-    check.is_truthy(type(ports.is_input_blocked) == "function", "should fill is_input_blocked")
-    check.is_truthy(type(ports.is_popup_active) == "function", "should fill is_popup_active")
-    check.is_truthy(type(ports.is_choice_active) == "function", "should fill is_choice_active")
-    check.is_truthy(type(ports.get_popup_owner_index) == "function", "should fill get_popup_owner_index")
-    check.is_truthy(type(ports.set_input_blocked) == "function", "should fill set_input_blocked")
-    check.is_truthy(type(ports.resolve_ui_gate) == "function", "should fill resolve_ui_gate")
-  end,
-  function()
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    -- 提供门控查询 override 时必须同时提供 resolve_ui_gate（防静默降级校验）
-    local custom_gate = { input_blocked = true }
-    local ports = {
-      get_ui_state = function() return "custom" end,
-      resolve_ui_gate = function() return custom_gate end,
-      is_input_blocked = function() return true end,
-    }
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    check.is_truthy(ports.get_ui_state() == "custom", "should not overwrite custom get_ui_state")
-    check.is_truthy(ports.is_input_blocked() == true, "should not overwrite custom is_input_blocked")
-    check.is_truthy(ports.resolve_ui_gate() == custom_gate, "should not overwrite custom resolve_ui_gate")
-    check.is_truthy(type(ports.is_popup_active) == "function", "should fill missing defaults")
-  end,
-  function()
-    -- turn 层默认实现不再读 state.ui.*：逐项查询一律派生自端口 resolve_ui_gate
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local gate = { input_blocked = true, choice_active = false, popup_active = true, popup_owner_index = 2 }
-    local ports = {
-      resolve_ui_gate = function() return gate end,
-    }
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = {}
-    check.is_truthy(ports.is_input_blocked(state) == true, "is_input_blocked should derive from resolve_ui_gate")
-    check.is_truthy(ports.is_choice_active(state) == false, "is_choice_active should derive from resolve_ui_gate")
-    check.is_truthy(ports.is_popup_active(state) == true, "is_popup_active should derive from resolve_ui_gate")
-    check.is_truthy(ports.get_popup_owner_index(state) == 2, "get_popup_owner_index should derive from resolve_ui_gate")
-  end,
-  function()
-    -- turn 层默认 set_input_blocked 不认识 state.ui 键名：惰性且不落写
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = { ui = { input_blocked = false } }
-    local changed = ports.set_input_blocked(state, true)
-    check.is_truthy(changed == false, "default set_input_blocked should report no change")
-    check.is_truthy(state.ui.input_blocked == false, "default set_input_blocked should not touch state.ui")
-  end,
-  function()
-    -- turn 层默认 resolve_ui_gate 不读 state.ui：返回全关惰性 gate
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = {
-      ui = {
-        input_blocked = true,
-        choice_active = false,
-        market_active = true,
-        popup_active = true,
-        popup_seq = 5,
-        popup_owner_index = 1,
-        popup_payload = { auto_close_seconds = 10 },
-      }
-    }
-    local gate = ports.resolve_ui_gate(state)
-    check.is_truthy(gate.input_blocked == false, "inert gate should keep input_blocked false")
-    check.is_truthy(gate.choice_active == false, "inert gate should keep choice_active false")
-    check.is_truthy(gate.market_active == false, "inert gate should keep market_active false")
-    check.is_truthy(gate.popup_active == false, "inert gate should keep popup_active false")
-    check.is_truthy(gate.popup_seq == nil, "inert gate should keep popup_seq nil")
-    check.is_truthy(gate.popup_owner_index == nil, "inert gate should keep popup_owner_index nil")
-    check.is_truthy(gate.popup_auto_close_seconds == nil, "inert gate should keep popup_auto_close_seconds nil")
-  end,
-  function()
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    check.is_truthy(ports.get_ui_state(nil) == nil, "get_ui_state should handle nil state")
-    check.is_truthy(ports.is_input_blocked(nil) == false, "is_input_blocked should handle nil state")
-    check.is_truthy(ports.is_choice_active(nil) == false, "is_choice_active should handle nil state")
-    check.is_truthy(ports.is_popup_active(nil) == false, "is_popup_active should handle nil state")
-    check.is_truthy(ports.get_popup_owner_index(nil) == nil, "get_popup_owner_index should handle nil state")
-    check.is_truthy(ports.set_input_blocked(nil, true) == false, "set_input_blocked should handle nil state")
-  end,
-  function()
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = { ui = nil }
-    check.is_truthy(ports.get_ui_state(state) == nil, "get_ui_state should handle nil ui")
-    check.is_truthy(ports.is_input_blocked(state) == false, "is_input_blocked should handle nil ui")
-    check.is_truthy(ports.set_input_blocked(state, true) == false, "set_input_blocked should handle nil ui")
-  end,
-  function()
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local gate = ports.resolve_ui_gate(nil)
-    check.is_truthy(gate.input_blocked == false, "gate should default input_blocked to false")
-    check.is_truthy(gate.choice_active == false, "gate should default choice_active to false")
-    check.is_truthy(gate.market_active == false, "gate should default market_active to false")
-    check.is_truthy(gate.popup_active == false, "gate should default popup_active to false")
-    check.is_truthy(gate.popup_seq == nil, "gate should default popup_seq to nil")
-    check.is_truthy(gate.popup_auto_close_seconds == nil, "gate should default popup_auto_close_seconds to nil")
-    check.is_truthy(gate.popup_owner_index == nil, "gate should default popup_owner_index to nil")
-  end,
-  function()
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = { ui = { input_blocked = false, popup_payload = nil } }
-    local gate = ports.resolve_ui_gate(state)
-    check.is_truthy(gate.popup_auto_close_seconds == nil, "gate should handle nil popup_payload")
-  end,
-}
-
-local _is_action_button_wait_active_more_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    ports.ui_sync.get_ui_state = nil
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == true, "should be active when get_ui_state is nil")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    ports.ui_sync.get_ui_state = function() return false end
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == false, "should not be active when get_ui_state returns false")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    game.turn.pending_choice = { id = 1 }
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == false, "should not be active when pending_choice exists")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    ports.ui_sync.is_choice_active = function() return true end
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == false, "should not be active when choice is active")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    ports.ui_sync.is_market_active = function() return true end
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == true, "market active should NOT block action_button (gentle deadline lets timer keep running)")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    ports.ui_sync.is_popup_active = function() return true end
-    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    check.is_truthy(result == false, "should not be active when popup is active")
-  end,
-}
-
-local _update_countdown_more_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local original_timeout = require("src.config.content.constants").action_timeout_seconds
-    require("src.config.content.constants").action_timeout_seconds = 10
-
-    game.turn.pending_choice = { id = 1, kind = "test" }
-    state.countdown_last = nil
-    state.countdown_active_last = nil
-
-    local original_get_pending_choice = runtime_state.get_pending_choice
-    local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
-    runtime_state.get_pending_choice = function() return game.turn.pending_choice end
-    runtime_state.get_pending_choice_elapsed = function() return 3 end
-
-    tick_ui_sync.update_countdown(game, state)
-
-    runtime_state.get_pending_choice = original_get_pending_choice
-    runtime_state.get_pending_choice_elapsed = original_get_pending_choice_elapsed
-    require("src.config.content.constants").action_timeout_seconds = original_timeout
-
-    check.is_truthy(game.turn.countdown_seconds ~= nil, "should set countdown_seconds")
-    check.is_truthy(game.turn.countdown_active == true, "should set countdown_active")
-  end,
-}
-
-local _is_action_button_wait_active_final_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-
-    check.is_truthy(turn_timer_policy.is_action_button_wait_active(nil, state, ports) == false, "nil game should return false")
-    check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, nil, ports) == false, "nil state should return false")
-    check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, nil) == false, "nil ports should return false")
-
-    game.finished = true
-    check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == false, "finished game should return false")
-    game.finished = false
-
-    ports.ui_sync.is_input_blocked = function() return true end
-    check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == false, "blocked input should return false")
-    ports.ui_sync.is_input_blocked = function() return false end
-
-    check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == true, "normal case should return true")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    ports.ui_sync.get_ui_state = function() return nil end
-
-    check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == false, "nil ui_state should return false")
-  end,
-}
-
-local _update_countdown_final_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-
-    game.turn.detained_wait_active = true
-    game.turn.detained_wait_seconds = 10
-    game.turn.detained_wait_elapsed = 5
-    tick_ui_sync.update_countdown(game, state)
-    check.is_truthy(game.turn.countdown_active == true, "detained wait should be active")
-    check.is_truthy(game.turn.countdown_seconds == 5, "countdown should be remaining seconds")
-
-    game.turn.detained_wait_active = false
-    state.countdown_last = nil
-    state.countdown_active_last = nil
-
-    local constants = require("src.config.content.constants")
-    local original_timeout = constants.action_timeout_seconds
-    constants.action_timeout_seconds = 10
-
-    local modal_gate_calls = 0
-    local tick_ui_gate = require("src.turn.waits.ui_gate")
-    local original_resolve_ui_gate = tick_ui_gate.resolve_ui_gate
-    tick_ui_gate.resolve_ui_gate = function()
-      modal_gate_calls = modal_gate_calls + 1
-      return { popup_active = true }
-    end
-
-    tick_ui_sync.update_countdown(game, state)
-
-    tick_ui_gate.resolve_ui_gate = original_resolve_ui_gate
-    constants.action_timeout_seconds = original_timeout
-
-    check.is_truthy(modal_gate_calls >= 1, "popup branch should query modal_gate")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-
-    state.action_button_active = true
-    state.action_button_elapsed = 3
-
-    local constants = require("src.config.content.constants")
-    local original_timeout = constants.action_timeout_seconds
-    constants.action_timeout_seconds = 10
-
-    tick_ui_sync.update_countdown(game, state)
-
-    constants.action_timeout_seconds = original_timeout
-
-    check.is_truthy(game.turn.countdown_active == true, "action button should be active")
-  end,
-}
-
 -- CRAP coverage tests for action_anim_wait._coalesce_head
 local _coalesce_head = action_anim_wait._coalesce_head
 
@@ -652,23 +99,152 @@ it("test_empty_queue_noop", function()
   _crap_assert_eq(#queue, 0, "empty queue should remain empty")
 end)
 
-it("test_fill_ui_sync_defaults_fills_all", function() _fill_ui_sync_defaults_tests[1]() end)
+it("test_fill_ui_sync_defaults_fills_all", function()
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local ports = {}
+  for k, v in pairs(base) do
+    ports[k] = v
+  end
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  check.is_truthy(type(ports.get_ui_state) == "function", "should fill get_ui_state")
+  check.is_truthy(type(ports.is_input_blocked) == "function", "should fill is_input_blocked")
+  check.is_truthy(type(ports.is_popup_active) == "function", "should fill is_popup_active")
+  check.is_truthy(type(ports.is_choice_active) == "function", "should fill is_choice_active")
+  check.is_truthy(type(ports.get_popup_owner_index) == "function", "should fill get_popup_owner_index")
+  check.is_truthy(type(ports.set_input_blocked) == "function", "should fill set_input_blocked")
+  check.is_truthy(type(ports.resolve_ui_gate) == "function", "should fill resolve_ui_gate")
+end)
 
-it("test_fill_ui_sync_defaults_gate_nil_popup", function() _fill_ui_sync_defaults_tests[9]() end)
+it("test_fill_ui_sync_defaults_gate_nil_popup", function()
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local ports = {}
+  for k, v in pairs(base) do
+    ports[k] = v
+  end
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  local state = { ui = { input_blocked = false, popup_payload = nil } }
+  local gate = ports.resolve_ui_gate(state)
+  check.is_truthy(gate.popup_auto_close_seconds == nil, "gate should handle nil popup_payload")
+end)
 
-it("test_fill_ui_sync_defaults_gate_nil_state", function() _fill_ui_sync_defaults_tests[8]() end)
+it("test_fill_ui_sync_defaults_gate_nil_state", function()
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local ports = {}
+  for k, v in pairs(base) do
+    ports[k] = v
+  end
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  local gate = ports.resolve_ui_gate(nil)
+  check.is_truthy(gate.input_blocked == false, "gate should default input_blocked to false")
+  check.is_truthy(gate.choice_active == false, "gate should default choice_active to false")
+  check.is_truthy(gate.market_active == false, "gate should default market_active to false")
+  check.is_truthy(gate.popup_active == false, "gate should default popup_active to false")
+  check.is_truthy(gate.popup_seq == nil, "gate should default popup_seq to nil")
+  check.is_truthy(gate.popup_auto_close_seconds == nil, "gate should default popup_auto_close_seconds to nil")
+  check.is_truthy(gate.popup_owner_index == nil, "gate should default popup_owner_index to nil")
+end)
 
-it("test_fill_ui_sync_defaults_implementations", function() _fill_ui_sync_defaults_tests[3]() end)
+it("test_fill_ui_sync_defaults_implementations", function()
+  -- turn 层默认实现不再读 state.ui.*：逐项查询一律派生自端口 resolve_ui_gate
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local gate = { input_blocked = true, choice_active = false, popup_active = true, popup_owner_index = 2 }
+  local ports = {
+    resolve_ui_gate = function() return gate end,
+  }
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  local state = {}
+  check.is_truthy(ports.is_input_blocked(state) == true, "is_input_blocked should derive from resolve_ui_gate")
+  check.is_truthy(ports.is_choice_active(state) == false, "is_choice_active should derive from resolve_ui_gate")
+  check.is_truthy(ports.is_popup_active(state) == true, "is_popup_active should derive from resolve_ui_gate")
+  check.is_truthy(ports.get_popup_owner_index(state) == 2, "get_popup_owner_index should derive from resolve_ui_gate")
+end)
 
-it("test_fill_ui_sync_defaults_nil_state", function() _fill_ui_sync_defaults_tests[6]() end)
+it("test_fill_ui_sync_defaults_nil_state", function()
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local ports = {}
+  for k, v in pairs(base) do
+    ports[k] = v
+  end
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  check.is_truthy(ports.get_ui_state(nil) == nil, "get_ui_state should handle nil state")
+  check.is_truthy(ports.is_input_blocked(nil) == false, "is_input_blocked should handle nil state")
+  check.is_truthy(ports.is_choice_active(nil) == false, "is_choice_active should handle nil state")
+  check.is_truthy(ports.is_popup_active(nil) == false, "is_popup_active should handle nil state")
+  check.is_truthy(ports.get_popup_owner_index(nil) == nil, "get_popup_owner_index should handle nil state")
+  check.is_truthy(ports.set_input_blocked(nil, true) == false, "set_input_blocked should handle nil state")
+end)
 
-it("test_fill_ui_sync_defaults_nil_ui", function() _fill_ui_sync_defaults_tests[7]() end)
+it("test_fill_ui_sync_defaults_nil_ui", function()
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local ports = {}
+  for k, v in pairs(base) do
+    ports[k] = v
+  end
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  local state = { ui = nil }
+  check.is_truthy(ports.get_ui_state(state) == nil, "get_ui_state should handle nil ui")
+  check.is_truthy(ports.is_input_blocked(state) == false, "is_input_blocked should handle nil ui")
+  check.is_truthy(ports.set_input_blocked(state, true) == false, "set_input_blocked should handle nil ui")
+end)
 
-it("test_fill_ui_sync_defaults_preserves_custom", function() _fill_ui_sync_defaults_tests[2]() end)
+it("test_fill_ui_sync_defaults_preserves_custom", function()
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  -- 提供门控查询 override 时必须同时提供 resolve_ui_gate（防静默降级校验）
+  local custom_gate = { input_blocked = true }
+  local ports = {
+    get_ui_state = function() return "custom" end,
+    resolve_ui_gate = function() return custom_gate end,
+    is_input_blocked = function() return true end,
+  }
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  check.is_truthy(ports.get_ui_state() == "custom", "should not overwrite custom get_ui_state")
+  check.is_truthy(ports.is_input_blocked() == true, "should not overwrite custom is_input_blocked")
+  check.is_truthy(ports.resolve_ui_gate() == custom_gate, "should not overwrite custom resolve_ui_gate")
+  check.is_truthy(type(ports.is_popup_active) == "function", "should fill missing defaults")
+end)
 
-it("test_fill_ui_sync_defaults_resolve_ui_gate", function() _fill_ui_sync_defaults_tests[5]() end)
+it("test_fill_ui_sync_defaults_resolve_ui_gate", function()
+  -- turn 层默认 resolve_ui_gate 不读 state.ui：返回全关惰性 gate
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local ports = {}
+  for k, v in pairs(base) do
+    ports[k] = v
+  end
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  local state = {
+    ui = {
+      input_blocked = true,
+      choice_active = false,
+      market_active = true,
+      popup_active = true,
+      popup_seq = 5,
+      popup_owner_index = 1,
+      popup_payload = { auto_close_seconds = 10 },
+    }
+  }
+  local gate = ports.resolve_ui_gate(state)
+  check.is_truthy(gate.input_blocked == false, "inert gate should keep input_blocked false")
+  check.is_truthy(gate.choice_active == false, "inert gate should keep choice_active false")
+  check.is_truthy(gate.market_active == false, "inert gate should keep market_active false")
+  check.is_truthy(gate.popup_active == false, "inert gate should keep popup_active false")
+  check.is_truthy(gate.popup_seq == nil, "inert gate should keep popup_seq nil")
+  check.is_truthy(gate.popup_owner_index == nil, "inert gate should keep popup_owner_index nil")
+  check.is_truthy(gate.popup_auto_close_seconds == nil, "inert gate should keep popup_auto_close_seconds nil")
+end)
 
-it("test_fill_ui_sync_defaults_set_input_blocked", function() _fill_ui_sync_defaults_tests[4]() end)
+it("test_fill_ui_sync_defaults_set_input_blocked", function()
+  -- turn 层默认 set_input_blocked 不认识 state.ui 键名：惰性且不落写
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+  local ports = {}
+  for k, v in pairs(base) do
+    ports[k] = v
+  end
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  local state = { ui = { input_blocked = false } }
+  local changed = ports.set_input_blocked(state, true)
+  check.is_truthy(changed == false, "default set_input_blocked should report no change")
+  check.is_truthy(state.ui.input_blocked == false, "default set_input_blocked should not touch state.ui")
+end)
 
 it("test_head_not_cash_receive_noop", function()
   local queue = {
@@ -681,53 +257,226 @@ it("test_head_not_cash_receive_noop", function()
   _crap_assert_eq(queue[2].amount, 5, "second entry should remain unchanged")
 end)
 
-it("test_is_action_button_all_early_returns", function() _is_action_button_wait_active_final_tests[1]() end)
+it("test_is_action_button_all_early_returns", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
 
-it("test_is_action_button_nil_ui_state", function() _is_action_button_wait_active_final_tests[2]() end)
+  check.is_truthy(turn_timer_policy.is_action_button_wait_active(nil, state, ports) == false, "nil game should return false")
+  check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, nil, ports) == false, "nil state should return false")
+  check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, nil) == false, "nil ports should return false")
 
-it("test_is_action_button_wait_active_blocked", function() _is_action_button_wait_active_tests[3]() end)
+  game.finished = true
+  check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == false, "finished game should return false")
+  game.finished = false
 
-it("test_is_action_button_wait_active_choice_active", function() _is_action_button_wait_active_extended_tests[2]() end)
+  ports.ui_sync.is_input_blocked = function() return true end
+  check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == false, "blocked input should return false")
+  ports.ui_sync.is_input_blocked = function() return false end
 
-it("test_is_action_button_wait_active_choice_ui_active", function() _is_action_button_wait_active_more_tests[4]() end)
+  check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == true, "normal case should return true")
+end)
 
-it("test_is_action_button_wait_active_falsy_ui", function() _is_action_button_wait_active_more_tests[2]() end)
+it("test_is_action_button_nil_ui_state", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  ports.ui_sync.get_ui_state = function() return nil end
 
-it("test_is_action_button_wait_active_finished", function() _is_action_button_wait_active_tests[2]() end)
+  check.is_truthy(turn_timer_policy.is_action_button_wait_active(game, state, ports) == false, "nil ui_state should return false")
+end)
 
-it("test_is_action_button_wait_active_finished_ext", function() _is_action_button_wait_active_extended_tests[11]() end)
+it("test_is_action_button_wait_active_blocked", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  state.ui = { input_blocked = true }
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == false, "should not be active when input is blocked")
+end)
 
-it("test_is_action_button_wait_active_input_blocked", function() _is_action_button_wait_active_extended_tests[12]() end)
+it("test_is_action_button_wait_active_choice_active", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  state.ui = { choice_active = true }
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == false, "should not be active when choice is active")
+end)
 
-it("test_is_action_button_wait_active_market_active", function() _is_action_button_wait_active_extended_tests[3]() end)
+it("test_is_action_button_wait_active_choice_ui_active", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  ports.ui_sync.is_choice_active = function() return true end
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == false, "should not be active when choice is active")
+end)
 
-it("test_is_action_button_wait_active_market_ui_active", function() _is_action_button_wait_active_more_tests[5]() end)
+it("test_is_action_button_wait_active_falsy_ui", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  ports.ui_sync.get_ui_state = function() return false end
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == false, "should not be active when get_ui_state returns false")
+end)
 
-it("test_is_action_button_wait_active_nil_game", function() _is_action_button_wait_active_extended_tests[5]() end)
+it("test_is_action_button_wait_active_finished", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  game.finished = true
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == false, "should not be active when game is finished")
+end)
 
-it("test_is_action_button_wait_active_nil_get_ui", function() _is_action_button_wait_active_extended_tests[8]() end)
+it("test_is_action_button_wait_active_finished_ext", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  g.finished = true
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == false, "should not be active when game is finished")
+end)
 
-it("test_is_action_button_wait_active_nil_get_ui_state", function() _is_action_button_wait_active_more_tests[1]() end)
+it("test_is_action_button_wait_active_input_blocked", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  state.ui = { input_blocked = true }
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == false, "should not be active when input is blocked")
+end)
 
-it("test_is_action_button_wait_active_nil_ports", function() _is_action_button_wait_active_extended_tests[7]() end)
+it("test_is_action_button_wait_active_market_active", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  state.ui = { market_active = true }
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == true, "market active should NOT block action_button (gentle deadline lets timer keep running)")
+end)
 
-it("test_is_action_button_wait_active_nil_state", function() _is_action_button_wait_active_extended_tests[6]() end)
+it("test_is_action_button_wait_active_market_ui_active", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  ports.ui_sync.is_market_active = function() return true end
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == true, "market active should NOT block action_button (gentle deadline lets timer keep running)")
+end)
 
-it("test_is_action_button_wait_active_nil_turn", function() _is_action_button_wait_active_extended_tests[13]() end)
+it("test_is_action_button_wait_active_nil_game", function()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  local result = turn_timer_policy.is_action_button_wait_active(nil, state, ports)
+  check.is_truthy(result == false, "should return false with nil game")
+end)
 
-it("test_is_action_button_wait_active_nil_ui_state", function() _is_action_button_wait_active_extended_tests[9]() end)
+it("test_is_action_button_wait_active_nil_get_ui", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports({
+    get_ui_state = nil
+  })
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == true, "should be active when get_ui_state is nil")
+end)
 
-it("test_is_action_button_wait_active_normal", function() _is_action_button_wait_active_tests[1]() end)
+it("test_is_action_button_wait_active_nil_get_ui_state", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  ports.ui_sync.get_ui_state = nil
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == true, "should be active when get_ui_state is nil")
+end)
 
-it("test_is_action_button_wait_active_normal_ext", function() _is_action_button_wait_active_extended_tests[10]() end)
+it("test_is_action_button_wait_active_nil_ports", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, nil)
+  check.is_truthy(result == false, "should return false with nil ports")
+end)
 
-it("test_is_action_button_wait_active_pending_choice", function() _is_action_button_wait_active_extended_tests[1]() end)
+it("test_is_action_button_wait_active_nil_state", function()
+  local g = _new_game()
+  local ports = _build_test_ports()
+  local result = turn_timer_policy.is_action_button_wait_active(g, nil, ports)
+  check.is_truthy(result == false, "should return false with nil state")
+end)
 
-it("test_is_action_button_wait_active_pending_choice_more", function() _is_action_button_wait_active_more_tests[3]() end)
+it("test_is_action_button_wait_active_nil_turn", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  g.turn = nil
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == true, "should handle nil turn (no pending_choice check)")
+end)
 
-it("test_is_action_button_wait_active_popup_active", function() _is_action_button_wait_active_extended_tests[4]() end)
+it("test_is_action_button_wait_active_nil_ui_state", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports({
+    get_ui_state = function() return nil end
+  })
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == false, "should return false when get_ui_state returns nil")
+end)
 
-it("test_is_action_button_wait_active_popup_ui_active", function() _is_action_button_wait_active_more_tests[6]() end)
+it("test_is_action_button_wait_active_normal", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == true, "should be active when no blocking UI and game not finished")
+end)
+
+it("test_is_action_button_wait_active_normal_ext", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == true, "should be active when all conditions are normal")
+end)
+
+it("test_is_action_button_wait_active_pending_choice", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  g.turn.pending_choice = { id = 1 }
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == false, "should not be active when pending_choice exists")
+end)
+
+it("test_is_action_button_wait_active_pending_choice_more", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  game.turn.pending_choice = { id = 1 }
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == false, "should not be active when pending_choice exists")
+end)
+
+it("test_is_action_button_wait_active_popup_active", function()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  state.ui = { popup_active = true }
+  local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
+  check.is_truthy(result == false, "should not be active when popup is active")
+end)
+
+it("test_is_action_button_wait_active_popup_ui_active", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local ports = _build_test_ports()
+  ports.ui_sync.is_popup_active = function() return true end
+  local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  check.is_truthy(result == false, "should not be active when popup is active")
+end)
 
 it("test_nil_amount_treated_as_zero", function()
   local queue = {
@@ -793,39 +542,208 @@ it("test_two_cash_receive_merge", function()
   _crap_assert_eq(queue[1].coalesced_count, 2, "merged coalesced_count should be 2")
 end)
 
-it("test_update_countdown_action_button", function() _update_countdown_tests[2]() end)
+it("test_update_countdown_action_button", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  state.action_button_active = true
+  state.action_button_elapsed = 1
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should set countdown active for action button")
+end)
 
-it("test_update_countdown_action_button_ext", function() _update_countdown_extended_tests[9]() end)
+it("test_update_countdown_action_button_ext", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  state.action_button_active = true
+  state.action_button_elapsed = 2
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should be active for action button")
+end)
 
-it("test_update_countdown_action_button_final", function() _update_countdown_final_tests[2]() end)
+it("test_update_countdown_action_button_final", function()
+  local game = _new_game()
+  local state = _build_loop_state()
 
-it("test_update_countdown_caching", function() _update_countdown_extended_tests[10]() end)
+  state.action_button_active = true
+  state.action_button_elapsed = 3
 
-it("test_update_countdown_choice_active", function() _update_countdown_extended_tests[4]() end)
+  local original_timeout = constants.action_timeout_seconds
+  constants.action_timeout_seconds = 10
 
-it("test_update_countdown_choice_gate", function() _update_countdown_more_tests[1]() end)
+  tick_ui_sync.update_countdown(game, state)
 
-it("test_update_countdown_detained_and_popup", function() _update_countdown_final_tests[1]() end)
+  constants.action_timeout_seconds = original_timeout
 
-it("test_update_countdown_detained_calc", function() _update_countdown_extended_tests[8]() end)
+  check.is_truthy(game.turn.countdown_active == true, "action button should be active")
+end)
 
-it("test_update_countdown_detained_wait", function() _update_countdown_tests[1]() end)
+it("test_update_countdown_caching", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.pending_choice = { id = 1, kind = "test" }
+  tick_ui_sync.update_countdown(game, state)
+  local first_countdown = game.turn.countdown_seconds
+  game.dirty.turn_countdown = nil
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_seconds == first_countdown, "countdown should remain same")
+end)
 
-it("test_update_countdown_market_active", function() _update_countdown_extended_tests[5]() end)
+it("test_update_countdown_choice_active", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.pending_choice = { id = 1, kind = "test" }
+  state.ui = { choice_active = true, market_active = false }
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should be active with choice_active")
+end)
 
-it("test_update_countdown_negative_elapsed", function() _update_countdown_extended_tests[7]() end)
+it("test_update_countdown_choice_gate", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  local original_timeout = require("src.config.content.constants").action_timeout_seconds
+  require("src.config.content.constants").action_timeout_seconds = 10
 
-it("test_update_countdown_nil_elapsed", function() _update_countdown_extended_tests[11]() end)
+  game.turn.pending_choice = { id = 1, kind = "test" }
+  state.countdown_last = nil
+  state.countdown_active_last = nil
 
-it("test_update_countdown_nil_turn", function() _update_countdown_extended_tests[3]() end)
+  local original_get_pending_choice = runtime_state.get_pending_choice
+  local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
+  runtime_state.get_pending_choice = function() return game.turn.pending_choice end
+  runtime_state.get_pending_choice_elapsed = function() return 3 end
 
-it("test_update_countdown_pending_choice", function() _update_countdown_extended_tests[1]() end)
+  tick_ui_sync.update_countdown(game, state)
 
-it("test_update_countdown_popup", function() _update_countdown_extended_tests[2]() end)
+  runtime_state.get_pending_choice = original_get_pending_choice
+  runtime_state.get_pending_choice_elapsed = original_get_pending_choice_elapsed
+  require("src.config.content.constants").action_timeout_seconds = original_timeout
 
-it("test_update_countdown_with_elapsed", function() _update_countdown_extended_tests[6]() end)
+  check.is_truthy(game.turn.countdown_seconds ~= nil, "should set countdown_seconds")
+  check.is_truthy(game.turn.countdown_active == true, "should set countdown_active")
+end)
 
-it("test_update_countdown_zero_popup_timeout", function() _update_countdown_extended_tests[12]() end)
+it("test_update_countdown_detained_and_popup", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+
+  game.turn.detained_wait_active = true
+  game.turn.detained_wait_seconds = 10
+  game.turn.detained_wait_elapsed = 5
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "detained wait should be active")
+  check.is_truthy(game.turn.countdown_seconds == 5, "countdown should be remaining seconds")
+
+  game.turn.detained_wait_active = false
+  state.countdown_last = nil
+  state.countdown_active_last = nil
+
+  local original_timeout = constants.action_timeout_seconds
+  constants.action_timeout_seconds = 10
+
+  local original_resolve_ui_gate = tick_ui_gate.resolve_ui_gate
+  tick_ui_gate.resolve_ui_gate = function()
+    return { popup_active = true }
+  end
+
+  tick_ui_sync.update_countdown(game, state)
+
+  tick_ui_gate.resolve_ui_gate = original_resolve_ui_gate
+  constants.action_timeout_seconds = original_timeout
+
+  check.is_truthy(game.turn.countdown_active == true, "popup gate should keep the modal countdown active")
+end)
+
+it("test_update_countdown_detained_calc", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.detained_wait_active = true
+  game.turn.detained_wait_seconds = 10
+  game.turn.detained_wait_elapsed = 3
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_seconds == 7, "should calculate remaining detained wait")
+  check.is_truthy(game.turn.countdown_active == true, "should be active for detained wait")
+end)
+
+it("test_update_countdown_detained_wait", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.detained_wait_active = true
+  game.turn.detained_wait_seconds = 5
+  game.turn.detained_wait_elapsed = 2
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_seconds == 3, "should calculate remaining detained wait seconds")
+  check.is_truthy(game.turn.countdown_active == true, "should set countdown active for detained wait")
+end)
+
+it("test_update_countdown_market_active", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.pending_choice = { id = 1, kind = "market_buy" }
+  state.ui = { choice_active = false, market_active = true }
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should be active with market_active")
+end)
+
+it("test_update_countdown_negative_elapsed", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.pending_choice = { id = 1, kind = "test" }
+  state.pending_choice_elapsed = -5
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should be active with negative elapsed")
+end)
+
+it("test_update_countdown_nil_elapsed", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.pending_choice = { id = 1, kind = "test" }
+  state.pending_choice_elapsed = nil
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should handle nil elapsed")
+end)
+
+it("test_update_countdown_nil_turn", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn = nil
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn == nil, "nil turn should remain nil (no mutation)")
+end)
+
+it("test_update_countdown_pending_choice", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.pending_choice = { id = 1, kind = "test" }
+  state.action_button_active = false
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should set countdown active for pending choice")
+end)
+
+it("test_update_countdown_popup", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  state.ui = { popup_active = true, popup_payload = { auto_close_seconds = 10 } }
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should set countdown active for popup")
+end)
+
+it("test_update_countdown_with_elapsed", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  game.turn.pending_choice = { id = 1, kind = "test" }
+  state.pending_choice_elapsed = 5
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == true, "should be active")
+  check.is_truthy(game.turn.countdown_seconds ~= nil, "should set countdown_seconds")
+end)
+
+it("test_update_countdown_zero_popup_timeout", function()
+  local game = _new_game()
+  local state = _build_loop_state()
+  state.ui = { popup_active = true, popup_payload = { auto_close_seconds = 0 } }
+  tick_ui_sync.update_countdown(game, state)
+  check.is_truthy(game.turn.countdown_active == false or game.turn.countdown_active == true, "should handle zero popup timeout")
+end)
 
 
 end)
