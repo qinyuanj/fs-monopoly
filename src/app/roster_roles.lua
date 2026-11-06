@@ -26,14 +26,6 @@ local function _unit_key_pool()
   return pool
 end
 
-local function _clamp_limit(count, pool)
-  local limit = count
-  if limit > #pool then
-    limit = #pool
-  end
-  return limit
-end
-
 -- Fisher-Yates 单步:把 index 处与随机位交换,返回交换后的 index 位值。
 local function _shuffle_pick(pool, index)
   local pick_index = GameAPI.random_int(index, #pool)
@@ -45,12 +37,8 @@ end
 
 local function _pick_synthetic_unit_keys(count)
   local selected = {}
-  if count == nil or count <= 0 then
-    return selected
-  end
   local pool = _unit_key_pool()
-  local limit = _clamp_limit(count, pool)
-  for index = 1, limit do
+  for index = 1, math.min(count, #pool) do
     selected[index] = _shuffle_pick(pool, index)
   end
   return selected
@@ -105,8 +93,8 @@ local function _build_synthetic_role(slot_index, unit_key)
   }
 end
 
-local function _add_synthetic_roles_to_roster(roster, max_players, selected_unit_keys)
-  local missing_count = max_players and (max_players - #roster) or 0
+-- 缺座数只在 build_startup_roster 算一次,抽 unit key 与补座共用同一个数。
+local function _add_synthetic_roles_to_roster(roster, missing_count, selected_unit_keys)
   for index = 1, missing_count do
     local slot_index = #roster + 1
     roster[slot_index] = _build_synthetic_role(slot_index, selected_unit_keys[index])
@@ -132,7 +120,7 @@ function M.build_startup_roster(max_players)
   roster = _add_real_roles_to_roster(roster, roles, max_players)
   local missing_count = max_players and (max_players - #roster) or 0
   local selected_unit_keys = _pick_synthetic_unit_keys(missing_count)
-  roster = _add_synthetic_roles_to_roster(roster, max_players, selected_unit_keys)
+  roster = _add_synthetic_roles_to_roster(roster, missing_count, selected_unit_keys)
   _warn_if_roles_truncated(#roles, max_players)
   return roster
 end
