@@ -317,4 +317,29 @@ describe("verify public output and lane plan", function()
   it("slim_plan_has_exactly_the_retained_lanes", slim_plan_has_exactly_the_retained_lanes)
   it("evidence_dir_is_forwarded_to_spec_lane_lanes", evidence_dir_is_forwarded_to_spec_lane_lanes)
   it("evidence_write_preserves_lane_output_and_report", evidence_write_preserves_lane_output_and_report)
+  it("untracked_tests_become_one_warning_naming_the_paths", function()
+    local plan = verify_full._resolve_lanes({
+      env = { lua54_bin = "lua5.4" },
+      untracked_tests = { "test/behavior/debug_rt01/test_a.lua", "test/guards/test_new.lua" },
+    })
+    check.equal(1, #plan.warnings)
+    check.truthy(plan.warnings[1]:find("2 个未跟踪文件", 1, true), plan.warnings[1])
+    check.truthy(plan.warnings[1]:find("test/behavior/debug_rt01/test_a.lua, test/guards/test_new.lua", 1, true), plan.warnings[1])
+  end)
+  it("untracked_tests_warning_caps_the_listing_and_keeps_the_total", function()
+    local paths = {}
+    for index = 1, 12 do
+      paths[index] = "test/behavior/test_" .. index .. ".lua"
+    end
+    local plan = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" }, untracked_tests = paths })
+    check.equal(1, #plan.warnings)
+    check.truthy(plan.warnings[1]:find("12 个未跟踪文件", 1, true), plan.warnings[1])
+    check.truthy(plan.warnings[1]:find("test_10.lua", 1, true), plan.warnings[1])
+    check.is_nil(plan.warnings[1]:find("test_11.lua", 1, true), plan.warnings[1])
+    check.truthy(plan.warnings[1]:find("另有 2 个", 1, true), plan.warnings[1])
+  end)
+  it("no_untracked_tests_means_no_warning", function()
+    local plan = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" }, untracked_tests = {} })
+    check.same({}, plan.warnings)
+  end)
 end)

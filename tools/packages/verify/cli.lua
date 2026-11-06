@@ -57,6 +57,7 @@ function M.usage()
     "    (400 seeds;MONOPOLY_FUZZ_SEEDS 可放大做 soak,FUZZ_ONLY_SEED=<n> 单 seed 复放)。",
     "  - 红车道 → 看 `[verify] FAIL <lane>` 行,按 lane 名下钻",
     "    (spec-lane --profile <目录> 或单文件)。",
+    "  - 开头的 `[verify] warning:` 列出 test/ 下未跟踪文件(会进车道),只提示,不影响退出码。",
     "",
     "pipeline 不包含(按需走单工具):uml crap / uml mutate / dry;",
     "dry 是软车道,由邻接 .uml-viewer/dryer 的 POSIX venv 承接;tooling 中相关探针实际执行。",

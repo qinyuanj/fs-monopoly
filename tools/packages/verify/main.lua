@@ -18,6 +18,12 @@ local function _resolve_lua54()
   return interpreter.detect_lua54()
 end
 
+-- 只为提示:git 不可用时按没有未跟踪文件处理,不走不可用退 3。
+local function _untracked_tests()
+  local git_query = require("test.guards.lib.git_query")
+  return git_query.split_lines(git_query.run_git({ "ls-files", "--others", "--exclude-standard", "test" }))
+end
+
 local function _main(opts)
   opts = opts or {}
   local started = os.time()
@@ -30,6 +36,7 @@ local function _main(opts)
     serial = opts.serial,
     env = env,
     evidence_dir = opts.evidence_dir,
+    untracked_tests = _untracked_tests(),
   })
 
   for _, w in ipairs(plan.warnings) do
