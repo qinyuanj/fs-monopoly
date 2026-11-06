@@ -25,6 +25,9 @@ function M.usage()
     "零参数、零开关;任何多余参数 → ERROR + exit 1(deploy.lua 自身 CLI 面不变)。",
     "在 WSL Ubuntu 中运行(ADR 0073):目标经 cmd.exe 取 %USERPROFILE% 再按 wslpath 换算;",
     "没有 cmd.exe / wslpath 时退 3(status=unavailable,环境问题不是部署失败)。",
+    "目标路径: <家目录>/Desktop/dev/eggy/LuaSource_大富翁;家目录即 %USERPROFILE%,",
+    "设了 MONOPOLY_DEPLOY_HOME 时以它为准(测试与沙箱用)。",
+    "要看实际路径或比对部署目录,跑只读的 `lua5.4 tools/cli.lua deploy-diff`,不要全盘 find。",
     "行为真源见 tools/packages/ops/deploy.lua。",
     "",
   }, "\n") .. "\n"

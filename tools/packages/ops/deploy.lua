@@ -111,6 +111,7 @@ end
 -- 部署 payload(与 main 的拷贝清单一致)。部署按工作树原样拷贝,真机插桩靠的正是这一点,
 -- 所以未提交改动只提示、不拦截:避免把半成品当成已提交版本做真机验证。
 local _PAYLOAD_PATHS = { "src", "main.lua", "Data/UIManagerNodes.lua", "Data/Prefab.lua" }
+M.PAYLOAD_PATHS = _PAYLOAD_PATHS
 local _UNCOMMITTED_NOTICE_LIMIT = 10
 
 -- 返回 payload 内未提交路径。用 -z:路径不加引号转义(空格、中文原样),条目以 NUL 分隔;
@@ -186,14 +187,18 @@ function M.join_lua_source_dir_name()
   return "LuaSource_" .. string.char(0xE5, 0xA4, 0xA7, 0xE5, 0xAF, 0x8C, 0xE7, 0xBF, 0x81)
 end
 
+function M.target_path_for_home(home_dir)
+  return M.resolve_normalized_path(
+    path_lib.join_path(home_dir, "Desktop", "dev", "eggy", M.join_lua_source_dir_name())
+  )
+end
+
 function M.resolve_default_target_path()
   local home_dir = M.resolve_home_dir()
   if text_lib.trim(home_dir) == "" then
     M.exit_with_error("Cannot resolve the Windows home directory (%USERPROFILE%) for the default deploy target.")
   end
-  return M.resolve_normalized_path(
-    path_lib.join_path(home_dir, "Desktop", "dev", "eggy", M.join_lua_source_dir_name())
-  )
+  return M.target_path_for_home(home_dir)
 end
 
 function M.test_project_root(path_text)
@@ -243,6 +248,19 @@ end
 
 function M.copy_file_with_parent_dir(source_path, target_path)
   return _check(fs_lib.copy_file(source_path, target_path))
+end
+
+-- 拷贝清单唯一真源是 PAYLOAD_PATHS:deploy-diff 按同一张表比对,两边不会各记一份。
+function M.copy_payload(project_root, target_path)
+  for _, relative_path in ipairs(_PAYLOAD_PATHS) do
+    local source = path_lib.join_path(project_root, relative_path)
+    local target = path_lib.join_path(target_path, relative_path)
+    if fs_lib.is_dir(source) then
+      M.copy_directory_tree(source, target)
+    else
+      M.copy_file_with_parent_dir(source, target)
+    end
+  end
 end
 
 -- 统计函数。
@@ -343,16 +361,7 @@ local function main()
     M.write_info(line)
   end
 
-  M.copy_directory_tree(path_lib.join_path(project_root, "src"), path_lib.join_path(target_path, "src"))
-  M.copy_file_with_parent_dir(path_lib.join_path(project_root, "main.lua"), path_lib.join_path(target_path, "main.lua"))
-  M.copy_file_with_parent_dir(
-    path_lib.join_path(project_root, "Data/UIManagerNodes.lua"),
-    path_lib.join_path(target_path, "Data/UIManagerNodes.lua")
-  )
-  M.copy_file_with_parent_dir(
-    path_lib.join_path(project_root, "Data/Prefab.lua"),
-    path_lib.join_path(target_path, "Data/Prefab.lua")
-  )
+  M.copy_payload(project_root, target_path)
 
   -- 统计读本地源侧:拷贝是 as-is,文件与有效行数量等价。
   local total_files =

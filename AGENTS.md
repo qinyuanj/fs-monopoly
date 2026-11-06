@@ -17,7 +17,7 @@
 | 产品行为或配置 | `src/config/**`、对应 `src/**` 与 `test/behavior/**` |
 | 工具行为、CLI、PATH/env/subprocess 或工具契约 | `lua5.4 tools/cli.lua <子命令> --help` 与对应 `tools/**/test/**`；包内有 `CONTRACT.md` 时一并读（如 `tools/packages/uml_quality/CONTRACT.md`） |
 | 宿主接口或真机行为 | `EggyAPI.lua` / `EggyEditorAPI.lua` 仅作第三方线索；当前适配器、对应测试与 [`docs/decisions.md`](docs/decisions.md) 才是项目真源 |
-| 部署 | `tools/packages/ops/deploy.lua`、`tools/packages/ops/test/` 与 `lua5.4 tools/cli.lua deploy --help` |
+| 部署 | `tools/packages/ops/deploy.lua`、`tools/packages/ops/test/` 与 `lua5.4 tools/cli.lua deploy --help`；真机验收后、提交前跑只读的 `lua5.4 tools/cli.lua deploy-diff` |
 
 ## 验证路由
 
