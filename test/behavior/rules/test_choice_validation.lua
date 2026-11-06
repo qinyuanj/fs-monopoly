@@ -258,12 +258,16 @@ it("test_item_preconsume_marks_choice_spec_and_disables_cancel", function()
   _item_choice_handler_t2_tests[5]()
 end)
 
-it("test_item_preconsume_preserves_existing_context_fields", function()
+it("test_item_preconsume_followup_helpers_mark_disable_and_backfill_meta", function()
   _item_choice_handler_t2_tests[6]()
 end)
 
-it("test_item_phase_passive_decorates_repeatable_followup_meta", function()
+it("test_item_preconsume_preserves_existing_context_fields", function()
   _item_choice_handler_t2_tests[7]()
+end)
+
+it("test_item_phase_passive_decorates_repeatable_followup_meta", function()
+  _item_choice_handler_t2_tests[8]()
 end)
 
 -- 窗里已经 offer 了这张卡就是放行的充要条件：可用性判定是 offer 的前置，

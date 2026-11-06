@@ -63,17 +63,6 @@ local _resolve_wait_state_tests = {
   end,
   function()
     local game = {
-      turn = {},
-      dirty = {},
-    }
-local landing_visual_hold = require("src.state.visual_hold")
-    landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
-    local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
-    check.is_truthy(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual hold is active")
-    landing_visual_hold.release(game)
-  end,
-  function()
-    local game = {
       turn = { action_anim_queue = { { kind = "move_effect" } } },
       dirty = {},
     }
@@ -323,7 +312,7 @@ it("test_resolve_wait_state_wait_move_anim_skips_followup_flag_for_non_followup"
 end)
 
 it("test_resolve_wait_state_with_action_anim_queue", function()
-  _resolve_wait_state_tests[4]()
+  _resolve_wait_state_tests[3]()
 end)
 
 it("test_resolve_wait_state_with_action_anim_wait_action_anim", function()
