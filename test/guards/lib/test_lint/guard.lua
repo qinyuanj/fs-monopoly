@@ -1,8 +1,9 @@
 -- 测试 lint 门禁(#127):扫全仓测试 spec(test/** 与 tools/**/test/** 的
 -- test_*.lua),用 luacheck parser 的 AST 跑可插拔规则:vacuous-branch
 -- (拦截断言只躲在条件分支里的空转测试,#127)与 call-count(拦截钉内部
--- 调用次数的计数器断言,#128)。骨架(枚举/AST/测试体识别/豁免解析/报告
--- 格式)两条规则共用。
+-- 调用次数的计数器断言,#128),以及文件级的 indexed-case-table(拦截让用例
+-- 体躲开前两条规则的函数数组)。骨架(枚举/AST/测试体识别/豁免解析/报告
+-- 格式)各规则共用。
 require("test.bootstrap").install_package_paths()
 
 local fs_lib = require("foundation.fs")
@@ -14,14 +15,33 @@ local allow_mod = require("test.guards.lib.test_lint.allow")
 local report = require("test.guards.lib.test_lint.report")
 local vacuous_branch = require("test.guards.lib.test_lint.rules.vacuous_branch")
 local call_count = require("test.guards.lib.test_lint.rules.call_count")
+local indexed_case_table = require("test.guards.lib.test_lint.rules.indexed_case_table")
 
 local M = {}
 
 local _GUARD = "test_lint_guard"
 
 -- 规则注册表:新规则往这里加一条即可,骨架不动。
--- check_body 返回违规记录列表或 nil。
-local RULES = { vacuous_branch, call_count }
+-- check_body(按测试体)与 check_file(按整份 AST)都可选,返回违规记录列表或 nil。
+local RULES = { vacuous_branch, call_count, indexed_case_table }
+
+local function _rule_violations(rule, parsed, bodies, locals)
+  local found = {}
+  if rule.check_file ~= nil then
+    for _, violation in ipairs(rule.check_file(parsed.ast) or {}) do
+      found[#found + 1] = violation
+    end
+  end
+  if rule.check_body ~= nil then
+    local ctx = rule.build_ctx ~= nil and rule.build_ctx({ locals = locals }) or nil
+    for _, body in ipairs(bodies) do
+      for _, violation in ipairs(rule.check_body(body, ctx) or {}) do
+        found[#found + 1] = violation
+      end
+    end
+  end
+  return found
+end
 
 -- 纯策略核:tracked 路径表 + read(path) -> content|nil,返回统一格式的违规
 -- 字符串列表。opts.parse 可注入替代 parser;缺省走受控 Lua 环境的 luacheck。
@@ -51,13 +71,10 @@ function M.check(paths, read, opts)
         -- 每条规则自备 ctx 构造(可选 build_ctx 钩子):新规则要不同的上下文
         -- 不改骨架本体,注册表即完整扩展点。
         for _, rule in ipairs(RULES) do
-          local ctx = rule.build_ctx ~= nil and rule.build_ctx({ locals = locals }) or nil
-          for _, body in ipairs(bodies) do
-            for _, violation in ipairs(rule.check_body(body, ctx) or {}) do
-              violation.path = path
-              if not allow_mod.exempted(allows, violation.rule, violation.line) then
-                violations[#violations + 1] = violation
-              end
+          for _, violation in ipairs(_rule_violations(rule, parsed, bodies, locals)) do
+            violation.path = path
+            if not allow_mod.exempted(allows, violation.rule, violation.line) then
+              violations[#violations + 1] = violation
             end
           end
         end

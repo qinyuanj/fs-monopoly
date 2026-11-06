@@ -580,4 +580,39 @@ end)
     luassert.is.equal(1, #violations)
     luassert.truthy(violations[1]:find("call-count", 1, true))
   end)
+
+  -- indexed-case-table:用例体放进函数数组、再由 it 按下标分派,用例体躲开
+  -- 上面两条规则,漏注册的条目也不会被跑到。原型是迁移前的 test_roll_dice.lua。
+  it("test_flags_indexed_case_table_as_red", function()
+    local violations = _check({
+      ["test/behavior/x/test_cases.lua"] = [=[
+local check = require("luassert")
+describe("cases", function()
+  local _roll_tests = {
+    function() check.equal(1, roll()) end,
+    function() check.equal(2, roll()) end,
+  }
+  it("first", function() _roll_tests[1]() end)
+end)
+]=],
+    })
+    luassert.is.equal(1, #violations)
+    luassert.truthy(violations[1]:find(
+      "indexed-case-table: test/behavior/x/test_cases.lua:3 ", 1, true))
+    luassert.truthy(violations[1]:find("_roll_tests", 1, true))
+  end)
+
+  it("test_accepts_tables_mixing_functions_with_data", function()
+    luassert.is.equal(0, #_check({
+      ["test/behavior/x/test_cases.lua"] = [=[
+local check = require("luassert")
+local stub = { run = function() return 1 end }
+local cases = { { name = "a", run = function() return 1 end } }
+local hooks = { function() return 1 end, "tail" }
+it("inline", function()
+  check.equal(1, stub.run())
+end)
+]=],
+    }))
+  end)
 end)
