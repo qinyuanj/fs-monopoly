@@ -3,7 +3,7 @@ local items_cfg = require("src.config.content.items")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local inventory = require("src.rules.items.inventory")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
-local host_limit = require("src.rules.market.host_limit")
+local purchase_limit = require("src.rules.market.purchase_limit")
 
 local context = {}
 
@@ -65,18 +65,15 @@ local function _is_market_item(entry)
   return entry ~= nil and entry.kind == "item"
 end
 
--- 与货币无关的准入闸门:是商品、已上架、未限购买满、背包有位(ADR 0080)。
-local function _entry_available(game, player, entry)
+-- 与货币、卡槽无关的准入闸门:是商品、已上架、未限购买满(ADR 0080)。
+local function _entry_on_offer(game, player, entry)
   if not _is_market_item(entry) then
     return false
   end
   if not context.entry_market_enabled(entry) then
     return false
   end
-  if host_limit.is_reached(game, player, entry) then
-    return false
-  end
-  return not inventory.is_full(player)
+  return not purchase_limit.is_reached(game, player, entry)
 end
 
 -- 付费货币走宿主下单校验,现金货币比 player_cash。
@@ -91,11 +88,16 @@ local function _can_afford_entry(game, player, entry)
   return game:player_cash(player) >= price
 end
 
-function eligibility.can_buy_entry(game, player, entry)
-  if not _entry_available(game, player, entry) then
+-- 只要腾出一格卡槽就能买(ADR 0081):黑市屏购买按钮的显隐依据。
+function eligibility.can_buy_with_free_slot(game, player, entry)
+  if not _entry_on_offer(game, player, entry) then
     return false
   end
   return _can_afford_entry(game, player, entry)
+end
+
+function eligibility.can_buy_entry(game, player, entry)
+  return eligibility.can_buy_with_free_slot(game, player, entry) and not inventory.is_full(player)
 end
 
 function eligibility.sorted_entries()

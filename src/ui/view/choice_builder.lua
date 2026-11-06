@@ -12,7 +12,8 @@ local function _copy_option_view(opt, label)
     return view
   end
   view.can_buy = opt.can_buy
-  view.host_limit_reached = opt.host_limit_reached
+  view.can_buy_with_free_slot = opt.can_buy_with_free_slot
+  view.purchase_limit_reached = opt.purchase_limit_reached
   view.requires_pre_confirm = opt.requires_pre_confirm == true
   view.pre_confirm_kind = opt.pre_confirm_kind
   view.confirm_title = opt.confirm_title

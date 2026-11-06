@@ -402,7 +402,7 @@ it("test_paid_purchase_callback_fulfills_item", function()
   end)
 end)
 
-it("test_paid_purchase_callback_grants_every_purchase_up_to_the_host_limit", function()
+it("test_paid_purchase_callback_grants_every_purchase_up_to_the_purchase_limit", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game)

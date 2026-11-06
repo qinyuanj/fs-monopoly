@@ -8,7 +8,7 @@ local logger = require("src.foundation.log")
 local choice_contract = require("src.config.choice.contract")
 local dirty_tracker = require("src.state.dirty_tracker")
 local market_query = require("src.rules.market.query")
-local host_limit = require("src.rules.market.host_limit")
+local purchase_limit = require("src.rules.market.purchase_limit")
 
 local query_context = market_query.context
 local query_eligibility = market_query.eligibility
@@ -62,7 +62,8 @@ local function _build_tab_entries(player, game, active_tab)
       merged[#merged + 1] = {
         entry = entry,
         can_buy = can_buy,
-        host_limit_reached = host_limit.is_reached(game, player, entry),
+        can_buy_with_free_slot = query_eligibility.can_buy_with_free_slot(game, player, entry),
+        purchase_limit_reached = purchase_limit.is_reached(game, player, entry),
       }
     end
   end
@@ -89,7 +90,8 @@ local function _build_options_for_page(visible, page_index, page_size)
       id = entry.product_id,
       label = label,
       can_buy = slot.can_buy,
-      host_limit_reached = slot.host_limit_reached,
+      can_buy_with_free_slot = slot.can_buy_with_free_slot,
+      purchase_limit_reached = slot.purchase_limit_reached,
     }
   end
   return body_lines, options

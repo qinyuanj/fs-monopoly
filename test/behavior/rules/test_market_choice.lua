@@ -100,6 +100,7 @@ local function _patch_market_query_empty()
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return {} end },
     { target = market_query.eligibility, key = "can_buy_entry", value = function() return false end },
+    { target = market_query.eligibility, key = "can_buy_with_free_slot", value = function() return false end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function() return "item" end },
     { target = market_query.context, key = "entry_price", value = function() return 100 end },
@@ -334,6 +335,7 @@ describe("TestMarketChoiceSession", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
+      { target = market_query.eligibility, key = "can_buy_with_free_slot", value = function() return true end },
       { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context, key = "entry_name", value = function() return "item" end },
       { target = market_query.context, key = "entry_price", value = function() return 100 end },
@@ -362,6 +364,7 @@ describe("TestMarketChoiceSession", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
+      { target = market_query.eligibility, key = "can_buy_with_free_slot", value = function() return true end },
       { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context, key = "entry_name", value = function() return "item" end },
       { target = market_query.context, key = "entry_price", value = function() return 100 end },
@@ -468,6 +471,7 @@ local function _patch_market_query(entries, dirty_mark_calls)
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
     { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
+    { target = market_query.eligibility, key = "can_buy_with_free_slot", value = function() return true end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function(e) return e.name end },
     { target = market_query.context, key = "entry_price", value = function(e) return e.price end },
@@ -793,6 +797,7 @@ local function _patch_market_query(entries)
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
     { target = market_query.eligibility, key = "can_buy_entry", value = function() return true end },
+    { target = market_query.eligibility, key = "can_buy_with_free_slot", value = function() return true end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function(e) return e.name end },
     { target = market_query.context, key = "entry_price", value = function(e) return e.price end },
@@ -1176,6 +1181,7 @@ local function _patch_market_query(entries, opts)
   return {
     { target = market_query.eligibility, key = "sorted_entries", value = function() return entries end },
     { target = market_query.eligibility, key = "can_buy_entry", value = opts.can_buy or function() return true end },
+    { target = market_query.eligibility, key = "can_buy_with_free_slot", value = opts.can_buy or function() return true end },
     { target = market_query.context, key = "entry_market_enabled", value = function() return true end },
     { target = market_query.context, key = "entry_name", value = function(entry) return entry.name end },
     { target = market_query.context, key = "entry_price", value = function(entry) return entry.price end },
@@ -1428,6 +1434,7 @@ describe("TestMarketChoiceSurvivors", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries",     value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry",      value = function() return true end },
+      { target = market_query.eligibility, key = "can_buy_with_free_slot",      value = function() return true end },
       -- entry_market_enabled returns true for BOTH — so mutation `and→or` would let wrong_kind slip through.
       { target = market_query.context,     key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context,     key = "entry_name",          value = function(e) return e.name end },
@@ -1450,6 +1457,7 @@ describe("TestMarketChoiceSurvivors", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries",     value = function() return entries end },
       { target = market_query.eligibility, key = "can_buy_entry",      value = function() return true end },
+      { target = market_query.eligibility, key = "can_buy_with_free_slot",      value = function() return true end },
       -- per-entry market_enabled echoes flag → `and` keeps only the on row, `or` would keep both via kind match.
       { target = market_query.context,     key = "entry_market_enabled", value = function(e) return e.market_enabled end },
       { target = market_query.context,     key = "entry_name",          value = function(e) return e.name end },
@@ -1481,6 +1489,7 @@ describe("TestMarketChoiceSurvivors", function()
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries",     value = function() return _make_entries(25) end },
       { target = market_query.eligibility, key = "can_buy_entry",      value = function() return true end },
+      { target = market_query.eligibility, key = "can_buy_with_free_slot",      value = function() return true end },
       { target = market_query.context,     key = "entry_market_enabled", value = function() return true end },
       { target = market_query.context,     key = "entry_name",          value = function(e) return e.name end },
       { target = market_query.context,     key = "entry_price",         value = function(e) return e.price end },

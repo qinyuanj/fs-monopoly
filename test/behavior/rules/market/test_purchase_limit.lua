@@ -9,6 +9,7 @@ local market_cfg = require("src.config.content.market")
 local market_catalog = require("src.config.content.market_catalog")
 local market_service = require("src.rules.market")
 local market_feedback = require("src.rules.market.choice").feedback
+local market_query = require("src.rules.market.query")
 local choice_resolver = require("src.rules.choice.resolver")
 local inventory = require("src.rules.items.inventory")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
@@ -130,7 +131,7 @@ local function _capture_buy_failed(fn)
   return captured
 end
 
-describe("TestMarketHostLimit", function()
+describe("TestMarketPurchaseLimit", function()
   it("test_item_stays_buyable_until_the_limit_then_is_marked_and_blocked", function()
     local game = support.new_game()
     local player = game:current_player()
@@ -139,13 +140,13 @@ describe("TestMarketHostLimit", function()
       _empty_inventory(player)
       local before = _option(game, player, PAID_PRODUCT_ID)
       luassert.is_true(before.can_buy, "9th purchase must leave the item buyable")
-      luassert.is_not_true(before.host_limit_reached, "9 purchases are below the limit")
+      luassert.is_not_true(before.purchase_limit_reached, "9 purchases are below the limit")
 
       _buy_times(game, host, player, PAID_PRODUCT_ID, 1)
       _empty_inventory(player)
       local after = _option(game, player, PAID_PRODUCT_ID)
       luassert.is_false(after.can_buy, "10th purchase must make the item unbuyable")
-      luassert.is_true(after.host_limit_reached, "10th purchase must mark the option")
+      luassert.is_true(after.purchase_limit_reached, "10th purchase must mark the option")
 
       local other = _option(game, player, OTHER_PAID_PRODUCT_ID)
       luassert.is_true(other.can_buy, "other products keep their own count")
@@ -168,7 +169,7 @@ describe("TestMarketHostLimit", function()
       luassert.is.equal(opened_before, #host.opened, "maxed item must not open the host purchase page")
       luassert.is_true(result and result.stay, "a maxed click keeps the market open")
       luassert.is.equal(1, #failures, "a maxed click reports one failure")
-      luassert.is.equal("host_limit_reached", failures[1].reason, "failure reason")
+      luassert.is.equal("purchase_limit_reached", failures[1].reason, "failure reason")
       luassert.is.equal("本局已买满", failures[1].body, "failure tip text")
     end)
   end)
@@ -180,7 +181,7 @@ describe("TestMarketHostLimit", function()
       _buy_times(game, host, buyer, PAID_PRODUCT_ID, LIMIT)
       local option = _option(game, other, PAID_PRODUCT_ID)
       luassert.is_true(option.can_buy, "other player's same product stays buyable")
-      luassert.is_not_true(option.host_limit_reached, "other player's option is not marked")
+      luassert.is_not_true(option.purchase_limit_reached, "other player's option is not marked")
     end)
   end)
 
@@ -194,7 +195,7 @@ describe("TestMarketHostLimit", function()
     _with_host(second, function()
       local option = _option(second, second:current_player(), PAID_PRODUCT_ID)
       luassert.is_true(option.can_buy, "a new game must reset the count")
-      luassert.is_not_true(option.host_limit_reached, "a new game has no maxed items")
+      luassert.is_not_true(option.purchase_limit_reached, "a new game has no maxed items")
     end)
   end)
 
@@ -213,7 +214,7 @@ describe("TestMarketHostLimit", function()
       local dirty = game:consume_dirty()
       luassert.is_true(dirty.market, "grant failure must still refresh the open market screen")
       local refreshed = _find_option(game.turn.pending_choice.options, PAID_PRODUCT_ID)
-      luassert.is_true(refreshed.host_limit_reached, "host already charged, so the failed grant still counts")
+      luassert.is_true(refreshed.purchase_limit_reached, "host already charged, so the failed grant still counts")
     end)
   end)
 
@@ -249,7 +250,7 @@ describe("TestMarketHostLimit", function()
       luassert.is.equal(0, inventory.count(player), "no pending record means no card is granted")
       luassert.is_true(game:consume_dirty().market, "the count changed, so the open screen must refresh")
       local refreshed = _find_option(game.turn.pending_choice.options, PAID_PRODUCT_ID)
-      luassert.is_true(refreshed.host_limit_reached, "the host counted it, so the mirror counts it too")
+      luassert.is_true(refreshed.purchase_limit_reached, "the host counted it, so the mirror counts it too")
     end)
   end)
 
@@ -280,28 +281,156 @@ describe("TestMarketHostLimit", function()
 
       local first = market_service.choice.build(player, game, { active_tab = "item", page_index = 1 })
       for _, option in ipairs(first.options) do
-        luassert.is_not_true(option.host_limit_reached, option.label .. " on page 1 is not maxed")
+        luassert.is_not_true(option.purchase_limit_reached, option.label .. " on page 1 is not maxed")
       end
       local second = market_service.choice.build(player, game, { active_tab = "item", page_index = 2 })
-      luassert.is_true(_find_option(second.options, SECOND_PAGE_PRODUCT_ID).host_limit_reached,
+      luassert.is_true(_find_option(second.options, SECOND_PAGE_PRODUCT_ID).purchase_limit_reached,
         "the mark must be on the maxed item's own page")
     end)
   end)
 
-  it("test_gold_item_can_be_bought_past_the_paid_limit", function()
+  it("test_gold_item_is_marked_and_blocked_after_the_limit", function()
     local game = support.new_game()
     local player = game:current_player()
     game:set_player_cash(player, 5000 * (LIMIT + 2))
     _with_host(game, function()
-      for _ = 1, LIMIT + 1 do
+      for _ = 1, LIMIT do
         _empty_inventory(player)
         _click_buy(game, player, GOLD_PRODUCT_ID)
         luassert.is.equal(1, inventory.count(player), "every gold purchase must grant the card")
       end
       _empty_inventory(player)
       local option = _option(game, player, GOLD_PRODUCT_ID)
-      luassert.is_true(option.can_buy, "gold items stay unlimited")
-      luassert.is_not_true(option.host_limit_reached, "gold items are never maxed")
+      luassert.is_true(option.purchase_limit_reached, "10th gold purchase must mark the option")
+      luassert.is_false(option.can_buy, "maxed gold item is unbuyable")
+      luassert.is_false(option.can_buy_with_free_slot, "a free slot does not help a maxed item")
+
+      local cash_before = game:player_cash(player)
+      local failures = _capture_buy_failed(function()
+        _click_buy(game, player, GOLD_PRODUCT_ID)
+      end)
+      luassert.is.equal("purchase_limit_reached", failures[1].reason, "failure reason")
+      luassert.is.equal("本局已买满", failures[1].body, "failure text")
+      luassert.is.equal(0, inventory.count(player), "11th purchase must not grant the card")
+      luassert.is.equal(cash_before, game:player_cash(player), "11th purchase must not charge")
+    end)
+  end)
+
+  it("test_failed_gold_purchases_do_not_count", function()
+    local game = support.new_game()
+    local player = game:current_player()
+    _with_host(game, function()
+      game:set_player_cash(player, 0)
+      for _ = 1, LIMIT do
+        _click_buy(game, player, GOLD_PRODUCT_ID)
+      end
+      game:set_player_cash(player, 5000 * 2)
+      _fill_inventory(player)
+      for _ = 1, LIMIT do
+        _click_buy(game, player, GOLD_PRODUCT_ID)
+      end
+      _empty_inventory(player)
+      luassert.is_not_true(_option(game, player, GOLD_PRODUCT_ID).purchase_limit_reached,
+        "failed purchases must not use up the limit")
+      _click_buy(game, player, GOLD_PRODUCT_ID)
+      luassert.is.equal(1, inventory.count(player), "the player can still buy after failed attempts")
+    end)
+  end)
+
+  it("test_gold_card_from_another_source_does_not_count", function()
+    local game = support.new_game()
+    local player = game:current_player()
+    game:set_player_cash(player, 5000 * 2)
+    _with_host(game, function()
+      for _ = 1, LIMIT do
+        _empty_inventory(player)
+        inventory.give(player, GOLD_PRODUCT_ID, { game = game })
+      end
+      _empty_inventory(player)
+      luassert.is_not_true(_option(game, player, GOLD_PRODUCT_ID).purchase_limit_reached,
+        "only market purchases count")
+    end)
+  end)
+
+  it("test_gold_limit_is_per_player_and_resets_in_a_new_game", function()
+    local game = support.new_game()
+    local player = game.players[1]
+    local other = game.players[2]
+    game:set_player_cash(player, 5000 * LIMIT)
+    game:set_player_cash(other, 5000)
+    _with_host(game, function()
+      for _ = 1, LIMIT do
+        _empty_inventory(player)
+        _click_buy(game, player, GOLD_PRODUCT_ID)
+      end
+      luassert.is_true(_option(game, player, GOLD_PRODUCT_ID).purchase_limit_reached, "buyer is maxed")
+      luassert.is_not_true(_option(game, other, GOLD_PRODUCT_ID).purchase_limit_reached,
+        "other player's option is not marked")
+    end)
+
+    local next_game = support.new_game()
+    local next_player = next_game.players[1]
+    next_game:set_player_cash(next_player, 5000)
+    _with_host(next_game, function()
+      luassert.is_not_true(_option(next_game, next_player, GOLD_PRODUCT_ID).purchase_limit_reached,
+        "a new game has no maxed items")
+    end)
+  end)
+
+  it("test_full_inventory_blocks_can_buy_but_not_can_buy_with_free_slot", function()
+    local game = support.new_game()
+    local player = game:current_player()
+    game:set_player_cash(player, 5000)
+    _with_host(game, function()
+      _fill_inventory(player)
+      for _, product_id in ipairs({ GOLD_PRODUCT_ID, PAID_PRODUCT_ID }) do
+        local option = _option(game, player, product_id)
+        luassert.is_false(option.can_buy, "a full inventory blocks the purchase")
+        luassert.is_true(option.can_buy_with_free_slot, "freeing a slot is all it takes")
+      end
+    end)
+  end)
+
+  it("test_maxed_item_with_a_full_inventory_counts_as_maxed", function()
+    local game = support.new_game()
+    local player = game:current_player()
+    game:set_player_cash(player, 5000 * (LIMIT + 1))
+    _with_host(game, function()
+      for _ = 1, LIMIT do
+        _empty_inventory(player)
+        _click_buy(game, player, GOLD_PRODUCT_ID)
+      end
+      _fill_inventory(player)
+      local option = _option(game, player, GOLD_PRODUCT_ID)
+      luassert.is_true(option.purchase_limit_reached, "the item is maxed")
+      luassert.is_false(option.can_buy_with_free_slot, "maxed wins over slots-full: no button")
+    end)
+  end)
+
+  it("test_insufficient_gold_fails_both_buy_flags", function()
+    local game = support.new_game()
+    local player = game:current_player()
+    game:set_player_cash(player, 0)
+    _with_host(game, function()
+      local option = _option(game, player, GOLD_PRODUCT_ID)
+      luassert.is_false(option.can_buy, "cannot afford")
+      luassert.is_false(option.can_buy_with_free_slot, "a free slot does not help without gold")
+    end)
+  end)
+
+  it("test_auto_purchase_candidates_skip_a_maxed_gold_item", function()
+    local game = support.new_game()
+    local player = game:current_player()
+    game:set_player_cash(player, 5000 * (LIMIT + 1))
+    _with_host(game, function()
+      for _ = 1, LIMIT do
+        _empty_inventory(player)
+        _click_buy(game, player, GOLD_PRODUCT_ID)
+      end
+      _empty_inventory(player)
+      for _, entry in ipairs(market_query.eligibility.list_available(player, game)) do
+        luassert.is_not.equal(GOLD_PRODUCT_ID, entry.product_id, "maxed gold item is not a candidate")
+      end
     end)
   end)
 end)

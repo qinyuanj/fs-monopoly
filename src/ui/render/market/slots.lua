@@ -72,10 +72,10 @@ local function _set_market_slot_visible(ui, slot, opt)
   local entry, cfg = _resolve_market_entry(opt_id)
   local name = _resolve_market_name(opt, opt_id, entry, cfg)
   ui:set_label(slot.label, name)
-  local sold_out = opt.host_limit_reached == true
+  local sold_out = opt.purchase_limit_reached == true
   ui_controls.set_slot_state(ui, slot, {
     label = { visible = true, touch_enabled = false },
-    button = { visible = true, touch_enabled = true },
+    button = { visible = true, touch_enabled = not sold_out },
     frame = { visible = true, touch_enabled = false },
     sold_out_badge = { visible = sold_out, touch_enabled = false },
     sold_out_label = { visible = sold_out, touch_enabled = false },
@@ -132,7 +132,9 @@ end
 
 function market_view_slots.populate_market_slots(ui, options)
   local option_ids = {}
+  local maxed_ids = {}
   local first_buyable = nil
+  local first_not_maxed = nil
   _for_each_market_slot(function(index, slot)
     local opt = options[index]
     if opt and opt.can_buy == true and first_buyable == nil then
@@ -140,22 +142,45 @@ function market_view_slots.populate_market_slots(ui, options)
     end
     local opt_id = _set_market_slot(ui, slot, opt)
     option_ids[index] = opt_id
+    if opt and opt.purchase_limit_reached == true then
+      maxed_ids[opt_id] = true
+    elseif opt and first_not_maxed == nil then
+      first_not_maxed = opt_id
+    end
   end)
   return {
     option_ids = option_ids,
+    maxed_ids = maxed_ids,
     first_buyable = first_buyable,
+    first_not_maxed = first_not_maxed,
   }
 end
 
-function market_view_slots.resolve_selected_option(option_ids, selected_option_id, first_buyable)
-  local selected = selected_option_id
-  if not _has_option_id(option_ids, selected) then
-    selected = nil
+function market_view_slots.same_option_ids(left, right)
+  if left == nil or #left ~= #right then
+    return false
   end
-  if selected == nil then
-    return first_buyable or option_ids[1]
+  for index, option_id in ipairs(right) do
+    if left[index] ~= option_id then
+      return false
+    end
   end
-  return selected
+  return true
+end
+
+-- 选中项买满时清空,不改选(#216 防按钮原位连点误购)。黑市每次 UI 同步都重刷,
+-- 所以同一页上没有选中项时要保持不选,否则清空后的下一轮就回落到默认选中。
+function market_view_slots.resolve_selected_option(rendered, selected_option_id, same_page)
+  if _has_option_id(rendered.option_ids, selected_option_id) then
+    if rendered.maxed_ids[selected_option_id] then
+      return nil
+    end
+    return selected_option_id
+  end
+  if same_page and selected_option_id == nil then
+    return nil
+  end
+  return rendered.first_buyable or rendered.first_not_maxed
 end
 
 function market_view_slots.resolve_selection(option_id, image_refs)

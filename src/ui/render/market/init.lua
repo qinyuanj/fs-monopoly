@@ -50,6 +50,16 @@ local function _set_market_preview_icon(state, icon_key, deps)
   runtime.set_node_texture_keep_size(ui.query_node(market_layout.selected_card), icon_key)
 end
 
+-- 购买按钮的显隐依据:商品本身买得了才显示;卡槽已满不算,仍留按钮给点击提示(ADR 0081)。
+local function _can_buy_with_free_slot(ui, option_id)
+  for _, option in ipairs(ui.market_options or {}) do
+    if option.id == option_id then
+      return option.can_buy_with_free_slot == true
+    end
+  end
+  return false
+end
+
 function market_view.refresh_market_selection(state, option_id, deps)
   local ui = state.ui
   assert(ui ~= nil, "missing market ui")
@@ -65,6 +75,11 @@ function market_view.select_market_option(state, option_id, deps)
   local resolved_deps = _resolve_deps(state, deps)
   local resolved_modal = resolved_deps.modal_state or _fallback_modal_state()
   resolved_modal.select_market_option(state, option_id)
+  if option_id == nil then
+    market_view_controls.reset_market_preview(state, resolved_deps)
+    market_view_controls.set_confirm_button_state(state.ui, false)
+    return
+  end
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
   market_view_controls.refresh_market_selection_frames(
     state.ui,
@@ -72,7 +87,7 @@ function market_view.select_market_option(state, option_id, deps)
     option_id
   )
   market_view.refresh_market_selection(state, option_id, resolved_deps)
-  market_view_controls.set_confirm_button_state(state.ui, true)
+  market_view_controls.set_confirm_button_state(state.ui, _can_buy_with_free_slot(state.ui, option_id))
 end
 
 local function _current_cash_amount(state)
@@ -115,16 +130,15 @@ local function _refresh_empty_market(state, market, resolved_deps, resolved_moda
 end
 
 local function _refresh_populated_market(state, market, resolved_deps, resolved_modal, options, ui, was_market_active)
+  local previous_option_ids = runtime_state.ensure_ui_runtime(state).choice_visible_option_ids
   local rendered = market_view_slots.populate_market_slots(ui, options)
   ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
   market_view_controls.clear_market_selection_frames(ui)
   market_view_controls.apply_market_common_controls(ui, market, true)
   local selected_option_id = was_market_active and market.selected_option_id or nil
-  local selected = market_view_slots.resolve_selected_option(
-    rendered.option_ids,
-    selected_option_id,
-    rendered.first_buyable
-  )
+  local same_page = was_market_active
+    and market_view_slots.same_option_ids(previous_option_ids, rendered.option_ids)
+  local selected = market_view_slots.resolve_selected_option(rendered, selected_option_id, same_page)
   resolved_modal.open_market(state, market.choice_id, rendered.option_ids, selected)
   market_view.select_market_option(state, selected, resolved_deps)
   market_view.refresh_cash_display(state)
@@ -137,6 +151,7 @@ function market_view.refresh_market(state, market, deps)
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
   local was_market_active = ui.market_active == true
   local options = market_view_slots.filter_market_options(market.options)
+  ui.market_options = options
   market_view_controls.set_market_container_active(ui, true)
   if #options == 0 then
     _refresh_empty_market(state, market, resolved_deps, resolved_modal, ui)
@@ -152,6 +167,7 @@ function market_view.close_market_panel(state, deps)
   local ui = state.ui
   assert(ui ~= nil and ui.market_active == true, "market panel not active")
   resolved_modal.close_choice(state)
+  ui.market_options = nil
   market_view_controls.close_market_panel(state, resolved_deps)
 end
 

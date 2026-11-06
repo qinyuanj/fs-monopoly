@@ -198,7 +198,7 @@ do -- describe("market")
       luassert.truthy(pending == nil or pending.kind ~= "market_buy" or pending.owner_role_id ~= p.id, "AI purchase must not leave its own market_buy modal open")
     end)
 
-    it("test_market_gold_item_purchases_are_unlimited_while_cash_lasts", function()
+    it("test_market_gold_item_purchases_below_the_limit_stop_when_cash_runs_out", function()
       local market_service = require("src.rules.market")
       local g = _new_game()
       local p = g:current_player()
@@ -210,24 +210,24 @@ do -- describe("market")
         end
       end
       luassert.truthy(entry ~= nil, "should find a market item with coin currency")
-      g:set_player_cash(p, entry.price * 11)
+      g:set_player_cash(p, entry.price * 3)
 
-      for purchase_index = 1, 11 do
+      for purchase_index = 1, 3 do
         p.inventory:clear()
         local res = market_service.purchase.execute(g, p, entry.product_id)
         luassert.truthy(type(res) == "table" and res.ok == true,
           "gold purchase " .. purchase_index .. " should succeed")
         luassert.truthy(p.inventory:count() == 1, "gold purchase " .. purchase_index .. " should grant the card")
       end
-      luassert.truthy(g:player_cash(p) == 0, "eleven purchases should charge eleven times")
+      luassert.truthy(g:player_cash(p) == 0, "three purchases should charge three times")
 
       p.inventory:clear()
       local broke = market_service.purchase.execute(g, p, entry.product_id)
       luassert.truthy(type(broke) == "table" and broke.reason == "insufficient_balance",
-        "only the cash balance should stop the next purchase")
+        "below the limit only the cash balance stops the next purchase")
     end)
 
-    it("test_market_choice_buyable_depends_only_on_cash_and_slots", function()
+    it("test_market_choice_buyable_below_the_limit_depends_only_on_cash_and_slots", function()
       local market_service = require("src.rules.market")
       local g = _new_game()
       local p = g:current_player()
@@ -239,8 +239,8 @@ do -- describe("market")
         end
       end
       luassert.truthy(entry ~= nil, "should find a market item with coin currency")
-      g:set_player_cash(p, entry.price * 11)
-      for _ = 1, 10 do
+      g:set_player_cash(p, entry.price * 10)
+      for _ = 1, 9 do
         p.inventory:clear()
         market_service.purchase.execute(g, p, entry.product_id)
       end
@@ -249,7 +249,7 @@ do -- describe("market")
       local option = _find_option(market_service.choice.build(p, g).options, entry.product_id)
       luassert.truthy(option ~= nil and option.can_buy == true, "cash and a free slot should keep the item buyable")
       luassert.truthy(_contains_product(market_service.query.list_available(p, g), entry.product_id),
-        "item should stay in the auto-buy list after ten purchases")
+        "item should stay in the auto-buy list below the limit")
 
       g:set_player_cash(p, entry.price - 1)
       option = _find_option(market_service.choice.build(p, g).options, entry.product_id)
@@ -750,13 +750,13 @@ do -- describe("market")
     it("test_market_screen_receives_the_maxed_mark_through_ui_sync", function()
       _reset_market_choice_runtime_modules()
       local market_service = _reload_market_service()
-      local host_limit = require("src.rules.market.host_limit")
+      local purchase_limit = require("src.rules.market.purchase_limit")
       local g = _new_game()
       local p = g:current_player()
       local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
       _with_paid_gateway(function() return true end, function()
         for _ = 1, 10 do
-          host_limit.record_purchase(g, p, target)
+          purchase_limit.record_purchase(g, p, target)
         end
         local spec = market_service.choice.build(p, g, { active_tab = "item", page_index = 1 })
         spec.id = 2311
@@ -766,7 +766,7 @@ do -- describe("market")
         local market = _sync_market_screen(g, _open_market_screen_state(g), p.id)
 
         local shown = _find_option(market and market.options, target.product_id)
-        luassert.truthy(shown ~= nil and shown.host_limit_reached == true,
+        luassert.truthy(shown ~= nil and shown.purchase_limit_reached == true,
           "market screen data must carry the maxed mark")
         luassert.truthy(shown.can_buy == false, "maxed item is unbuyable on screen")
       end)

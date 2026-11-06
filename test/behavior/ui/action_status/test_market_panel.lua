@@ -65,9 +65,40 @@ end
 
 local function _two_entry_options(entry_a, entry_b)
   return {
-    { id = entry_a.product_id, label = entry_a.name, can_buy = true },
-    { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+    { id = entry_a.product_id, label = entry_a.name, can_buy = true, can_buy_with_free_slot = true },
+    { id = entry_b.product_id, label = entry_b.name, can_buy = true, can_buy_with_free_slot = true },
   }
+end
+
+local function _maxed_option(entry)
+  return { id = entry.product_id, label = entry.name, can_buy = false,
+    can_buy_with_free_slot = false, purchase_limit_reached = true }
+end
+
+local function _buyable_option(entry)
+  return { id = entry.product_id, label = entry.name, can_buy = true, can_buy_with_free_slot = true }
+end
+
+local function _unaffordable_option(entry)
+  return { id = entry.product_id, label = entry.name, can_buy = false, can_buy_with_free_slot = false }
+end
+
+local function _refresh_market_options(state, options, selected_option_id)
+  return market_view.refresh_market(state, {
+    choice_id = 40,
+    options = options,
+    allow_cancel = true,
+    selected_option_id = selected_option_id,
+  })
+end
+
+local function _assert_nothing_selected(state, visible, labels, context)
+  _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, nil, context .. ": selection")
+  _assert_eq(visible[market_layout.confirm_button], false, context .. ": confirm button")
+  _assert_eq(labels[market_layout.price_label], "", context .. ": price")
+  for _, frame in ipairs(market_layout.item_selection_frames) do
+    _assert_eq(visible[frame], false, context .. ": selection frame " .. frame)
+  end
 end
 
 local function _refresh_two_entry_market(state, choice_id, entry_a, entry_b, selected_option_id)
@@ -694,23 +725,26 @@ describe("TestMarketPanel", function()
     market_view.refresh_market(state, {
       choice_id = 31,
       options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = false, host_limit_reached = true },
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, purchase_limit_reached = true },
         { id = entry_b.product_id, label = entry_b.name, can_buy = true },
       },
       allow_cancel = true,
     })
     assert_sold_out_slots("with the maxed item in slot 1", 1)
-    _assert_eq(touch[market_layout.item_buttons[1]], true, "maxed slot button stays clickable for the tip")
+    _assert_eq(touch[market_layout.item_buttons[1]], false, "maxed slot cannot be selected")
+    _assert_eq(touch[market_layout.item_buttons[2]], true, "other slots stay selectable")
 
     market_view.refresh_market(state, {
       choice_id = 31,
       options = {
         { id = entry_b.product_id, label = entry_b.name, can_buy = true },
-        { id = entry_a.product_id, label = entry_a.name, can_buy = false, host_limit_reached = true },
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, purchase_limit_reached = true },
       },
       allow_cancel = true,
     })
     assert_sold_out_slots("after the maxed item moves to slot 2", 2)
+    _assert_eq(touch[market_layout.item_buttons[1]], true, "touch follows the item, not the slot")
+    _assert_eq(touch[market_layout.item_buttons[2]], false, "touch follows the maxed item to slot 2")
 
     market_view.refresh_market(state, {
       choice_id = 31,
@@ -724,7 +758,7 @@ describe("TestMarketPanel", function()
     market_view.refresh_market(state, {
       choice_id = 31,
       options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = false, host_limit_reached = true },
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, purchase_limit_reached = true },
       },
       allow_cancel = true,
     })
@@ -734,32 +768,140 @@ describe("TestMarketPanel", function()
     assert_sold_out_slots("after the market closes", nil)
   end)
 
-  it("test_19_market_confirm_button_stays_visible_when_unbuyable_item_selected", function()
+  it("test_19_market_confirm_button_hides_for_an_unaffordable_item_and_keeps_the_selection", function()
     local entry_a = assert(market_cfg[1], "missing market cfg entry a")
     local entry_b = assert(market_cfg[2], "missing market cfg entry b")
-    local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    local state, visible, _, touch = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    local options = { _unaffordable_option(entry_a), _buyable_option(entry_b) }
 
-    market_view.refresh_market(state, {
-      choice_id = 33,
-      options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = false },
-        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
-      },
-      allow_cancel = true,
-    })
+    _refresh_market_options(state, options)
 
     _assert_eq(visible[market_layout.confirm_button], true,
       "confirm button should be visible when buyable item is auto-selected")
 
     market_view.select_market_option(state, entry_a.product_id)
 
-    _assert_eq(visible[market_layout.confirm_button], true,
-      "confirm button should stay visible when an unbuyable item is selected")
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_a.product_id,
+      "an unaffordable item can still be selected")
+    _assert_eq(visible[market_layout.confirm_button], false,
+      "confirm button should hide when an unaffordable item is selected")
+    _assert_eq(touch[market_layout.confirm_button], false, "hidden confirm button takes no touch")
 
     market_view.select_market_option(state, entry_b.product_id)
 
     _assert_eq(visible[market_layout.confirm_button], true,
       "confirm button should remain visible when buyable item is re-selected")
+  end)
+
+  it("test_19_market_selection_survives_running_out_of_gold_after_a_purchase", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
+
+    _refresh_market_options(state, { _buyable_option(entry_a), _buyable_option(entry_b) })
+    _refresh_market_options(state, { _unaffordable_option(entry_a), _buyable_option(entry_b) }, entry_a.product_id)
+
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_a.product_id,
+      "the selection stays on the item the player can no longer afford")
+    _assert_eq(visible[market_layout.confirm_button], false, "confirm button hides")
+  end)
+
+  it("test_19_market_keeps_the_confirm_button_when_only_the_slots_are_full", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local state, visible, _, touch = _build_market_state({ entry_a.product_id, entry_b.product_id })
+
+    _refresh_market_options(state, {
+      { id = entry_a.product_id, label = entry_a.name, can_buy = false, can_buy_with_free_slot = true },
+      { id = entry_b.product_id, label = entry_b.name, can_buy = false, can_buy_with_free_slot = true },
+    })
+
+    _assert_eq(visible[market_layout.confirm_button], true, "slots-full keeps the button for the tip")
+    _assert_eq(touch[market_layout.confirm_button], true, "slots-full button stays clickable")
+  end)
+
+  it("test_19_market_clears_a_selection_that_becomes_maxed_without_reselecting", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local state, visible, labels = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    local selected_card = {}
+    state.ui.query_node = function() return selected_card end
+    local maxed_options = { _maxed_option(entry_a), _buyable_option(entry_b) }
+
+    _refresh_market_options(state, { _buyable_option(entry_a), _buyable_option(entry_b) })
+    _refresh_market_options(state, maxed_options, entry_a.product_id)
+
+    _assert_nothing_selected(state, visible, labels, "right after the item maxes out")
+    _assert_eq(selected_card.image_texture, 1, "preview falls back to the empty image")
+
+    -- 黑市每次 UI 同步都重刷:清空后的下一轮不能回落默认选中,否则连点会买到别的商品。
+    _refresh_market_options(state, maxed_options, nil)
+
+    _assert_nothing_selected(state, visible, labels, "on the next refresh of the same page")
+  end)
+
+  it("test_19_market_page_change_after_a_cleared_selection_selects_the_default", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
+
+    _refresh_market_options(state, { _buyable_option(entry_a) })
+    _refresh_market_options(state, { _maxed_option(entry_a) }, entry_a.product_id)
+    _refresh_market_options(state, { _buyable_option(entry_b) }, nil)
+
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id,
+      "a new page selects its default item")
+    _assert_eq(visible[market_layout.confirm_button], true, "confirm button returns on the new page")
+  end)
+
+  it("test_19_market_page_that_only_repeats_the_start_of_the_old_page_is_a_new_page", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local state = _build_market_state({ entry_a.product_id, entry_b.product_id })
+
+    _refresh_market_options(state, { _buyable_option(entry_a), _buyable_option(entry_b) }, nil)
+    _refresh_market_options(state, { _buyable_option(entry_a), _maxed_option(entry_b) }, entry_b.product_id)
+    _refresh_market_options(state, { _buyable_option(entry_a) }, nil)
+
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_a.product_id,
+      "a shorter option list selects its default item")
+  end)
+
+  it("test_19_market_reopen_after_a_cleared_selection_selects_the_default", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local state = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    _bind_ui_runtime(state)
+    local options = { _maxed_option(entry_a), _buyable_option(entry_b) }
+
+    _refresh_market_options(state, options)
+    market_view.close_market_panel(state)
+    _refresh_market_options(state, options)
+
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id,
+      "reopening selects the first buyable item")
+  end)
+
+  it("test_19_market_default_selection_prefers_buyable_then_first_not_maxed", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local entry_c = assert(market_cfg[3], "missing market cfg entry c")
+    local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id, entry_c.product_id })
+
+    _refresh_market_options(state, {
+      _maxed_option(entry_a), _unaffordable_option(entry_b), _buyable_option(entry_c),
+    })
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_c.product_id,
+      "first buyable item wins")
+
+    local other_state, other_visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
+    _refresh_market_options(other_state, { _maxed_option(entry_a), _unaffordable_option(entry_b) })
+    _assert_eq(_ui_runtime(other_state).pending_choice_selected_option_id, entry_b.product_id,
+      "without a buyable item the first item not maxed is selected")
+    _assert_eq(other_visible[market_layout.confirm_button], false, "an unaffordable default has no button")
+    _assert_eq(visible[market_layout.confirm_button], true, "a buyable default has the button")
+  end)
+
+  it("test_19_market_selects_nothing_when_the_whole_page_is_maxed", function()
+    local entry_a, entry_b = _first_two_market_entries()
+    local state, visible, labels = _build_market_state({ entry_a.product_id, entry_b.product_id })
+
+    _refresh_market_options(state, { _maxed_option(entry_a), _maxed_option(entry_b) })
+
+    _assert_nothing_selected(state, visible, labels, "whole page maxed")
   end)
 
   it("test_21_market_cash_display_shows_current_player_balance", function()

@@ -5,7 +5,7 @@ local market_query = require("src.rules.market.query")
 local market_choice = require("src.rules.market.choice")
 local paid_purchase_flow = require("src.rules.market.paid_purchase_flow")
 local fulfillment = require("src.rules.market.purchase_fulfillment")
-local host_limit = require("src.rules.market.host_limit")
+local purchase_limit = require("src.rules.market.purchase_limit")
 
 local query_context = market_query.context
 local choice_feedback = market_choice.feedback
@@ -34,10 +34,10 @@ end
 -- 买满只在下单时拦:到账回调走 validate_entry,已付款的回调不能因买满被拒。
 function policy.validate_order(game, player, entry)
   local decision = policy.validate_entry(player, entry)
-  if decision.ok and host_limit.is_reached(game, player, entry) then
+  if decision.ok and purchase_limit.is_reached(game, player, entry) then
     return {
       ok = false,
-      reason = "host_limit_reached",
+      reason = "purchase_limit_reached",
       body = "本局已买满",
     }
   end
@@ -68,6 +68,7 @@ function local_purchase.execute(game, player, entry)
     choice_feedback.emit_buy_failed(player, entry, result.reason, result.body)
     return { ok = false, reason = result.reason }
   end
+  purchase_limit.record_purchase(game, player, entry)
   return result
 end
 
@@ -99,7 +100,7 @@ local paid_purchase_callback = {}
 
 -- 宿主回调到达即已扣款并计数,所以先计数,且发卡失败也要刷新黑市屏。
 function paid_purchase_callback.handle(game, player, entry)
-  host_limit.record_purchase(game, player, entry)
+  purchase_limit.record_purchase(game, player, entry)
   paid_purchase_flow.clear_in_flight(game, player, entry)
   local ok = paid_fulfillment.fulfill_entry(game, player, entry)
   choice_session.refresh_after_paid_callback(game, player, entry)
@@ -114,7 +115,7 @@ function paid_purchase_callback.handle_untracked(game, player, product_id)
     logger.warn("market untracked purchase skipped: not a market product", "product_id=" .. tostring(product_id))
     return
   end
-  host_limit.record_purchase(game, player, entry)
+  purchase_limit.record_purchase(game, player, entry)
   choice_session.refresh_after_paid_callback(game, player, entry)
 end
 

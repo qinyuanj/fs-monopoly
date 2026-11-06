@@ -709,25 +709,10 @@ it("test_market_confirm_blocked_with_tip_when_buyer_slots_full", function()
     "rejection tip should tell the player slots are full")
 end)
 
-it("test_market_confirm_blocked_with_tip_when_selected_item_is_maxed", function()
-  local state = _market_gate_state({ "a", "b", "c", "d", "e" }, nil)
-  runtime_state.get_ui_model(state).market.options[1].host_limit_reached = true
-  local spec = assert(_market_confirm_spec(state), "confirm route spec should exist")
-
-  local intent = "unset"
-  local tips = _with_captured_tips(function()
-    intent = spec.build_intent()
-  end)
-
-  luassert.is_nil(intent, "maxed item must reject the click locally: no market_confirm intent")
-  _assert_eq(#tips, 1, "maxed item should enqueue exactly one rejection tip")
-  _assert_eq(tips[1] and tips[1].text, "本局已买满", "maxed tip wins over the slots-full tip")
-end)
-
-it("test_market_confirm_passes_when_only_another_item_is_maxed", function()
+-- 界面未刷新时点到买满商品:UI 不再拦,意图放行给规则层下单校验兜底(ADR 0081)。
+it("test_market_confirm_leaves_a_stale_maxed_click_to_the_order_check", function()
   local state = _market_gate_state({ "a", nil, "c", "d", "e" }, nil)
-  local options = runtime_state.get_ui_model(state).market.options
-  options[#options + 1] = { id = 2002, label = "遥控骰子卡", host_limit_reached = true }
+  runtime_state.get_ui_model(state).market.options[1].purchase_limit_reached = true
   local spec = assert(_market_confirm_spec(state), "confirm route spec should exist")
 
   local intent = nil
@@ -735,8 +720,8 @@ it("test_market_confirm_passes_when_only_another_item_is_maxed", function()
     intent = spec.build_intent()
   end)
 
-  _assert_eq(intent and intent.option_id, 2001, "only the selected item decides the block")
-  _assert_eq(#tips, 0, "no rejection tip for the unselected maxed item")
+  _assert_eq(intent and intent.option_id, 2001, "the order check owns the maxed rejection")
+  _assert_eq(#tips, 0, "no local maxed tip remains")
 end)
 
 it("test_market_confirm_passes_when_buyer_has_empty_slot", function()

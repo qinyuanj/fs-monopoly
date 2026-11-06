@@ -14,6 +14,7 @@ it("test_builds_phase_title_and_option_fields", function()
         id = 2001,
         label = "路障卡",
         can_buy = true,
+        can_buy_with_free_slot = true,
         requires_pre_confirm = true,
         pre_confirm_kind = "secondary_confirm",
         confirm_title = "确认使用",
@@ -38,6 +39,7 @@ it("test_builds_phase_title_and_option_fields", function()
   luassert.is.equal("base_inline", view.route_key, "choice view should copy explicit fields")
   luassert.is.equal(true, view.options[1].requires_pre_confirm, "choice view should copy pre-confirm marker")
   luassert.is.equal("确认使用", view.options[1].confirm_title, "choice view should copy confirm title")
+  luassert.is.equal(true, view.options[1].can_buy_with_free_slot, "choice view should copy the confirm button flag")
 end)
 
 it("test_defaults_body_and_option_labels", function()
