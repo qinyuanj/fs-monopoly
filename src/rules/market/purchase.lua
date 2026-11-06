@@ -38,7 +38,7 @@ function policy.validate_order(game, player, entry)
     return {
       ok = false,
       reason = "host_limit_reached",
-      body = player.name .. " 本局已买满",
+      body = "本局已买满",
     }
   end
   return decision
@@ -106,9 +106,14 @@ function paid_purchase_callback.handle(game, player, entry)
   return ok
 end
 
--- 回调没有对应的待到账记录(不经自家购买按钮):只跟上宿主计数,不发卡。
+-- 回调没有对应的待到账记录:只跟上宿主计数,不发卡。皮肤共用付费网关,
+-- 查不到黑市商品的回调不属于本计数,留痕跳过。
 function paid_purchase_callback.handle_untracked(game, player, product_id)
   local entry = query_context.entry_by_id(product_id)
+  if entry == nil then
+    logger.warn("market untracked purchase skipped: not a market product", "product_id=" .. tostring(product_id))
+    return
+  end
   host_limit.record_purchase(game, player, entry)
   choice_session.refresh_after_paid_callback(game, player, entry)
 end

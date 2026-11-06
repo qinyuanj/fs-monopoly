@@ -288,7 +288,6 @@ local function _consume_callback_pending(rt, data, goods_id)
   if pending then
     return pending
   end
-  logger.warn("market paid callback ignored: pending missing", "role_id=" .. tostring(callback_role_id), "goods_id=" .. tostring(goods_id))
   return nil
 end
 
@@ -351,17 +350,30 @@ local function _product_id_for_goods(rt, goods_id)
   return nil
 end
 
+local function _warn_untracked(outcome, role_id, goods_id)
+  logger.warn("market paid callback pending missing: " .. outcome, "role_id=" .. tostring(role_id), "goods_id=" .. tostring(goods_id))
+end
+
 -- 没有待到账记录的回调同样已被宿主扣款计数:能确定玩家和商品就上报,由规则层跟上计数。
--- goods_id 只有在黑市开过屏后才映射得到,此前的回调确定不了商品,不上报。
+-- goods_id 映射在该商品首次走到 can_start / start 时才建立,此前的回调确定不了商品,不上报。
 local function _report_untracked_purchase(game, rt, data, goods_id)
+  local role_id = _callback_role_id(data)
   local product_id = _product_id_for_goods(rt, goods_id)
-  if product_id == nil or type(rt.on_untracked_purchase) ~= "function" then
+  if product_id == nil then
+    _warn_untracked("skipped, goods unmapped", role_id, goods_id)
     return
   end
-  local player = game:find_player_by_id(_callback_role_id(data))
-  if player then
-    rt.on_untracked_purchase(game, player, product_id)
+  if type(rt.on_untracked_purchase) ~= "function" then
+    _warn_untracked("skipped, handler missing", role_id, goods_id)
+    return
   end
+  local player = game:find_player_by_id(role_id)
+  if player == nil then
+    _warn_untracked("skipped, player missing", role_id, goods_id)
+    return
+  end
+  _warn_untracked("reported to rules", role_id, goods_id)
+  rt.on_untracked_purchase(game, player, product_id)
 end
 
 local function _on_purchase_goods_callback(game, rt, data)
