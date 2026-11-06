@@ -12,6 +12,7 @@ end
 local _with_patches = support.with_patches
 local sound = require("src.host.sound")
 local logger = require("src.foundation.log")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 describe("TestSound", function()
 
@@ -279,6 +280,108 @@ local function _test_bind_sfx_to_unit_calls_host_when_both_params_valid()
   _assert_eq(captured.unit, unit, "unit should pass through")
 end
 
+-- ── _is_vector_like: 每个分量单独出现都判为向量,非向量表回落默认 scale ──
+
+local function _play_with_host_scale_capture(scale)
+  local scales = {}
+  local result
+  _with_patches({
+    { key = "GameAPI", value = {
+      play_sfx_by_key = function(_, _, _, passed_scale)
+        scales[#scales + 1] = passed_scale
+        return 99
+      end,
+    } },
+  }, function()
+    result = sound.play_sfx_by_key(100, nil, nil, scale, 0.1, 1.0, true, { cue_name = "cue" })
+  end)
+  return result, scales
+end
+
+local function _test_play_sfx_by_key_rejects_named_vector_scale_with_only_y_or_z()
+  local result_y, scales_y = _play_with_host_scale_capture({ y = 5 })
+  _assert_eq(result_y, nil, "table with only y component should be rejected as scale")
+  _assert_eq(#scales_y, 0, "rejected y-only scale must not reach the host")
+  local result_z, scales_z = _play_with_host_scale_capture({ z = 5 })
+  _assert_eq(result_z, nil, "table with only z component should be rejected as scale")
+  _assert_eq(#scales_z, 0, "rejected z-only scale must not reach the host")
+end
+
+local function _test_play_sfx_by_key_rejects_indexed_vector_scale_with_only_second_or_third()
+  local result_2, scales_2 = _play_with_host_scale_capture({ [2] = 5 })
+  _assert_eq(result_2, nil, "table with only [2] should be rejected as scale")
+  _assert_eq(#scales_2, 0, "rejected [2]-only scale must not reach the host")
+  local result_3, scales_3 = _play_with_host_scale_capture({ [3] = 5 })
+  _assert_eq(result_3, nil, "table with only [3] should be rejected as scale")
+  _assert_eq(#scales_3, 0, "rejected [3]-only scale must not reach the host")
+end
+
+local function _test_play_sfx_by_key_falls_back_to_default_scale_for_non_vector_table()
+  local result, scales = _play_with_host_scale_capture({ w = 5 })
+  _assert_eq(result, 99, "a table without vector components is not a vector and should play")
+  _assert_eq(scales[1], 1.0, "non-numeric non-vector scale should fall back to 1.0")
+end
+
+-- ── _resolve_pos: 显式位置透传,缺省回落 v3_zero ───────────────────
+
+local function _test_play_3d_sound_passes_explicit_pos_and_defaults_missing_pos_to_zero()
+  local positions = {}
+  local pos = { x = 4, y = 5, z = 6 }
+  _with_patches({
+    { key = "GameAPI", value = {
+      play_3d_sound = function(passed_pos)
+        positions[#positions + 1] = passed_pos
+        return 1
+      end,
+    } },
+  }, function()
+    sound.play_3d_sound(pos, 100)
+    sound.play_3d_sound(nil, 100)
+  end)
+  _assert_eq(positions[1], pos, "explicit position should pass through to host")
+  _assert_eq(positions[2], runtime_constants.v3_zero, "missing position should fall back to v3_zero")
+end
+
+-- ── 宿主全局缺失:不抛错,返回 nil/false ────────────────────────────
+
+local function _test_play_calls_return_nil_without_raising_when_game_api_is_absent()
+  _with_patches({
+    { key = "GameAPI", value = nil },
+  }, function()
+    local ok_sfx, sfx_result = pcall(sound.play_sfx_by_key, 100, nil, nil, 1.0)
+    _assert_eq(ok_sfx, true, "absent GameAPI must not raise from play_sfx_by_key")
+    _assert_eq(sfx_result, nil, "absent GameAPI should make play_sfx_by_key return nil")
+    local ok_3d, sound_result = pcall(sound.play_3d_sound, nil, 100)
+    _assert_eq(ok_3d, true, "absent GameAPI must not raise from play_3d_sound")
+    _assert_eq(sound_result, nil, "absent GameAPI should make play_3d_sound return nil")
+  end)
+end
+
+local function _test_bind_sfx_to_unit_returns_false_without_raising_when_global_api_is_absent()
+  _with_patches({
+    { key = "GlobalAPI", value = nil },
+  }, function()
+    local ok, result = pcall(sound.bind_sfx_to_unit, 7, {})
+    _assert_eq(ok, true, "absent GlobalAPI must not raise")
+    _assert_eq(result, false, "absent GlobalAPI should return false")
+  end)
+end
+
+local function _test_bind_sfx_to_unit_skips_host_when_only_one_of_sfx_id_or_unit_is_missing()
+  local bound = {}
+  _with_patches({
+    { key = "GlobalAPI", value = {
+      bind_sfx_to_unit = function(sfx_id, unit)
+        bound[#bound + 1] = { sfx_id = sfx_id, unit = unit }
+      end,
+    } },
+  }, function()
+    _assert_eq(sound.bind_sfx_to_unit(nil, {}), false, "missing sfx id should return false with a live host")
+    _assert_eq(sound.bind_sfx_to_unit(7, nil), false, "missing unit should return false with a live host")
+  end)
+  _assert_eq(#bound, 0, "host bind must not receive a call with a missing sfx id or unit")
+end
+
 
 it("test_bind_sfx_to_unit_reports_success_and_a_missing_host_function", _test_bind_sfx_to_unit_reports_success_and_a_missing_host_function)
 it("test_play_sfx_by_key_rejects_array_vector_scale", _test_play_sfx_by_key_rejects_array_vector_scale)
@@ -296,4 +399,11 @@ it("test_play_3d_sound_returns_nil_when_game_api_missing_play_3d_sound", _test_p
 it("test_play_3d_sound_returns_nil_when_host_call_raises", _test_play_3d_sound_returns_nil_when_host_call_raises)
 it("test_bind_sfx_to_unit_returns_false_when_bind_is_not_a_function", _test_bind_sfx_to_unit_returns_false_when_bind_is_not_a_function)
 it("test_bind_sfx_to_unit_calls_host_when_both_params_valid", _test_bind_sfx_to_unit_calls_host_when_both_params_valid)
+it("test_play_sfx_by_key_rejects_named_vector_scale_with_only_y_or_z", _test_play_sfx_by_key_rejects_named_vector_scale_with_only_y_or_z)
+it("test_play_sfx_by_key_rejects_indexed_vector_scale_with_only_second_or_third", _test_play_sfx_by_key_rejects_indexed_vector_scale_with_only_second_or_third)
+it("test_play_sfx_by_key_falls_back_to_default_scale_for_non_vector_table", _test_play_sfx_by_key_falls_back_to_default_scale_for_non_vector_table)
+it("test_play_3d_sound_passes_explicit_pos_and_defaults_missing_pos_to_zero", _test_play_3d_sound_passes_explicit_pos_and_defaults_missing_pos_to_zero)
+it("test_play_calls_return_nil_without_raising_when_game_api_is_absent", _test_play_calls_return_nil_without_raising_when_game_api_is_absent)
+it("test_bind_sfx_to_unit_returns_false_without_raising_when_global_api_is_absent", _test_bind_sfx_to_unit_returns_false_without_raising_when_global_api_is_absent)
+it("test_bind_sfx_to_unit_skips_host_when_only_one_of_sfx_id_or_unit_is_missing", _test_bind_sfx_to_unit_skips_host_when_only_one_of_sfx_id_or_unit_is_missing)
 end)

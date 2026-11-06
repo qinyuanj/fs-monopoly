@@ -203,6 +203,47 @@ local function _test_run_or_defer_carries_the_runtime_event_source_L15_nil()
     "run_or_defer must carry the runtime_event source; got " .. tostring(seen_source))
 end
 
+-- 宿主注册抛出的错误原样上抛(error level 0):不得被 event_bridge 自己的
+-- 行号前缀污染,调用方据消息定位宿主侧故障。
+local function _test_install_rethrows_host_registration_error_verbatim()
+  local saved_ctx = runtime_context.current()
+  runtime_context.set_current({ env = { LuaAPI = {
+    global_register_custom_event = function()
+      error("host register boom", 0)
+    end,
+  } } })
+  local ok, err = pcall(event_bridge.install, {}, function() end)
+  runtime_context.set_current(saved_ctx)
+  luassert.is_false(ok)
+  luassert.is.equal("host register boom", err)
+end
+
+-- 真机取证(#585):宿主拒绝注册时句柄为 nil。只有一个事件拿到句柄时,
+-- 重复 install 仍不得再注册,否则已生效的事件会被重复派发。
+local function _test_repeated_install_with_one_rejected_handle_does_not_duplicate_the_live_event()
+  local events = require("src.foundation.events")
+  local live_event_names = {}
+  local lua_api = {
+    global_register_custom_event = function(name)
+      if name == events.land.tile_upgraded then
+        return nil
+      end
+      live_event_names[#live_event_names + 1] = name
+      return { event_name = name }
+    end,
+    global_unregister_custom_event = function() end,
+  }
+  local saved_ctx = runtime_context.current()
+  runtime_context.set_current({ env = { LuaAPI = lua_api } })
+
+  event_bridge.install({}, function() return {} end)
+  event_bridge.install({}, function() return {} end)
+
+  runtime_context.set_current(saved_ctx)
+
+  luassert.same({ events.intent.need_choice }, live_event_names)
+end
+
 
 it("test_uninstall_removes_both_registered_event_callbacks", _test_uninstall_removes_both_registered_event_callbacks)
 it("test_uninstall_is_idempotent", _test_uninstall_is_idempotent)
@@ -212,4 +253,7 @@ it("test_install_asserts_missing_state_L9_nil", _test_install_asserts_missing_st
 it("test_install_asserts_missing_get_current_game_L10_nil", _test_install_asserts_missing_get_current_game_L10_nil)
 it("test_install_asserts_when_event_registration_fails_L26_nil", _test_install_asserts_when_event_registration_fails_L26_nil)
 it("test_run_or_defer_carries_the_runtime_event_source_L15_nil", _test_run_or_defer_carries_the_runtime_event_source_L15_nil)
+it("test_install_rethrows_host_registration_error_verbatim", _test_install_rethrows_host_registration_error_verbatim)
+it("test_repeated_install_with_one_rejected_handle_does_not_duplicate_the_live_event",
+  _test_repeated_install_with_one_rejected_handle_does_not_duplicate_the_live_event)
 end)

@@ -91,6 +91,20 @@ local function _test_bootstrap_nodes_ignores_non_table_extra_nodes()
   luassert.truthy(_contains(required, "not-a-list") == false, "non-table extras should not be appended")
 end
 
+-- 遥控骰子灰底追加在选项之后,不得覆盖任何一个选项(#177)。
+local function _test_remote_choice_underlay_is_appended_without_dropping_any_option()
+  local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
+  local required = bootstrap_nodes.build_required_click_nodes()
+
+  for _, name in ipairs({
+    "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
+    "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06",
+    "遥控骰子_退出灰底",
+  }) do
+    luassert.truthy(_contains(required, name), name .. " should be a required click node")
+  end
+end
+
 local function _test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes()
   local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
   local ui_manager_nodes = {
@@ -657,6 +671,8 @@ end
 
 it("test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras", _test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras)
 it("test_bootstrap_nodes_ignores_non_table_extra_nodes", _test_bootstrap_nodes_ignores_non_table_extra_nodes)
+it("test_remote_choice_underlay_is_appended_without_dropping_any_option",
+  _test_remote_choice_underlay_is_appended_without_dropping_any_option)
 it("test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes", _test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes)
 it("test_bootstrap_nodes_assert_reports_single_missing_node", _test_bootstrap_nodes_assert_reports_single_missing_node)
 it("test_required_click_nodes_appends_extras", _test_required_click_nodes_appends_extras)

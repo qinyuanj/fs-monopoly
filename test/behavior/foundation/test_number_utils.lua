@@ -17,6 +17,17 @@ describe("TestNumberUtils", function()
     _assert_eq(number_utils.to_integer("12.3"), nil, "float string should be rejected")
   end)
 
+  -- 非负数原样返回(同值同子类型),负数与非数值归零。边界 0.0 也属原样返回:
+  -- 浮点 0.0 不得被换成整数 0(tostring 由 "0.0" 变 "0")。
+  it("test_non_negative_or_zero_passes_non_negatives_through_unchanged", function()
+    _assert_eq(number_utils.non_negative_or_zero(2.5), 2.5, "positive float passes through")
+    _assert_eq(number_utils.non_negative_or_zero(3), 3, "positive integer passes through")
+    _assert_eq(math.type(number_utils.non_negative_or_zero(0)), "integer", "integer zero stays integer")
+    _assert_eq(math.type(number_utils.non_negative_or_zero(0.0)), "float", "float zero stays float")
+    _assert_eq(number_utils.non_negative_or_zero(-0.5), 0, "negative clamps to zero")
+    _assert_eq(number_utils.non_negative_or_zero(nil), 0, "nil clamps to zero")
+  end)
+
   it("test_to_integer_fallback_from_tostring", function()
     local wrapped = setmetatable({}, {
       __tostring = function()

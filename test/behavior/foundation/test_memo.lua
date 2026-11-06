@@ -180,6 +180,34 @@ describe("TestMemo", function()
 
   -- ===== 构造校验 =====
 
+  it("test_new_snapshot_with_extra_field_recomputes", function()
+    local cell = memo.new(function(snapshot)
+      local total = 0
+      for _, value in pairs(snapshot) do
+        total = total + value
+      end
+      return total
+    end)
+    luassert.is.equal(1, cell:get({ a = 1 }))
+    luassert.is.equal(3, cell:get({ a = 1, b = 2 }), "an added field in the new snapshot should invalidate the cache")
+  end)
+
+  it("test_switching_between_table_and_scalar_snapshot_recomputes", function()
+    local cell = memo.new(function(snapshot)
+      return type(snapshot)
+    end)
+    luassert.is.equal("number", cell:get(5))
+    luassert.is.equal("table", cell:get({ a = 1 }), "scalar -> table snapshot should recompute")
+    luassert.is.equal("number", cell:get(5), "table -> scalar snapshot should recompute")
+  end)
+
+  it("test_first_get_with_nil_snapshot_still_computes", function()
+    local cell = memo.new(function()
+      return 42
+    end)
+    luassert.is.equal(42, cell:get(), "a constant selector must compute on the first get even without input")
+  end)
+
   it("test_new_rejects_non_function_compute", function()
     -- 原义是「memo.new("not a function") 会抛」,尾参是传给 memo.new 的实参。
     luassert.has_error(function()

@@ -52,6 +52,23 @@ local function _test_end_game_routes_to_host_and_leaves_diagnostics()
   _assert_equal(#warns, 2, "missing and raising host game_end should each leave one warn")
 end
 
+local function _test_end_game_without_game_api_reports_false()
+  local ports = default_ports.build({ current = function()
+    return { env = {} }
+  end })
+  local logger = require("src.foundation.log")
+  local original_warn = logger.warn
+  local warns = {}
+  logger.warn = function(...)
+    warns[#warns + 1] = table.concat({ ... }, " ")
+  end
+  local ok, result = pcall(ports.end_game)
+  logger.warn = original_warn
+
+  _assert_equal(ok and result == false, true, "missing GameAPI should report false, not raise")
+  _assert_equal(#warns, 1, "missing GameAPI should leave one warn")
+end
+
 local function _test_wall_diff_seconds_prefers_game_api_then_falls_back()
   local ctx = {
     env = {
@@ -329,6 +346,49 @@ local function _test_resolve_roles_queries_game_api_when_roles_not_initialized()
 
   _assert_equal(#roles, 1, "resolve_roles should query the host when ctx.roles is not a table")
   _assert_equal(roles[1].id, 7, "resolve_roles should return the queried role")
+end
+
+local function _test_resolve_roles_tolerates_a_non_table_host_answer()
+  local ctx = {
+    env = {
+      GameAPI = {
+        get_all_valid_roles = function()
+          return nil
+        end,
+      },
+    },
+    roles = {},
+  }
+  local ports = default_ports.build({ current = function() return ctx end })
+
+  local ok, roles = pcall(ports.resolve_roles)
+
+  _assert_equal(ok, true, "a nil host role list should not raise")
+  _assert_equal(type(roles), "table", "a nil host role list should yield a role table")
+  _assert_equal(#roles, 0, "a nil host role list should yield no roles")
+  _assert_equal(ports.resolve_role(1), nil, "resolve_role should degrade to nil on a nil host role list")
+end
+
+-- ctx.roles 会经 install_runtime_helpers 发布为 ALLROLES / all_roles,同一张表;
+-- 宿主刷新回空列表时不得把上下文换成另一张空表,否则与已发布的全局表脱钩。
+local function _test_resolve_roles_keeps_the_context_roster_when_host_refresh_is_empty()
+  local roster = {}
+  local ctx = {
+    env = {
+      GameAPI = {
+        get_all_valid_roles = function()
+          return {}
+        end,
+      },
+    },
+    roles = roster,
+  }
+  local ports = default_ports.build({ current = function() return ctx end })
+
+  local roles = ports.resolve_roles()
+
+  _assert_equal(rawequal(roles, roster), true, "an empty refresh should hand back the context roster table")
+  _assert_equal(rawequal(ctx.roles, roster), true, "an empty refresh should not replace the context roster table")
 end
 
 local function _test_is_effect_idle_reports_the_effect_track_state()
@@ -691,6 +751,7 @@ end
 
 
 it("test_end_game_routes_to_host_and_leaves_diagnostics", _test_end_game_routes_to_host_and_leaves_diagnostics)
+it("test_end_game_without_game_api_reports_false", _test_end_game_without_game_api_reports_false)
 it("test_wall_diff_seconds_prefers_game_api_then_falls_back", _test_wall_diff_seconds_prefers_game_api_then_falls_back)
 it("test_cpu_now_seconds_prefers_game_api_then_falls_back", _test_cpu_now_seconds_prefers_game_api_then_falls_back)
 it("test_wall_now_hms_formats_from_game_api_parts", _test_wall_now_hms_formats_from_game_api_parts)
@@ -704,6 +765,8 @@ it("test_is_synthetic_player_answers_from_registry_and_defaults_false", _test_is
 it("test_resolve_role_returns_nil_without_game_api", _test_resolve_role_returns_nil_without_game_api)
 it("test_resolve_roles_refreshes_empty_roles_from_game_api", _test_resolve_roles_refreshes_empty_roles_from_game_api)
 it("test_resolve_roles_queries_game_api_when_roles_not_initialized", _test_resolve_roles_queries_game_api_when_roles_not_initialized)
+it("test_resolve_roles_tolerates_a_non_table_host_answer", _test_resolve_roles_tolerates_a_non_table_host_answer)
+it("test_resolve_roles_keeps_the_context_roster_when_host_refresh_is_empty", _test_resolve_roles_keeps_the_context_roster_when_host_refresh_is_empty)
 it("test_is_effect_idle_reports_the_effect_track_state", _test_is_effect_idle_reports_the_effect_track_state)
 it("test_is_effect_idle_falls_back_to_true_when_require_raises", _test_is_effect_idle_falls_back_to_true_when_require_raises)
 it("test_is_effect_idle_falls_back_to_true_when_module_is_not_a_table", _test_is_effect_idle_falls_back_to_true_when_module_is_not_a_table)

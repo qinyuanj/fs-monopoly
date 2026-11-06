@@ -281,6 +281,30 @@ local function _test_drops_the_name_to_nil_when_the_name_accessor_raises()
   end)
 end
 
+-- 帧同步下 GameAPI.random_int 是全局共享随机流:开局只为真正空缺的席位抽
+-- unit_key,多抽会平移后续骰子等随机结果。
+local function _with_recorded_draws(roles, max_players)
+  local draws = {}
+  _with_roles(roles, function()
+    _G.GameAPI.random_int = function(min, max)
+      draws[#draws + 1] = { min, max }
+      return min
+    end
+    roster_roles.build_startup_roster(max_players)
+  end)
+  return draws
+end
+
+local function _test_draws_random_unit_keys_only_for_the_missing_seats()
+  local draws = _with_recorded_draws({ _role(101, "甲") }, 4)
+  luassert.same({ { 1, 4 }, { 2, 4 }, { 3, 4 } }, draws)
+end
+
+local function _test_unset_cap_draws_nothing_from_the_random_stream()
+  local draws = _with_recorded_draws({ _role(101, "甲"), _role(102, "乙") }, nil)
+  luassert.same({}, draws)
+end
+
 it("test_seats_exactly_the_real_roles_when_their_count_matches_the_cap", _test_seats_exactly_the_real_roles_when_their_count_matches_the_cap)
 it("test_fills_the_remaining_seats_with_synthetic_roles_in_pool_order", _test_fills_the_remaining_seats_with_synthetic_roles_in_pool_order)
 it("test_truncates_real_roles_past_the_cap_and_warns", _test_truncates_real_roles_past_the_cap_and_warns)
@@ -298,6 +322,8 @@ it("test_non_table_resolver_result_is_rejected", _test_non_table_resolver_result
 it("test_single_missing_seat_keeps_a_real_unit_key", _test_single_missing_seat_keeps_a_real_unit_key)
 it("test_dirty_false_entries_in_roles_list_are_skipped", _test_dirty_false_entries_in_roles_list_are_skipped)
 it("test_drops_the_name_to_nil_when_the_name_accessor_raises", _test_drops_the_name_to_nil_when_the_name_accessor_raises)
+it("test_draws_random_unit_keys_only_for_the_missing_seats", _test_draws_random_unit_keys_only_for_the_missing_seats)
+it("test_unset_cap_draws_nothing_from_the_random_stream", _test_unset_cap_draws_nothing_from_the_random_stream)
 end)
 
 describe("TestRosterRolesBuildStartupAiMap", function()
@@ -384,14 +410,14 @@ describe("TestRosterRolesSeatingClampFill", function()
     return roles
   end
 
-  local function _build_with_signups(signup_count)
+  local function _build_with_signups(signup_count, factory_opts)
     local saved_gameapi = _G.GameAPI
     _G.GameAPI = { random_int = function(min, _) return min end }
     runtime_ports.configure({
       resolve_roles = function() return _mock_roles(signup_count) end,
     })
     local ok, result = pcall(function()
-      return roster.build_game_factory({})()
+      return roster.build_game_factory({}, factory_opts)()
     end)
     runtime_ports.reset_for_tests()
     _G.GameAPI = saved_gameapi
@@ -431,5 +457,23 @@ describe("TestRosterRolesSeatingClampFill", function()
       luassert.truthy(real + ai == SEATS,
         "real + AI roles must conserve to " .. SEATS .. " for signup=" .. signup_count)
     end)
+  end)
+
+  local function _delegated_flags(game)
+    local control = require("src.player.control")
+    local flags = {}
+    for index, player in ipairs(game.players) do
+      flags[index] = control.is_delegated(player)
+    end
+    return flags
+  end
+
+  it("test_real_players_start_undelegated_unless_auto_all_is_explicitly_true", function()
+    luassert.same({ false, false, false, false }, _delegated_flags(_build_with_signups(SEATS)))
+    luassert.same({ false, false, false, false }, _delegated_flags(_build_with_signups(SEATS, { auto_all = "yes" })))
+  end)
+
+  it("test_auto_all_delegates_every_real_player", function()
+    luassert.same({ true, true, true, true }, _delegated_flags(_build_with_signups(SEATS, { auto_all = true })))
   end)
 end)

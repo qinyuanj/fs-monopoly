@@ -298,6 +298,32 @@ local function _test_watch_game_warns_when_trigger_port_is_unavailable()
   luassert.truthy(#warns == 1, "unavailable trigger port must leave a warn trace (ADR 0046)")
 end
 
+-- get_roleid 读不出(返回 nil 或抛错)时回落 .id 比对,不得把 nil 或错误消息当 id。
+local function _test_exit_callback_falls_back_to_role_id_field_when_get_roleid_fails()
+  _configure_roles({ [1] = { tag = "role1" } })
+  local player1 = { id = 1, name = "P1" }
+  local registrations = {}
+  support.with_patches({
+    {
+      target = host_runtime,
+      key = "register_trigger_event",
+      value = function(event_desc, fn)
+        registrations[#registrations + 1] = { desc = event_desc, handler = fn }
+        return true, "trigger-handle"
+      end,
+    },
+  }, function()
+    settlement.watch_game({ players = { player1 } })
+  end, { skip_runtime_context_refresh = true })
+
+  registrations[1].handler("ET_SPEC_ROLE_EXIT_GAME", nil,
+    { role = { get_roleid = function() return nil end, id = 2 } })
+  luassert.is_nil(player1.quit_reason, "nil get_roleid must fall back to .id and see another player's exit")
+  registrations[1].handler("ET_SPEC_ROLE_EXIT_GAME", nil,
+    { role = { get_roleid = function() error("proxy gone") end, id = 1 } })
+  luassert.is.equal("disconnect", player1.quit_reason, "raising get_roleid must fall back to .id and mark own exit")
+end
+
 local function _test_watch_game_rejects_missing_game_or_players()
   luassert.truthy(settlement.watch_game(nil) == false, "watch_game must reject nil game")
   luassert.truthy(settlement.watch_game({}) == false, "watch_game must reject a game without players")
@@ -312,5 +338,7 @@ it("test_watch_game_skips_and_logs_when_role_unresolved", _test_watch_game_skips
 it("test_watch_game_warns_when_host_rejects_registration", _test_watch_game_warns_when_host_rejects_registration)
 it("test_exit_callback_marks_quit_when_role_id_is_unreadable", _test_exit_callback_marks_quit_when_role_id_is_unreadable)
 it("test_watch_game_warns_when_trigger_port_is_unavailable", _test_watch_game_warns_when_trigger_port_is_unavailable)
+it("test_exit_callback_falls_back_to_role_id_field_when_get_roleid_fails",
+  _test_exit_callback_falls_back_to_role_id_field_when_get_roleid_fails)
 it("test_watch_game_rejects_missing_game_or_players", _test_watch_game_rejects_missing_game_or_players)
 end)

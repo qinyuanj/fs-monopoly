@@ -590,6 +590,74 @@ local function _test_is_synthetic_player_is_cleared_by_reset()
   _assert_eq(registry.is_synthetic_player(-23), false, "reset should clear synthetic player identities")
 end
 
+-- ── 宿主边界缺失/失败时的可见行为 ──────────────────────────────────
+
+local function _test_spawn_pending_reports_missing_spawn_api_when_game_api_is_absent()
+  local registry_module = require("src.host.synthetic_actor_registry")
+  local registry = registry_module.new({ LuaAPI = {} })
+  registry.register_specs({ { player_id = -24, unit_key = "npc_24" } })
+  local ok, err = pcall(registry.spawn_pending, { path = { 1 } })
+  _assert_eq(ok, false, "spawning without GameAPI should fail loudly")
+  luassert.truthy(string.find(tostring(err), "missing GameAPI.create_creature_fixed_scale", 1, true),
+    "absent GameAPI should report the missing spawn API, got: " .. tostring(err))
+end
+
+local function _test_spawn_pending_reports_failed_spawn_when_host_create_raises()
+  local registry_module = require("src.host.synthetic_actor_registry")
+  local registry = registry_module.new({
+    LuaAPI = {},
+    GameAPI = {
+      create_creature_fixed_scale = function()
+        error("create boom")
+      end,
+    },
+  })
+  registry.register_specs({ { player_id = -25, unit_key = "npc_25" } })
+  local ok, err = pcall(registry.spawn_pending, { path = { 1 } })
+  _assert_eq(ok, false, "a throwing host create should fail the spawn")
+  luassert.truthy(string.find(tostring(err), "failed to spawn synthetic actor: -25", 1, true),
+    "throwing host create should report the failed player, got: " .. tostring(err))
+  _assert_eq(registry.resolve_actor(-25), nil, "a failed spawn must not register an actor")
+end
+
+local function _test_reset_tolerates_game_api_removed_after_spawn()
+  local registry_module = require("src.host.synthetic_actor_registry")
+  local env = {
+    LuaAPI = {},
+    GameAPI = {
+      create_creature_fixed_scale = function() return { start_ai = function() end } end,
+    },
+  }
+  local registry = registry_module.new(env)
+  registry.register_specs({ { player_id = -26, unit_key = "npc_26" } })
+  registry.spawn_pending({ path = { 1 } })
+  env.GameAPI = nil
+
+  local ok, err = pcall(registry.reset)
+  _assert_eq(ok, true, "reset must not raise once the host GameAPI is gone: " .. tostring(err))
+  _assert_eq(registry.resolve_actor(-26), nil, "reset should still clear the actor lookup")
+end
+
+local function _test_adapter_kept_across_reset_does_not_destroy_again()
+  local registry_module = require("src.host.synthetic_actor_registry")
+  local destroyed = {}
+  local registry = registry_module.new({
+    LuaAPI = {},
+    GameAPI = {
+      create_creature_fixed_scale = function() return { start_ai = function() end } end,
+      destroy_unit = function(unit) destroyed[#destroyed + 1] = unit end,
+    },
+  })
+  registry.register_specs({ { player_id = -27, unit_key = "npc_27" } })
+  registry.spawn_pending({ path = { 1 } })
+  local adapter = _require_truthy(registry.resolve_actor(-27).adapter, "adapter required")
+
+  registry.reset()
+  _assert_eq(#destroyed, 1, "reset should destroy the live actor once")
+  _assert_eq(adapter.lose(), true, "lose on an actor already retired by reset reports success")
+  _assert_eq(#destroyed, 1, "an adapter held across reset must not destroy the unit again")
+end
+
 
 it("test_spawns_from_first_path_tile", _test_spawns_from_first_path_tile)
 it("test_spawns_at_zero_when_lua_api_cannot_query_start_tile", _test_spawns_at_zero_when_lua_api_cannot_query_start_tile)
@@ -611,4 +679,8 @@ it("test_spawn_pending_is_noop_when_no_specs_registered", _test_spawn_pending_is
 it("test_spawn_logs_nothing_when_start_ai_succeeds", _test_spawn_logs_nothing_when_start_ai_succeeds)
 it("test_is_synthetic_player_survives_retirement", _test_is_synthetic_player_survives_retirement)
 it("test_is_synthetic_player_is_cleared_by_reset", _test_is_synthetic_player_is_cleared_by_reset)
+it("test_spawn_pending_reports_missing_spawn_api_when_game_api_is_absent", _test_spawn_pending_reports_missing_spawn_api_when_game_api_is_absent)
+it("test_spawn_pending_reports_failed_spawn_when_host_create_raises", _test_spawn_pending_reports_failed_spawn_when_host_create_raises)
+it("test_reset_tolerates_game_api_removed_after_spawn", _test_reset_tolerates_game_api_removed_after_spawn)
+it("test_adapter_kept_across_reset_does_not_destroy_again", _test_adapter_kept_across_reset_does_not_destroy_again)
 end)
