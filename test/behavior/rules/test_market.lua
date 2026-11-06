@@ -747,6 +747,31 @@ do -- describe("market")
         "refreshed market screen should show the item unbuyable once the last slot is taken")
     end)
 
+    it("test_market_screen_receives_the_maxed_mark_through_ui_sync", function()
+      _reset_market_choice_runtime_modules()
+      local market_service = _reload_market_service()
+      local host_limit = require("src.rules.market.host_limit")
+      local g = _new_game()
+      local p = g:current_player()
+      local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
+      _with_paid_gateway(function() return true end, function()
+        for _ = 1, 10 do
+          host_limit.record_purchase(g, p, target)
+        end
+        local spec = market_service.choice.build(p, g, { active_tab = "item", page_index = 1 })
+        spec.id = 2311
+        g.turn.pending_choice = spec
+        market_service.choice.rebuild_pending(g, spec, p)
+
+        local market = _sync_market_screen(g, _open_market_screen_state(g), p.id)
+
+        local shown = _find_option(market and market.options, target.product_id)
+        luassert.truthy(shown ~= nil and shown.host_limit_reached == true,
+          "market screen data must carry the maxed mark")
+        luassert.truthy(shown.can_buy == false, "maxed item is unbuyable on screen")
+      end)
+    end)
+
     it("test_market_paid_purchase_same_goods_can_fulfill_multiple_times", function()
       local market_service = _reload_market_service()
       local g = _new_game()

@@ -25,6 +25,7 @@ local M = { key = "market" }
 
 local MARKET_SLOTS_FULL_TIP = "道具槽已满，无法购买"
 local MARKET_SLOTS_FULL_TIP_SECONDS = 3.0
+local MARKET_HOST_LIMIT_TIP = "本局已买满"
 
 -- #178 点背景关闭在黑市屏永久停用(#216:金豆单次限购改 1 后连续购买易误触关屏)。
 -- 背景仍注册路由且保持触摸,只吞点击、不产出意图,避免点击穿透到下方棋盘;
@@ -77,6 +78,27 @@ local function _reject_buy_slots_full()
   })
 end
 
+-- 限购买满点击拦截(UI 本地闸):与槽满同形,先于槽满判定;引擎侧下单校验
+-- host_limit_reached 兜底刷新延迟穿透。
+local function _selected_host_limit_reached(market, option_id)
+  for _, option in ipairs(market.options or {}) do
+    if option.id == option_id then
+      return option.host_limit_reached == true
+    end
+  end
+  return false
+end
+
+local function _reject_buy_host_limit()
+  tip_queue.enqueue({
+    text = MARKET_HOST_LIMIT_TIP,
+    duration = MARKET_SLOTS_FULL_TIP_SECONDS,
+    dedupe_key = "market_buy_block_host_limit",
+    blocks_inter_turn = false,
+    source = "ui.market_host_limit",
+  })
+end
+
 -- items 与 controls 保持两个具名 builder,而不是合成一坨:这个二分是真实的(items 由
 -- nodes.item_buttons 数据驱动,controls 是固定集),且 canvas_route_market_baseline_spec
 -- 正是分别钉住两者的产物。build_route_specs 只负责按序合成。
@@ -121,6 +143,10 @@ function M.build_controls(state)
         local ui_runtime = runtime_state.ensure_ui_runtime(state)
         local option_id = ui_runtime.pending_choice_selected_option_id
         if not option_id then
+          return nil
+        end
+        if _selected_host_limit_reached(market, option_id) then
+          _reject_buy_host_limit()
           return nil
         end
         if _buyer_inventory_full(state) then

@@ -541,7 +541,7 @@ describe("TestMarketPurchase", function()
     end)
     luassert.truthy(failures[1].reason == "unsupported_kind", "unsupported callback entry should emit reason")
     -- lint-allow: call-count session 端口经依赖注入,刷新次数即回调结果的对外输出
-    luassert.truthy(refreshed == 0, "unsupported callback entry should not refresh market choice")
+    luassert.truthy(refreshed == 1, "failed callback must still refresh: the host already counted the purchase")
 
     failures = {}
     callback = nil
@@ -587,7 +587,7 @@ describe("TestMarketPurchase", function()
     end)
     luassert.truthy(failures[1].reason == "inventory_full", "callback failure should emit fulfillment reason")
     -- lint-allow: call-count session 端口经依赖注入,刷新次数即回调结果的对外输出
-    luassert.truthy(refreshed == 0, "callback failure should not refresh market choice")
+    luassert.truthy(refreshed == 1, "failed card grant must still refresh: the host already counted the purchase")
   end)
 
   it("test_purchase_execute_rejects_non_item_entries", function()

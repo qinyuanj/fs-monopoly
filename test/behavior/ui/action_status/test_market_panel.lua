@@ -676,16 +676,16 @@ describe("TestMarketPanel", function()
     _assert_eq(show_tip_calls, 0, "market_cancel should not show unadapted tip")
   end)
 
-  it("test_17_market_sold_out_nodes_stay_hidden_for_any_option_data", function()
+  it("test_17_market_sold_out_nodes_follow_the_maxed_item_across_pages_and_never_take_touch", function()
     local entry_a = assert(market_cfg[1], "missing market cfg entry a")
     local entry_b = assert(market_cfg[2], "missing market cfg entry b")
     local state, visible, _, touch = _build_market_state({ entry_a.product_id, entry_b.product_id })
     _bind_ui_runtime(state)
 
-    local function assert_all_hidden(phase)
+    local function assert_sold_out_slots(phase, expected_slot)
       for i = 1, #market_layout.sold_out_badges do
         for _, node in ipairs({ market_layout.sold_out_badges[i], market_layout.sold_out_labels[i] }) do
-          _assert_eq(visible[node], false, node .. " should be hidden " .. phase)
+          _assert_eq(visible[node], i == expected_slot, node .. " visibility " .. phase)
           _assert_eq(touch[node], false, node .. " should not be touchable " .. phase)
         end
       end
@@ -694,15 +694,44 @@ describe("TestMarketPanel", function()
     market_view.refresh_market(state, {
       choice_id = 31,
       options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = false, sold_out = true },
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, host_limit_reached = true },
         { id = entry_b.product_id, label = entry_b.name, can_buy = true },
       },
       allow_cancel = true,
     })
-    assert_all_hidden("while the market is open")
+    assert_sold_out_slots("with the maxed item in slot 1", 1)
+    _assert_eq(touch[market_layout.item_buttons[1]], true, "maxed slot button stays clickable for the tip")
+
+    market_view.refresh_market(state, {
+      choice_id = 31,
+      options = {
+        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, host_limit_reached = true },
+      },
+      allow_cancel = true,
+    })
+    assert_sold_out_slots("after the maxed item moves to slot 2", 2)
+
+    market_view.refresh_market(state, {
+      choice_id = 31,
+      options = {
+        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+      },
+      allow_cancel = true,
+    })
+    assert_sold_out_slots("on a page without a maxed item", nil)
+
+    market_view.refresh_market(state, {
+      choice_id = 31,
+      options = {
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, host_limit_reached = true },
+      },
+      allow_cancel = true,
+    })
+    assert_sold_out_slots("back on the maxed page", 1)
 
     market_view.close_market_panel(state)
-    assert_all_hidden("after the market closes")
+    assert_sold_out_slots("after the market closes", nil)
   end)
 
   it("test_19_market_confirm_button_stays_visible_when_unbuyable_item_selected", function()

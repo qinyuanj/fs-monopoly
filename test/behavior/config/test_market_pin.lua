@@ -44,4 +44,18 @@ describe("TestMarketPin", function()
     end
   end)
 
+  -- 编辑器地图商城的「单局」限购数量镜像(#231):改编辑器必须同步这里(ADR 0080)。
+  it("test_every_paid_item_mirrors_the_editor_limit_and_gold_items_have_none", function()
+    local paid_count = 0
+    for _, row in ipairs(market) do
+      if row.currency == "金币" then
+        luassert.is_nil(row.host_limit, row.name .. " is outside the map mall")
+      else
+        paid_count = paid_count + 1
+        luassert.is.equal(10, row.host_limit, row.name .. " host_limit")
+      end
+    end
+    luassert.is.equal(18, paid_count, "paid item count")
+  end)
+
 end)

@@ -3,6 +3,7 @@ local items_cfg = require("src.config.content.items")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local inventory = require("src.rules.items.inventory")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
+local host_limit = require("src.rules.market.host_limit")
 
 local context = {}
 
@@ -64,12 +65,15 @@ local function _is_market_item(entry)
   return entry ~= nil and entry.kind == "item"
 end
 
--- 与货币无关的准入闸门:是商品、已上架、背包有位。数量上限只由宿主限购承担(ADR 0078)。
-local function _entry_available(player, entry)
+-- 与货币无关的准入闸门:是商品、已上架、未限购买满、背包有位(ADR 0080)。
+local function _entry_available(game, player, entry)
   if not _is_market_item(entry) then
     return false
   end
   if not context.entry_market_enabled(entry) then
+    return false
+  end
+  if host_limit.is_reached(game, player, entry) then
     return false
   end
   return not inventory.is_full(player)
@@ -88,7 +92,7 @@ local function _can_afford_entry(game, player, entry)
 end
 
 function eligibility.can_buy_entry(game, player, entry)
-  if not _entry_available(player, entry) then
+  if not _entry_available(game, player, entry) then
     return false
   end
   return _can_afford_entry(game, player, entry)

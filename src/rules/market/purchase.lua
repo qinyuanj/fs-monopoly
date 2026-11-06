@@ -5,6 +5,7 @@ local market_query = require("src.rules.market.query")
 local market_choice = require("src.rules.market.choice")
 local paid_purchase_flow = require("src.rules.market.paid_purchase_flow")
 local fulfillment = require("src.rules.market.purchase_fulfillment")
+local host_limit = require("src.rules.market.host_limit")
 
 local query_context = market_query.context
 local choice_feedback = market_choice.feedback
@@ -28,6 +29,19 @@ function policy.validate_entry(player, entry)
     }
   end
   return { ok = true }
+end
+
+-- 买满只在下单时拦:到账回调走 validate_entry,已付款的回调不能因买满被拒。
+function policy.validate_order(game, player, entry)
+  local decision = policy.validate_entry(player, entry)
+  if decision.ok and host_limit.is_reached(game, player, entry) then
+    return {
+      ok = false,
+      reason = "host_limit_reached",
+      body = player.name .. " 本局已买满",
+    }
+  end
+  return decision
 end
 
 local local_purchase = {}
@@ -83,23 +97,30 @@ end
 
 local paid_purchase_callback = {}
 
+-- 宿主回调到达即已扣款并计数,所以先计数,且发卡失败也要刷新黑市屏。
 function paid_purchase_callback.handle(game, player, entry)
+  host_limit.record_purchase(game, player, entry)
   paid_purchase_flow.clear_in_flight(game, player, entry)
   local ok = paid_fulfillment.fulfill_entry(game, player, entry)
-  if ok then
-    choice_session.refresh_after_paid_callback(game, player, entry)
-  end
+  choice_session.refresh_after_paid_callback(game, player, entry)
   return ok
+end
+
+-- 回调没有对应的待到账记录(不经自家购买按钮):只跟上宿主计数,不发卡。
+function paid_purchase_callback.handle_untracked(game, player, product_id)
+  local entry = query_context.entry_by_id(product_id)
+  host_limit.record_purchase(game, player, entry)
+  choice_session.refresh_after_paid_callback(game, player, entry)
 end
 
 local purchase = {}
 
 function purchase.setup_for_game(game)
-  paid_purchase_gateway.setup_for_game(game, paid_purchase_callback.handle)
+  paid_purchase_gateway.setup_for_game(game, paid_purchase_callback.handle, paid_purchase_callback.handle_untracked)
 end
 
-local function _validate_purchase_entry(player, entry)
-  local decision = policy.validate_entry(player, entry)
+local function _validate_purchase_order(game, player, entry)
+  local decision = policy.validate_order(game, player, entry)
   if not decision.ok then
     choice_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
     return false, decision.reason
@@ -122,7 +143,7 @@ function purchase.execute(game, player, product_id)
   local entry = query_context.entry_by_id(product_id)
   assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
 
-  local ok, reason = _validate_purchase_entry(player, entry)
+  local ok, reason = _validate_purchase_order(game, player, entry)
   if not ok then
     return { ok = false, reason = reason }
   end

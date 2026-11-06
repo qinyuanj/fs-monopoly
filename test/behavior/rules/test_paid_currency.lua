@@ -402,7 +402,7 @@ it("test_paid_purchase_callback_fulfills_item", function()
   end)
 end)
 
-it("test_paid_purchase_callback_grants_every_purchase_without_count_limit", function()
+it("test_paid_purchase_callback_grants_every_purchase_up_to_the_host_limit", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game)
@@ -413,7 +413,7 @@ it("test_paid_purchase_callback_grants_every_purchase_without_count_limit", func
   }, function()
     _with_patches(env.patch_list, function()
       local market = _reload_market()
-      for purchase_index = 1, 11 do
+      for purchase_index = 1, 10 do
         p.inventory:clear()
         local result = market.purchase.execute(game, p, 2009)
         luassert.truthy(type(result) == "table" and result.ok == true and result.deferred_fulfillment == true,

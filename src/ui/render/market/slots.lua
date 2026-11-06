@@ -41,6 +41,8 @@ local function _set_market_slot_hidden(ui, slot)
     button = { visible = false, touch_enabled = false },
     label = { visible = false, touch_enabled = false },
     frame = { visible = false, touch_enabled = false },
+    sold_out_badge = { visible = false, touch_enabled = false },
+    sold_out_label = { visible = false, touch_enabled = false },
   })
 end
 
@@ -57,6 +59,8 @@ local function _for_each_market_slot(callback)
         button = button,
         label = label,
         frame = frame,
+        sold_out_badge = market_layout.sold_out_badges[index],
+        sold_out_label = market_layout.sold_out_labels[index],
       })
     end
   end
@@ -68,10 +72,13 @@ local function _set_market_slot_visible(ui, slot, opt)
   local entry, cfg = _resolve_market_entry(opt_id)
   local name = _resolve_market_name(opt, opt_id, entry, cfg)
   ui:set_label(slot.label, name)
+  local sold_out = opt.host_limit_reached == true
   ui_controls.set_slot_state(ui, slot, {
     label = { visible = true, touch_enabled = false },
     button = { visible = true, touch_enabled = true },
     frame = { visible = true, touch_enabled = false },
+    sold_out_badge = { visible = sold_out, touch_enabled = false },
+    sold_out_label = { visible = sold_out, touch_enabled = false },
   })
   return opt_id
 end

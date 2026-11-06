@@ -17,6 +17,7 @@ local function _new_runtime()
     registered_role_ids = {},
     pending_by_role_id = {},
     on_purchase = nil,
+    on_untracked_purchase = nil,
     setup_done = false,
   }
 end
@@ -339,6 +340,30 @@ local function _close_goods_purchase_panel(data, goods_id)
   end
 end
 
+-- goods_id 的宿主类型不稳定(同 _consume_pending),按字符串比对。
+local function _product_id_for_goods(rt, goods_id)
+  local target_goods_id = tostring(goods_id)
+  for mapped_goods_id, product_id in pairs(rt.product_id_by_goods_id) do
+    if tostring(mapped_goods_id) == target_goods_id then
+      return product_id
+    end
+  end
+  return nil
+end
+
+-- 没有待到账记录的回调同样已被宿主扣款计数:能确定玩家和商品就上报,由规则层跟上计数。
+-- goods_id 只有在黑市开过屏后才映射得到,此前的回调确定不了商品,不上报。
+local function _report_untracked_purchase(game, rt, data, goods_id)
+  local product_id = _product_id_for_goods(rt, goods_id)
+  if product_id == nil or type(rt.on_untracked_purchase) ~= "function" then
+    return
+  end
+  local player = game:find_player_by_id(_callback_role_id(data))
+  if player then
+    rt.on_untracked_purchase(game, player, product_id)
+  end
+end
+
 local function _on_purchase_goods_callback(game, rt, data)
   local goods_id = _callback_goods_id(data)
   if goods_id == nil then
@@ -347,6 +372,7 @@ local function _on_purchase_goods_callback(game, rt, data)
   _close_goods_purchase_panel(data, goods_id)
   local pending = _consume_callback_pending(rt, data, goods_id)
   if pending == nil then
+    _report_untracked_purchase(game, rt, data, goods_id)
     return
   end
   local callback_player = _callback_player(game, pending)
@@ -398,9 +424,12 @@ local function _register_purchase_event_for_role(game, player)
   rt.registered_role_ids[role_id] = true
 end
 
-local function _set_runtime_on_purchase(rt, on_purchase)
+local function _set_runtime_purchase_handlers(rt, on_purchase, on_untracked_purchase)
   if type(on_purchase) == "function" then
     rt.on_purchase = on_purchase
+  end
+  if type(on_untracked_purchase) == "function" then
+    rt.on_untracked_purchase = on_untracked_purchase
   end
 end
 
@@ -414,9 +443,9 @@ local function _setup_purchase_events(game, rt)
   end
 end
 
-function gateway.setup_for_game(game, on_purchase)
+function gateway.setup_for_game(game, on_purchase, on_untracked_purchase)
   local rt = _runtime(game)
-  _set_runtime_on_purchase(rt, on_purchase)
+  _set_runtime_purchase_handlers(rt, on_purchase, on_untracked_purchase)
   if rt.setup_done == true then
     return
   end

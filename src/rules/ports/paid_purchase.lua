@@ -30,8 +30,8 @@ function port.is_configured()
   return configured_gateway ~= nil
 end
 
-function port.setup_for_game(game, on_purchase)
-  return assert(_resolve_gateway(), "missing market paid gateway").setup_for_game(game, on_purchase)
+function port.setup_for_game(game, on_purchase, on_untracked_purchase)
+  return assert(_resolve_gateway(), "missing market paid gateway").setup_for_game(game, on_purchase, on_untracked_purchase)
 end
 
 function port.can_start(game, player, entry)

@@ -52,6 +52,10 @@ function market_view_controls.set_market_container_active(ui, active)
   ui_controls.set_control_state(ui, market_layout.background, { touch_enabled = active == true })
   ui_controls.set_controls_state(ui, market_layout.passthrough_nodes, { touch_enabled = false })
   ui_controls.set_controls_state(ui, market_layout.hidden_nodes, { visible = false, touch_enabled = false })
+  if not active then
+    ui_controls.set_controls_state(ui, market_layout.sold_out_badges, { visible = false, touch_enabled = false })
+    ui_controls.set_controls_state(ui, market_layout.sold_out_labels, { visible = false, touch_enabled = false })
+  end
 end
 
 -- 黑市屏自带的倒计时节点(与基础屏倒计时同源):黑市打开时镜像基础屏的
