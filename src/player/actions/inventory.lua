@@ -45,7 +45,7 @@ end
 
 -- 清空全部槽位(槽位数不变、每槽置 false)。清空期间暂停变更通知，
 -- 整体替换 items 表，避免逐槽触发 _on_change。
--- max_slots 由 init 断言恒非 nil,曾经的「or #self.items」是死默认(等价变异体,按 #257 三分类删冗余)。
+-- max_slots 由 init 断言恒非 nil,曾经的「or #self.items」是死默认(等价变异体,已删冗余)。
 function inventory:clear()
   self._suspend_on_change = true
   local items = {}

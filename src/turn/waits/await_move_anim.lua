@@ -62,7 +62,7 @@ local function _assert_await_anim_args(session, opts)
   assert(session ~= nil and session.game ~= nil, "missing await session")
   -- opts 三件套(state_name/anim_key/done_action_type)恒被唯一调用方
   -- _resolve_wait_anim_opts 填满,曾经的三个 nil 断言恒不触发——
-  -- 等价变异体,按 #257 三分类删冗余。
+  -- 等价变异体,已删冗余。
 end
 
 -- action 是否是本次动画的完成信号：类型匹配，且 seq 不与动画冲突。

@@ -240,7 +240,7 @@ function handlers.handle_roadblock(game, player, item_id, context)
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       -- pick_best 只收非空候选、auto_candidates 必带 idx,roadblock.apply 另有 idx 断言;
-      -- 曾经的「best and best.idx」入口断言恒不触发(等价变异体,按 #257 三分类删冗余)。
+      -- 曾经的「best and best.idx」入口断言恒不触发(等价变异体,已删冗余)。
       local best = roadblock.pick_best(candidates)
       return settlement.execute(inner_game, inner_player, inner_item_id, function()
         return roadblock.apply(inner_game, inner_player, best.idx)

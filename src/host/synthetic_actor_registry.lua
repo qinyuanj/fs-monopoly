@@ -62,7 +62,7 @@ local function _game_api_of(env)
 end
 
 -- actor 恒非 nil、actor.unit 由 _spawn_unit 断言非 nil 且之后不改;曾经的
--- 「actor and」「unit == nil」是恒真/恒假守卫(等价变异体,按 #257 三分类删冗余)。
+-- 「actor and」「unit == nil」是恒真/恒假守卫(等价变异体,已删冗余)。
 local function _destroy_actor(env, actor)
   local destroy_unit = _resolve_destroy_unit(_game_api_of(env))
   if destroy_unit == nil then
@@ -74,7 +74,7 @@ end
 -- 退役幂等(#610 遗留收口):已退役再调 die/lose 视为「出局态成立」返回 true,与宿主
 -- 单位路径的「已死幂等算成功」对齐;否则 role_die 会把 lose 之后的 die 误判为失败留痕。
 -- 单位只销毁一次由 destroyed 标志把门。
--- 只由 adapter 闭包调用,actor 恒非 nil(曾经的 nil 守卫不可达,按 #257 删冗余)。
+-- 只由 adapter 闭包调用,actor 恒非 nil(曾经的 nil 守卫不可达,已删冗余)。
 local function _retire_actor(registry, actor)
   if actor.destroyed == true then
     return true
@@ -129,7 +129,7 @@ local function _normalize_pending_spec(spec)
   }
 end
 
--- GameAPI 可用性由 spawn_pending 入口断言一次并传入,这里不再重复断言(#257 删冗余)。
+-- GameAPI 可用性由 spawn_pending 入口断言一次并传入,这里不再重复断言(已删冗余)。
 local function _validate_spawn_preconditions(spec)
   local player_id = role_id_utils.normalize(spec.player_id)
   assert(player_id ~= nil, "missing synthetic player_id")
@@ -188,7 +188,7 @@ function synthetic_actor_registry.new(env)
 
   function registry.reset()
     -- 退役即从 actors_by_player_id 删表项,遍历到的 actor 恒未销毁(曾经的
-    -- destroyed 判断恒真,按 #257 删冗余)。
+    -- destroyed 判断恒真,已删冗余)。
     for _, actor in pairs(registry.actors_by_player_id) do
       actor.destroyed = true
       _destroy_actor(registry.env, actor)

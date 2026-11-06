@@ -120,7 +120,7 @@ end
 
 _next_action_anim = function(game)
   -- game 与 game.turn 恒非 nil(两个调用方都先读写 game.turn 才到这里),
-  -- 曾经的入口断言恒不触发——等价变异体,按 #257 三分类删冗余。
+  -- 曾经的入口断言恒不触发——等价变异体,已删冗余。
   local queue = game.turn.action_anim_queue
   if type(queue) ~= "table" or #queue == 0 then
     return nil

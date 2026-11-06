@@ -14,7 +14,7 @@ local use_result = require("src.rules.items.use_result")
 
 local settlement = {}
 -- 兜底动画时长只认 config 真源(timing.action_anim_default_seconds 恒有值,
--- 「or 1.0」是恒被短路的死默认——等价变异体,按 #257 三分类删冗余)。
+-- 「or 1.0」是恒被短路的死默认——等价变异体,已删冗余)。
 local action_anim_duration = timing.action_anim_default_seconds
 
 -- 消耗时机:kind 级默认由调用方描述符经 opts.consume 声明

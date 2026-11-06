@@ -52,7 +52,7 @@ local function _assert_modal_opts(opts)
 end
 
 -- 两张共享计时载荷表的字段在每次 sync_modal_timer 前恒被覆写,初值恒不可读
--- (等价变异体,按 #257 三分类删冗余)。
+-- (等价变异体,已删冗余)。
 local _modal_timer_reset = {}
 local _modal_timer_update = {}
 local _modal_timer_empty = {}

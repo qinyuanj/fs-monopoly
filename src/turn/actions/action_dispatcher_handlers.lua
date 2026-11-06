@@ -19,7 +19,7 @@ local handlers = {}
 local function _try_show_share_panel(actor_role_id, player)
   -- actor_role_id 恒可解析:唯一调用方 handle_auto_toggle 先经
   -- ctx_mod.resolve_actor_player 把 normalize 不出 role_id 的 action 挡成
-  -- rejected。曾经的「unresolvable」分支不可达——等价变异体,按 #257 删冗余。
+  -- rejected。曾经的「unresolvable」分支不可达——等价变异体,已删冗余。
   if share_panel.try_show(actor_role_id, "auto share panel") then
     player.auto_share_panel_shown = true
   end

@@ -10,7 +10,7 @@ local game_defaults = {}
 
 -- 归一化 player 的 role id 后按 id 收录,id 非法(空/无法归一化)时跳过。
 -- players 由 game_factory 生成恒为表;normalize(nil) 即 nil,曾经的「p and p.id ~= nil」
--- 前置守卫是冗余(等价变异体,按 #257 删冗余)。
+-- 前置守卫是冗余(等价变异体,已删冗余)。
 local function _insert_normalized_player(out, p)
   local player_id = role_id_utils.normalize(p.id)
   if player_id ~= nil then

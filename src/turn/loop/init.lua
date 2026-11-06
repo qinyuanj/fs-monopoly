@@ -225,7 +225,7 @@ local function _build_item_index(state)
   ui_runtime.item_name_by_id = {}
   for _, cfg in ipairs(items_cfg) do
     -- items 配置 19 条全有 name(配置真源钉死),「or tostring(cfg.id)」是恒被
-    -- 短路的死默认——等价变异体,按 #257 三分类删冗余。
+    -- 短路的死默认——等价变异体,已删冗余。
     ui_runtime.item_name_by_id[cfg.id] = cfg.name
   end
 end

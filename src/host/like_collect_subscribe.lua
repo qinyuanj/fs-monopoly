@@ -42,7 +42,7 @@ local function _role_from_data(data)
   return data and data.role or nil
 end
 
--- 两个调用点都已排除 role 为 nil(曾经的「role == nil」死守卫按 #257 删冗余)。
+-- 两个调用点都已排除 role 为 nil(曾经的「role == nil」死守卫已删冗余)。
 local function _get_ctrl_unit(role)
   if type(role.get_ctrl_unit) ~= "function" then
     return nil

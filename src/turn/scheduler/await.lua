@@ -51,7 +51,7 @@ local _validate_choice_action
 local _wait_for_choice_action_anim
 
 -- 共享 decide 入参表;elapsed_seconds 在 _resolve_choice_action 调用前恒被覆写,
--- 初值 0 恒不可读(等价变异体,按 #257 三分类删冗余)。
+-- 初值 0 恒不可读(等价变异体,已删冗余)。
 local _decide_opts = {}
 
 local function _resolve_after_action_anim(args, res)
@@ -78,7 +78,7 @@ local function _resolve_choice_result(game, choice, session)
   end
   if action.type == "choice_force_skip" then
     -- game 与 game.turn 恒非 nil(_choice 入口断言 + pending_choice 读取把守),
-    -- 「game and game.turn」是恒真守卫(等价变异体,按 #257 三分类删冗余)。
+    -- 「game and game.turn」是恒真守卫(等价变异体,已删冗余)。
     game.turn.pending_choice = nil
     _mark_dirty(game)
     return {}, true
