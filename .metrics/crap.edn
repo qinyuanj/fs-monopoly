@@ -1,13 +1,8 @@
 {:entries [
-  {:name "asset_handlers.register", :namespace "rules.chance.asset_handlers", :complexity 31, :coverage 100.0, :crap 31.0}
-  {:name "cash_handlers.register", :namespace "rules.chance.cash_handlers", :complexity 17, :coverage 100.0, :crap 17.0}
   {:name "default_ports.build", :namespace "host.default_ports", :complexity 16, :coverage 100.0, :crap 16.0}
-  {:name "board_feedback_handlers.install", :namespace "ui.coord.board_feedback_handlers", :complexity 13, :coverage 100.0, :crap 13.0}
-  {:name "decision_engine.build", :namespace "computer.agent.decision", :complexity 12, :coverage 100.0, :crap 12.0}
   {:name "anim_ports.build", :namespace "ui.ports.anim", :complexity 11, :coverage 91.6667, :crap 11.07}
   {:name "synthetic_actor_registry.new", :namespace "host.synthetic_actor_registry", :complexity 11, :coverage 97.3684, :crap 11.0022}
   {:name "completions.build", :namespace "rules.choice_handlers.item_completions", :complexity 11, :coverage 100.0, :crap 11.0}
-  {:name "_matches", :namespace "turn.output.player_control_snapshot", :complexity 11, :coverage 100.0, :crap 11.0}
   {:name "_build_session", :namespace "turn.scheduler.session", :complexity 10, :coverage 100.0, :crap 10.0}
   {:name "Class", :namespace "ui.manager.class", :complexity 10, :coverage 100.0, :crap 10.0}
   {:name "M.build_route_specs", :namespace "ui.screens.target_choice", :complexity 10, :coverage 100.0, :crap 10.0}
@@ -20,8 +15,10 @@
   {:name "like_collect_subscribe.setup", :namespace "host.like_collect_subscribe", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "role_die.call_role_die", :namespace "host.role_die", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "_new_memory_coin_role", :namespace "player.actions.balance", :complexity 8, :coverage 100.0, :crap 8.0}
+  {:name "_record_matches", :namespace "turn.output.player_control_snapshot", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "_remember", :namespace "turn.output.player_control_snapshot", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "view_command_ports.build", :namespace "ui.ports.view_command", :complexity 8, :coverage 100.0, :crap 8.0}
+  {:name "M.build_controls", :namespace "ui.screens.market", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "choice_resolution.install", :namespace "turn.deadlines.choice_resolution", :complexity 7, :coverage 76.4706, :crap 7.6383}
   {:name "_grant_and_record", :namespace "rules.skin_ownership.redeem", :complexity 7, :coverage 86.6667, :crap 7.1161}
   {:name "sequence_builder.build_steps", :namespace "ui.render.move_anim.sequence_builder", :complexity 7, :coverage 95.0, :crap 7.0061}
@@ -34,16 +31,17 @@
   {:name "defaults.register", :namespace "ui.render.anim.defaults", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_resolve_contiguous_rent", :namespace "ui.render.board.visual_sync_tile", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_schedule_followup_sound", :namespace "ui.render.board_feedback.sound_player", :complexity 7, :coverage 100.0, :crap 7.0}
-  {:name "M.build_controls", :namespace "ui.screens.market", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "M.open_market_panel", :namespace "ui.screens.market", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_owner_rent_for_tile", :namespace "ui.view.board_slice", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "gift_code.remember_input", :namespace "ui.screens.gift_code", :complexity 6, :coverage 77.7778, :crap 6.3951}
   {:name "_close_goods_purchase_panel", :namespace "host.paid_purchase_gateway", :complexity 6, :coverage 83.3333, :crap 6.1667}
   {:name "_rejection", :namespace "rules.skin_ownership.purchase", :complexity 6, :coverage 90.9091, :crap 6.027}
+  {:name "_handle_board_target_choice", :namespace "computer.agent.decision", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "tip_queue.has_blocking_pending", :namespace "foundation.tips", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_kill_ctrl_unit", :namespace "host.role_die", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_build", :namespace "rules.choice_handlers.landing_optional", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "demolish_choice.build_human_choice", :namespace "rules.items.demolish_choice", :complexity 6, :coverage 100.0, :crap 6.0}
+  {:name "settlement.abandon", :namespace "rules.items.settlement", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_validate_code_hash", :namespace "rules.skin_ownership.gift_code_table", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "turn_dispatch.new", :namespace "turn.actions.action_dispatcher", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_matches_record", :namespace "turn.loop.ports", :complexity 6, :coverage 100.0, :crap 6.0}
@@ -156,6 +154,10 @@
   {:name "_extract_candidates", :namespace "rules.board.target_layout", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_fill_primary_slots", :namespace "rules.board.target_layout", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_build_choice_helpers", :namespace "rules.bootstrap", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "_destroy_building_on_path_index", :namespace "rules.chance.asset_handlers", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "_sorted_property_ids", :namespace "rules.chance.asset_handlers", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "_collect_from_others", :namespace "rules.chance.cash_handlers", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "_pay_others", :namespace "rules.chance.cash_handlers", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "shared.adjust_chance_delta", :namespace "rules.chance.handlers", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_build_fallback_select", :namespace "rules.choice.item_preconsume_policy", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_build_resolve_result", :namespace "rules.choice.resolver", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -200,8 +202,6 @@
   {:name "registry:target_candidates", :namespace "rules.items.registry", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "remote_dice.apply", :namespace "rules.items.remote_dice", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "roadblock.manual_candidates", :namespace "rules.items.roadblock", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "_escrow_token", :namespace "rules.items.settlement", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "settlement.abandon", :namespace "rules.items.settlement", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_resolve_try_use_item_args", :namespace "rules.items.strategy", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "strategy.has_obstacles_ahead", :namespace "rules.items.strategy", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_should_emit_share_wealth_cash_receive", :namespace "rules.items.target_cash_effects", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -241,6 +241,7 @@
   {:name "gift_code_table.build", :namespace "rules.skin_ownership.gift_code_table", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_start_via_paid_port", :namespace "rules.skin_ownership.purchase", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_grant_missing", :namespace "rules.skin_ownership.redeem", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "redeem.owns_all_active_rewards", :namespace "rules.skin_ownership.redeem", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "session.owns", :namespace "rules.skin_ownership.session", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "M.get_follow_target_position", :namespace "state.board_runtime", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "dirty_tracker.merge_into", :namespace "state.dirty_tracker", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -326,6 +327,7 @@
   {:name "_should_arm_target_deadline", :namespace "turn.waits.target_select_timer", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "tick_ui_sync.update_countdown", :namespace "turn.waits.ui_sync", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_event_player_id", :namespace "ui.coord.board_feedback_handlers", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "_on_status_applied", :namespace "ui.coord.board_feedback_handlers", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_should_hide_canvas", :namespace "ui.coord.canvas_coordinator", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_show_canvas_set", :namespace "ui.coord.canvas_coordinator", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_fill_option_nodes", :namespace "ui.coord.choice_openers", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -461,6 +463,8 @@
   {:name "_refresh_price_icon", :namespace "ui.render.widgets.skin_panel_cards", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "slot_views.build_page", :namespace "ui.render.widgets.skin_panel_slot_views", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "request_shape.slot_index", :namespace "ui.schema.skin_request", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "M.open", :namespace "ui.screens._option_screen", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "_redeem_draft", :namespace "ui.screens.gift_code", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_select_slot", :namespace "ui.screens.item_atlas.panel", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "panel.handle_action", :namespace "ui.screens.item_atlas.panel", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "M.build_items", :namespace "ui.screens.market", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -497,6 +501,7 @@
   {:name "_set_control_text", :namespace "ui.render.market.controls", :complexity 4, :coverage 66.6667, :crap 4.5926}
   {:name "_remap_color_for", :namespace "ui.view.player_colors", :complexity 4, :coverage 66.6667, :crap 4.5926}
   {:name "gift_code.bind_input", :namespace "ui.screens.gift_code", :complexity 4, :coverage 69.2308, :crap 4.4661}
+  {:name "_report_untracked_purchase", :namespace "host.paid_purchase_gateway", :complexity 4, :coverage 71.4286, :crap 4.3732}
   {:name "_currency_entry", :namespace "rules.commerce.paid_currency_bridge", :complexity 4, :coverage 71.4286, :crap 4.3732}
   {:name "_resolve_effect_registry", :namespace "rules.effects.runner", :complexity 4, :coverage 75.0, :crap 4.25}
   {:name "_refund_helper", :namespace "turn.deadlines.force_skip", :complexity 4, :coverage 75.0, :crap 4.25}
@@ -508,7 +513,6 @@
   {:name "_reset_occupants", :namespace "ui.render.board.placement", :complexity 4, :coverage 75.0, :crap 4.25}
   {:name "_resolve_market_name", :namespace "ui.render.market.slots", :complexity 4, :coverage 75.0, :crap 4.25}
   {:name "_set_player_avatar", :namespace "ui.render.widgets.player_slots", :complexity 4, :coverage 75.0, :crap 4.25}
-  {:name "mutate_nodes_all", :namespace "ui.render.support.node_ops", :complexity 4, :coverage 77.7778, :crap 4.1756}
   {:name "M.refresh_copy", :namespace "ui.screens.secondary_confirm", :complexity 4, :coverage 77.7778, :crap 4.1756}
   {:name "_resolve_sfx_params", :namespace "host.sound", :complexity 4, :coverage 79.3103, :crap 4.1417}
   {:name "M.resolve", :namespace "rules.choice.fallback_registry", :complexity 4, :coverage 80.0, :crap 4.128}
@@ -551,11 +555,13 @@
   {:name "service.cancel", :namespace "turn.deadlines.service", :complexity 4, :coverage 87.5, :crap 4.0312}
   {:name "_handle_timeout_elapsed", :namespace "turn.policies.action_button_timer", :complexity 4, :coverage 87.5, :crap 4.0312}
   {:name "_resolve_pending_choice_countdown", :namespace "turn.waits.countdown_resolve", :complexity 4, :coverage 87.5, :crap 4.0312}
+  {:name "gift_code.confirm", :namespace "ui.screens.gift_code", :complexity 4, :coverage 88.2353, :crap 4.0261}
   {:name "path_planner.pick_remote_dice_value", :namespace "computer.agent.path", :complexity 4, :coverage 88.8889, :crap 4.0219}
   {:name "scene_ui.get_eui_node_at_scene_ui", :namespace "host.scene_ui", :complexity 4, :coverage 88.8889, :crap 4.0219}
   {:name "_resolve_auto_phase_action_anim", :namespace "rules.items.phase", :complexity 4, :coverage 88.8889, :crap 4.0219}
   {:name "M.resolve_state", :namespace "turn.waits.countdown_resolve", :complexity 4, :coverage 88.8889, :crap 4.0219}
   {:name "market_view_controls.refresh_market_selection_frames", :namespace "ui.render.market.controls", :complexity 4, :coverage 88.8889, :crap 4.0219}
+  {:name "_set_entry_visible", :namespace "ui.screens.gift_code", :complexity 4, :coverage 88.8889, :crap 4.0219}
   {:name "_priority_for_candidate", :namespace "rules.items.roadblock", :complexity 4, :coverage 90.0, :crap 4.016}
   {:name "skin_ownership.equip", :namespace "rules.skin_ownership", :complexity 4, :coverage 90.0, :crap 4.016}
   {:name "landing_visual_hold.with_flushing", :namespace "state.visual_hold", :complexity 4, :coverage 90.0, :crap 4.016}
@@ -574,7 +580,6 @@
   {:name "intents.build", :namespace "ui.input.route_base", :complexity 4, :coverage 96.9697, :crap 4.0004}
   {:name "composition_root.new_game", :namespace "app.compose_game", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_insert_normalized_player", :namespace "app.game_defaults", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "game_defaults.build_market_limits", :namespace "app.game_defaults", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_create_players", :namespace "app.game_factory", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_auto_flag", :namespace "app.game_factory", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_coin_role", :namespace "app.game_factory", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -697,6 +702,9 @@
   {:name "_fill_overflow_bwd", :namespace "rules.board.target_layout", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_fill_overflow_fwd", :namespace "rules.board.target_layout", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "tile:init", :namespace "rules.board.tile", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_discard_properties", :namespace "rules.chance.asset_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_discard_random_items", :namespace "rules.chance.asset_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_dispatch_payment", :namespace "rules.chance.cash_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "shared.emit_event", :namespace "rules.chance.handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "item_preconsume_policy.each_option", :namespace "rules.choice.item_preconsume_policy", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "item_preconsume_policy.normalize_cancel_action", :namespace "rules.choice.item_preconsume_policy", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -757,7 +765,6 @@
   {:name "_handle_place_mine_here", :namespace "rules.items.post_effects", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_forward_priority", :namespace "rules.items.roadblock", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "roadblock.is_ui_candidate", :namespace "rules.items.roadblock", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_meta_escrowed", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_queue_fallback_anim", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_reconcile_preapplied_count", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_refund_actor_id", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -765,6 +772,7 @@
   {:name "_resolve_consume_mode", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_refund", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_seed_escrow_meta", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_seed_slot", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "settlement.execute", :namespace "rules.items.settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_try_use_item", :namespace "rules.items.strategy", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_find_highest_score", :namespace "rules.items.target_query", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -811,7 +819,6 @@
   {:name "_warn_refresh_skipped", :namespace "rules.market.choice", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "session.refresh_after_paid_callback", :namespace "rules.market.choice", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_fail_paid_purchase_start", :namespace "rules.market.paid_purchase_flow", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "policy.validate_entry", :namespace "rules.market.purchase", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "purchase.execute", :namespace "rules.market.purchase", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_fulfill_item", :namespace "rules.market.purchase_fulfillment", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_is_full_buy", :namespace "rules.market.purchase_settlement", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -921,6 +928,7 @@
   {:name "_build_tip_intent", :namespace "turn.output.event_feed_adapter", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_intent", :namespace "turn.output.intent_dispatcher", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "intent_dispatcher.dispatch", :namespace "turn.output.intent_dispatcher", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_matches", :namespace "turn.output.player_control_snapshot", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_write_entry", :namespace "turn.output.player_control_snapshot", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "snapshot.build", :namespace "turn.output.player_control_snapshot", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "snapshot.find", :namespace "turn.output.player_control_snapshot", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -997,6 +1005,8 @@
   {:name "tick_ui_gate.resolve_modal_timeout_seconds", :namespace "turn.waits.ui_gate", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "actor_context.resolve_role_by_id", :namespace "ui.coord.actor_context", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_negative_card_ready", :namespace "ui.coord.board_feedback_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_on_angel_immune_blocked", :namespace "ui.coord.board_feedback_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_on_deity_applied", :namespace "ui.coord.board_feedback_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_play_tile_cue", :namespace "ui.coord.board_feedback_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_player_cue_from_subject", :namespace "ui.coord.board_feedback_handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_has_any_debug_canvas", :namespace "ui.coord.canvas_coordinator", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1161,6 +1171,7 @@
   {:name "M.from_state", :namespace "ui.render.support.host_runtime_resolver", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_target_screen", :namespace "ui.render.support.node_ops", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "mutate_node", :namespace "ui.render.support.node_ops", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "mutate_nodes_all", :namespace "ui.render.support.node_ops", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "set_item_slot_image", :namespace "ui.render.support.node_ops", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "sync_target_choice_buttons", :namespace "ui.render.support.node_ops", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "M.resolve", :namespace "ui.render.support.panel_runtime", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1193,6 +1204,7 @@
   {:name "_resolve_other_action_prompt_text", :namespace "ui.render.widgets.turn_effects", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_runtime", :namespace "ui.render.widgets.turn_effects", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_message", :namespace "ui.screens.gift_code", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_selected_host_limit_reached", :namespace "ui.screens.market", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "M.open", :namespace "ui.screens.secondary_confirm", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "M.open_pre_confirm", :namespace "ui.screens.secondary_confirm", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_start_purchase", :namespace "ui.screens.skin_panel.panel", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1356,7 +1368,9 @@
   {:name "_allow_from_options", :namespace "computer.agent.action", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_random_from", :namespace "computer.agent.action", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_board_target_resolver", :namespace "computer.agent.decision", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_handle_landing_optional_effect", :namespace "computer.agent.decision", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_target_option", :namespace "computer.agent.decision", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "decision_engine.build", :namespace "computer.agent.decision", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_best_score", :namespace "computer.agent.path", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_remote_priority", :namespace "computer.agent.path", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "choice_contract.copy_explicit_fields", :namespace "config.choice.contract", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1425,6 +1439,7 @@
   {:name "_goods_name", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_hide_purchase_panel", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_index_goods_by_name", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_product_id_for_goods", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_record_goods_name", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_record_product_goods_id", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_registered_role_id", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1432,6 +1447,7 @@
   {:name "_resolve_start_context", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_role_id_field", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_run_purchase_handler", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_set_runtime_purchase_handlers", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_trigger_ready", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_warn_mapping_missing_once", :namespace "host.paid_purchase_gateway", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_remove_ctrl_unit", :namespace "host.role_die", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1495,6 +1511,13 @@
   {:name "board_query.queue_walk", :namespace "rules.board.query", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_geometry_is_backward", :namespace "rules.board.target_direction", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_densify_slots", :namespace "rules.board.target_layout", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_destroy_buildings_on_path", :namespace "rules.chance.asset_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_has_building", :namespace "rules.chance.asset_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_reset_tile_on_path_index", :namespace "rules.chance.asset_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_reset_tiles_on_path", :namespace "rules.chance.asset_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_resolve_drop_rng", :namespace "rules.chance.asset_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_resolve_owner", :namespace "rules.chance.asset_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_apply_to_all_players", :namespace "rules.chance.cash_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "shared.record_cash_received", :namespace "rules.chance.handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "resolver.resolve", :namespace "rules.chance.resolver", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_fill_missing_field", :namespace "rules.choice.item_preconsume_policy", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1570,6 +1593,7 @@
   {:name "_settle_target_player", :namespace "rules.items.handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_use_on_named_target", :namespace "rules.items.handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "inventory.draw_random", :namespace "rules.items.inventory", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "inventory.restore", :namespace "rules.items.inventory", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "obstacle_clear.handle", :namespace "rules.items.obstacle_clear", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "obstacle_clear_tiles.resolve_initial_dirs", :namespace "rules.items.obstacle_clear_tiles", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "obstacle_clear_tiles.sorted_forward_dirs", :namespace "rules.items.obstacle_clear_tiles", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1593,8 +1617,11 @@
   {:name "_own_land_backward", :namespace "rules.items.roadblock", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_action_anim_seq", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_assert_applier_owned", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_choice_meta", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_consume_after_success", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_consume_before_apply", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_escrow_slot", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_escrow_token", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_frozen_base", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_item_name", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_make_commit", :namespace "rules.items.settlement", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1667,9 +1694,12 @@
   {:name "_market_pending_choice", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_valid_market_buy", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "session.apply_navigation", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_purchase_count", :namespace "rules.market.host_limit", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "paid_purchase_flow.handle", :namespace "rules.market.paid_purchase_flow", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "local_purchase.execute", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "paid_fulfillment.fulfill_entry", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "policy.validate_entry", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "policy.validate_order", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_charge_if_needed", :namespace "rules.market.purchase_fulfillment", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_decode_ok", :namespace "rules.market.purchase_result", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_decode_rejected", :namespace "rules.market.purchase_result", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1930,6 +1960,7 @@
   {:name "_cue_subject", :namespace "ui.coord.board_feedback_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_deity_cue_name", :namespace "ui.coord.board_feedback_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_event_field", :namespace "ui.coord.board_feedback_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_on_turn_started", :namespace "ui.coord.board_feedback_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_player_cue_from_player_id", :namespace "ui.coord.board_feedback_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_player_id", :namespace "ui.coord.board_feedback_handlers", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_choice_canvas", :namespace "ui.coord.canvas_coordinator", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2214,8 +2245,6 @@
   {:name "_set_prompt_visible", :namespace "ui.render.widgets.turn_effects", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_sync_other_player_action_prompt", :namespace "ui.render.widgets.turn_effects", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "request_shape.kind", :namespace "ui.schema.skin_request", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "M.open", :namespace "ui.screens._option_screen", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "gift_code.confirm", :namespace "ui.screens.gift_code", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "gift_code.install_entry", :namespace "ui.screens.gift_code", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "gift_code.open", :namespace "ui.screens.gift_code", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "panel.close", :namespace "ui.screens.item_atlas.panel", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2234,6 +2263,7 @@
   {:name "_ensure_loaded", :namespace "ui.screens_registry", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "registry.build_choice_screens", :namespace "ui.screens_registry", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "registry.opener_for", :namespace "ui.screens_registry", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "gift_code_port.owns_all_rewards", :namespace "ui.seams.gift_code", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_init_store", :namespace "ui.state.canvas_store", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_ui", :namespace "ui.state.canvas_store", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "canvas_store.consume_dirty", :namespace "ui.state.canvas_store", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2302,6 +2332,7 @@
   {:name "_timing_or", :namespace "ui.render.anim.defaults", :complexity 2, :coverage 66.6667, :crap 2.1481}
   {:name "_timing_or", :namespace "ui.render.anim.units", :complexity 2, :coverage 66.6667, :crap 2.1481}
   {:name "_set_node_visible", :namespace "ui.render.widgets.turn_effects", :complexity 2, :coverage 66.6667, :crap 2.1481}
+  {:name "_hide_entry_node", :namespace "ui.screens.gift_code", :complexity 2, :coverage 66.6667, :crap 2.1481}
   {:name "gift_code.handle_action", :namespace "ui.screens.gift_code", :complexity 2, :coverage 66.6667, :crap 2.1481}
   {:name "_assert_valid_dirty_key", :namespace "ui.state.canvas_store", :complexity 2, :coverage 66.6667, :crap 2.1481}
   {:name "_play_branches", :namespace "ui.render.anim.unit_overlay_robot", :complexity 2, :coverage 71.4286, :crap 2.0933}
@@ -2390,6 +2421,8 @@
   {:name "_richer", :namespace "computer.agent.action", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "action_selector.pick_target_player", :namespace "computer.agent.action", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_build_choice_action", :namespace "computer.agent.decision", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_handle_remote_dice_choice", :namespace "computer.agent.decision", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_handle_target_player_choice", :namespace "computer.agent.decision", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_current_rent", :namespace "computer.agent.path", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_role_id_field", :namespace "config.choice.contract", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "choice_contract.resolve_owner_or_meta_role_id", :namespace "config.choice.contract", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2477,7 +2510,6 @@
   {:name "_resolve_missing_mapping_reason", :namespace "host.paid_purchase_gateway", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_role_id", :namespace "host.paid_purchase_gateway", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_runtime", :namespace "host.paid_purchase_gateway", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_set_runtime_on_purchase", :namespace "host.paid_purchase_gateway", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_show_purchase_panel", :namespace "host.paid_purchase_gateway", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_try_record_entry_mapping", :namespace "host.paid_purchase_gateway", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_warn_duplicate_name_match", :namespace "host.paid_purchase_gateway", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2511,6 +2543,7 @@
   {:name "balance_ops.initialize_player_coins", :namespace "player.actions.balance", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_ensure_deity", :namespace "player.actions.deity", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "deity_ops.player_deity_type", :namespace "player.actions.deity", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "inventory:add_at", :namespace "player.actions.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "inventory:count", :namespace "player.actions.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "inventory:remove_by_index", :namespace "player.actions.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_add_to_occupancy", :namespace "player.actions.location", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2546,6 +2579,15 @@
   {:name "_make_slots", :namespace "rules.board.target_layout", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_max_key", :namespace "rules.board.target_layout", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "tile.get_state", :namespace "rules.board.tile", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_discard_count", :namespace "rules.chance.asset_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_discard_items_text", :namespace "rules.chance.asset_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_grant_item", :namespace "rules.chance.asset_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_pick_property_index", :namespace "rules.chance.asset_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "asset_handlers.register", :namespace "rules.chance.asset_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_add_cash", :namespace "rules.chance.cash_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_collect_from_other", :namespace "rules.chance.cash_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_pay_other", :namespace "rules.chance.cash_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "cash_handlers.register", :namespace "rules.chance.cash_handlers", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "shared.move_steps", :namespace "rules.chance.handlers", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.register", :namespace "rules.choice.fallback_registry", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "item_preconsume_policy.decorate_followup_choice_spec", :namespace "rules.choice.item_preconsume_policy", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2598,6 +2640,7 @@
   {:name "_apply_share_wealth_context", :namespace "rules.items.handlers", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_no_candidate_result", :namespace "rules.items.handlers", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "handlers.handle_demolish", :namespace "rules.items.handlers", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "inventory.consume_at", :namespace "rules.items.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "inventory.remove_by_index", :namespace "rules.items.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_new_state", :namespace "rules.items.obstacle_clear", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "obstacle_clear_tiles.next_strict_or_turn", :namespace "rules.items.obstacle_clear_tiles", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2620,7 +2663,9 @@
   {:name "_tile_state_for", :namespace "rules.items.roadblock", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_ui_accepted_indices", :namespace "rules.items.roadblock", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "roadblock.pick_best", :namespace "rules.items.roadblock", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_consume", :namespace "rules.items.settlement", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_item_consumed", :namespace "rules.items.settlement", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_meta_escrowed", :namespace "rules.items.settlement", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_settle_applied", :namespace "rules.items.settlement", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_settle_rejected", :namespace "rules.items.settlement", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "settlement.is_settled", :namespace "rules.items.settlement", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2664,11 +2709,13 @@
   {:name "_apply_navigation_action", :namespace "rules.market.choice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_normalize_tab", :namespace "rules.market.choice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "builder.build", :namespace "rules.market.choice", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "host_limit.is_reached", :namespace "rules.market.host_limit", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "host_limit.record_purchase", :namespace "rules.market.host_limit", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_ensure_in_flight_map", :namespace "rules.market.paid_purchase_flow", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_schedule_in_flight_clear", :namespace "rules.market.paid_purchase_flow", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "paid_purchase_flow.clear_in_flight", :namespace "rules.market.paid_purchase_flow", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_validate_purchase_entry", :namespace "rules.market.purchase", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "paid_purchase_callback.handle", :namespace "rules.market.purchase", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_validate_purchase_order", :namespace "rules.market.purchase", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "paid_purchase_callback.handle_untracked", :namespace "rules.market.purchase", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_success_text", :namespace "rules.market.purchase_fulfillment", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "purchase_result.deferred", :namespace "rules.market.purchase_result", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "purchase_result.fulfilled", :namespace "rules.market.purchase_result", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3131,14 +3178,15 @@
   {:name "_is_owned_status", :namespace "ui.render.widgets.skin_panel_slot_views", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "turn_effects.sync", :namespace "ui.render.widgets.turn_effects", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "request_shape.unlock_source", :namespace "ui.schema.skin_request", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_close_and_clear", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_enqueue_result", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_ensure", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_entry_enabled", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "_hide_entry_node", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_entry_node_names", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_query_input_node", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_write_input_field", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "gift_code.build_route_specs", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "gift_code.cancel", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "gift_code.refresh_entry", :namespace "ui.screens.gift_code", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "item_atlas.build_route_specs", :namespace "ui.screens.item_atlas", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "atlas_state.clamp_page", :namespace "ui.screens.item_atlas.item_atlas_state", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "atlas_state.ensure", :namespace "ui.screens.item_atlas.item_atlas_state", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3213,7 +3261,7 @@
   {:name "common.build_log_prefix", :namespace "ui.ports.common", :complexity 1, :coverage 50.0, :crap 1.125}
   {:name "common.log_once", :namespace "ui.ports.common", :complexity 1, :coverage 50.0, :crap 1.125}
   {:name "gift_code_port.is_configured", :namespace "ui.seams.gift_code", :complexity 1, :coverage 50.0, :crap 1.125}
-  {:name "_load_required_modules", :namespace "app.host_install", :complexity 1, :coverage 68.4211, :crap 1.0315}
+  {:name "_load_required_modules", :namespace "app.host_install", :complexity 1, :coverage 65.0, :crap 1.0429}
   {:name "_freeze", :namespace "turn.output.player_control_snapshot", :complexity 1, :coverage 80.0, :crap 1.008}
   {:name "_build_adapter", :namespace "host.synthetic_actor_registry", :complexity 1, :coverage 91.6667, :crap 1.0006}
   {:name "game_defaults.build_initial_turn", :namespace "app.game_defaults", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3255,6 +3303,8 @@
   {:name "_required_click_nodes", :namespace "app.ui_bootstrap_nodes", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_pick_missile_target", :namespace "computer.agent.action", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_pick_steal_target", :namespace "computer.agent.action", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_handle_cancel_choice", :namespace "computer.agent.decision", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_handle_card_prompt_choice", :namespace "computer.agent.decision", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_simulate_landing", :namespace "computer.agent.path", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "path_planner.predict_landing", :namespace "computer.agent.path", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "remote_priority_rules[tile_type]", :namespace "computer.agent.path", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3340,6 +3390,7 @@
   {:name "_new_runtime", :namespace "host.paid_purchase_gateway", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_push_pending", :namespace "host.paid_purchase_gateway", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_record_goods_mapping", :namespace "host.paid_purchase_gateway", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_warn_untracked", :namespace "host.paid_purchase_gateway", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_is_synthetic_adapter", :namespace "host.role_die", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_warn", :namespace "host.role_model", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "role_model.install", :namespace "host.role_model", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3407,6 +3458,13 @@
   {:name "_build_choice_groups", :namespace "rules.bootstrap", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_build_effect_groups", :namespace "rules.bootstrap", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "bootstrap.create_registries", :namespace "rules.bootstrap", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_discard_items", :namespace "rules.chance.asset_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_add_cash_to", :namespace "rules.chance.cash_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_apply_payment", :namespace "rules.chance.cash_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_fee_flat", :namespace "rules.chance.cash_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_fee_percent", :namespace "rules.chance.cash_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_pay_cash", :namespace "rules.chance.cash_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_percent_pay_cash", :namespace "rules.chance.cash_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_build_chance_move_anim_payload", :namespace "rules.chance.handlers", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "handlers.build", :namespace "rules.chance.handlers", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "shared.apply_cash_change", :namespace "rules.chance.handlers", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3552,9 +3610,11 @@
   {:name "_clamp_page", :namespace "rules.market.choice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "feedback.emit_buy_failed", :namespace "rules.market.choice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "feedback.emit_inventory_full", :namespace "rules.market.choice", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_count_key", :namespace "rules.market.host_limit", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_in_flight_key", :namespace "rules.market.paid_purchase_flow", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_reject_in_flight_purchase", :namespace "rules.market.paid_purchase_flow", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_handle_paid_purchase", :namespace "rules.market.purchase", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "paid_purchase_callback.handle", :namespace "rules.market.purchase", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "purchase.setup_for_game", :namespace "rules.market.purchase", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_emit_bought_item", :namespace "rules.market.purchase_fulfillment", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_query_context", :namespace "rules.market.purchase_fulfillment", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3562,11 +3622,8 @@
   {:name "purchase_result.is_result", :namespace "rules.market.purchase_result", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "purchase_result.residual", :namespace "rules.market.purchase_result", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_is_purchase_failure", :namespace "rules.market.purchase_settlement", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "context.consume_global_limit", :namespace "rules.market.query", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "context.entry_market_enabled", :namespace "rules.market.query", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "context.remaining_global_limit", :namespace "rules.market.query", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "context.try_charge_player", :namespace "rules.market.query", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "eligibility.is_sold_out", :namespace "rules.market.query", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_build_move_result", :namespace "rules.movement", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "events.emit_market_interrupt", :namespace "rules.movement_events", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "events.emit_move_completed", :namespace "rules.movement_events", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3796,6 +3853,8 @@
   {:name "_resolve_modal_output_ports", :namespace "turn.waits.modal_timeout", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "modal_timeout.step_default", :namespace "turn.waits.modal_timeout", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_is_target_select_active", :namespace "turn.waits.target_select_timer", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_on_chance_applied", :namespace "ui.coord.board_feedback_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "board_feedback_handlers.install", :namespace "ui.coord.board_feedback_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "board_feedback_handlers.set_context", :namespace "ui.coord.board_feedback_handlers", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_role_sender", :namespace "ui.coord.canvas_coordinator", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "coordinator.resolve_canvas_after_popup", :namespace "ui.coord.canvas_coordinator", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -4129,6 +4188,7 @@
   {:name "_sync_current_turn_highlight", :namespace "ui.render.widgets.turn_effects", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_sync_local_turn_prompt", :namespace "ui.render.widgets.turn_effects", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_role_key", :namespace "ui.screens.gift_code", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "gift_code.cancel", :namespace "ui.screens.gift_code", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "gift_code.configure_entry_for_tests", :namespace "ui.screens.gift_code", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "gift_code.reset_entry_for_tests", :namespace "ui.screens.gift_code", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "item_atlas.configure_catalog_for_tests", :namespace "ui.screens.item_atlas", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -4143,7 +4203,7 @@
   {:name "_show_enlarged_for_owner", :namespace "ui.screens.item_atlas.panel", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "M.close_market_panel", :namespace "ui.screens.market", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "M.select_market_option", :namespace "ui.screens.market", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "_reject_buy_slots_full", :namespace "ui.screens.market", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_reject_buy", :namespace "ui.screens.market", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_view_deps", :namespace "ui.screens.market", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "M.descriptor", :namespace "ui.screens.player_choice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "M.open", :namespace "ui.screens.player_choice", :complexity 1, :coverage 100.0, :crap 1.0}
