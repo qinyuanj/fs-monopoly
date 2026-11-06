@@ -173,6 +173,32 @@ local function test_demolish_target_uses_demolish_agent()
   _assert_eq(result.option_id, 99, "demolish_target should use pick_demolish_target")
 end
 
+-- 路障与拆除各问各的 agent;两边都给出 choice 内的合法 pick,且都不是第一个选项,
+-- 才能区分「用错 resolver」「pick 被丢弃回退到第一个选项」与正确行为。
+local function test_roadblock_target_takes_roadblock_pick_over_demolish_pick()
+  local fn = decision_engine.build(_make_agent_ref({
+    pick_roadblock_target = function() return 8 end,
+    pick_demolish_target = function() return 9 end,
+  }))
+  local game = _make_game(_make_ai_player())
+  local choice = { id = 25, kind = "roadblock_target", options = { { id = 7 }, { id = 8 }, { id = 9 } }, meta = {} }
+  local result = fn(game, choice)
+  luassert.truthy(result ~= nil, "should have result for roadblock_target")
+  _assert_eq(result.option_id, 8, "roadblock_target should keep the in-options roadblock pick")
+end
+
+local function test_demolish_target_takes_demolish_pick_over_roadblock_pick()
+  local fn = decision_engine.build(_make_agent_ref({
+    pick_roadblock_target = function() return 8 end,
+    pick_demolish_target = function() return 9 end,
+  }))
+  local game = _make_game(_make_ai_player())
+  local choice = { id = 26, kind = "demolish_target", options = { { id = 7 }, { id = 8 }, { id = 9 } }, meta = {} }
+  local result = fn(game, choice)
+  luassert.truthy(result ~= nil, "should have result for demolish_target")
+  _assert_eq(result.option_id, 9, "demolish_target should keep the in-options demolish pick")
+end
+
 local function test_item_target_player_returns_target_id()
   local fn = decision_engine.build(_make_agent_ref({
     pick_target_player = function() return { id = "p3" } end,
@@ -274,6 +300,10 @@ describe("TestDecisionEngine", function()
   it("test_roadblock_target_falls_back_when_pick_not_in_options", test_roadblock_target_falls_back_when_pick_not_in_options)
   it("test_demolish_target_falls_back_when_pick_not_in_options", test_demolish_target_falls_back_when_pick_not_in_options)
   it("test_demolish_target_uses_demolish_agent", test_demolish_target_uses_demolish_agent)
+  it("test_roadblock_target_takes_roadblock_pick_over_demolish_pick",
+    test_roadblock_target_takes_roadblock_pick_over_demolish_pick)
+  it("test_demolish_target_takes_demolish_pick_over_roadblock_pick",
+    test_demolish_target_takes_demolish_pick_over_roadblock_pick)
   it("test_item_target_player_returns_target_id", test_item_target_player_returns_target_id)
   it("test_item_target_player_cancels_when_no_target", test_item_target_player_cancels_when_no_target)
   it("test_landing_optional_effect_prefers_buy_land", test_landing_optional_effect_prefers_buy_land)

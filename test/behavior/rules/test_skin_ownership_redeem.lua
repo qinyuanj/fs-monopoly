@@ -162,6 +162,17 @@ describe("TestSkinOwnershipRedeem", function()
     _assert_eq(_redeem(_state(), 1, "SUMMER").status, "granted", "missing wall clock should not expire")
   end)
 
+  -- 墙钟读数 0 是「取不到」的哨兵,与码的 expires_at 取值无关;任何正读数都按真实时间判过期。
+  it("test_wall_clock_zero_is_unavailable_and_any_positive_reading_judges_expiry", function()
+    gift_codes.codes = { { id = 9, code_hash = CODES[3].code_hash, rewards = { CAPYBARA }, expires_at = -1 } }
+    _install_host({ now = 0 })
+    _assert_eq(_redeem(_state(), 1, "SUMMER").status, "granted", "now=0 should not judge expiry even before the epoch")
+
+    gift_codes.codes = { { id = 9, code_hash = CODES[3].code_hash, rewards = { CAPYBARA }, expires_at = 0 } }
+    _install_host({ now = 1 })
+    _assert_eq(_redeem(_state(), 1, "SUMMER").status, "expired", "now=1 is a real reading past expires_at=0")
+  end)
+
   it("test_same_player_redeeming_twice_is_already_redeemed", function()
     local host = _install_host()
     local state = _state()

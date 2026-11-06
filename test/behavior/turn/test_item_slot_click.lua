@@ -84,6 +84,13 @@ it("test_玩家没有 inventory：点槽位视作空槽静默", function()
   _assert_eq(#tips, 0, "missing inventory must stay silent")
 end)
 
+it("test_背包 items 不是表：点槽位视作空槽静默,不炸", function()
+  local game, tips = _game({ players = { { id = 1, inventory = { items = true } } } })
+  local result = _click(game, 1, 1)
+  _assert_eq(result.status, "empty", "a non-table items field should read as an empty slot")
+  _assert_eq(#tips, 0, "a non-table items field must stay silent")
+end)
+
 it("test_他人回合点自己的卡：拒绝并提示阶段不合法", function()
   local game, tips = _game({
     players = { _player(1, { "item_a" }), _player(2, {}) },
@@ -106,6 +113,18 @@ it("test_对手开着道具窗时点自己的卡：不借对手的窗放行,照�
   local result = _click(game, 1, 1)
   _assert_eq(result.status, "denied", "another player's window must not admit this click")
   _assert_eq(#tips, 1, "click must still be tipped")
+end)
+
+it("test_自己回合但挂着的道具窗归属别人：不借窗放行,按无道具窗拒绝", function()
+  local game, tips = _game({
+    players = { _player(1, { "item_a" }), _player(2, { "item_a" }) },
+    current_player_index = 1,
+    pending_choice = _item_window(2, { "item_a" }),
+  })
+  local result = _click(game, 1, 1)
+  _assert_eq(result.status, "denied", "a window owned by someone else must not admit the click")
+  _assert_eq(result.reason, "no_item_window", "foreign window counts as no window")
+  _assert_eq(tips[1] and tips[1].text, denial_cfg.PHASE_DENIED_TEXT, "foreign window tip text")
 end)
 
 it("test_自己回合但没有道具窗：拒绝并提示阶段不合法", function()
@@ -199,6 +218,7 @@ end)
 it("test_槽位号缺位或非法时静默,不发提示", function()
   local game, tips = _game({ players = { _player(1, { "item_a" }) } })
   _assert_eq(item_slot_click.resolve(game, { actor_role_id = 1 }).status, "empty", "missing slot index")
+  _assert_eq(item_slot_click.resolve(game, nil).status, "empty", "missing action")
   _assert_eq(_click(game, 1, "buy").status, "empty", "unrelated id")
   _assert_eq(#tips, 0, "malformed clicks must stay silent")
 end)

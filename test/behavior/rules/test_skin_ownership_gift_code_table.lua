@@ -172,4 +172,34 @@ describe("TestSkinOwnershipGiftCodeTable", function()
     luassert.equal(1, catalog.find("egg2026").id, "a code without expires_at should build")
     luassert.equal(2, catalog.find("summer").id, "a numeric expires_at should build")
   end)
+
+  -- 只换码表、停用表不变,默认索引也要按新码表重建。
+  it("test_default_index_follows_a_swapped_code_table_alone", function()
+    local gift_codes = require("src.config.content.gift_codes")
+    local original_codes = gift_codes.codes
+    gift_code_table.default()
+    gift_codes.codes = { { id = 100000, code_hash = HASH_SUMMER, rewards = { 5005 } } }
+    local ok, found = pcall(function()
+      return gift_code_table.default().find("summer")
+    end)
+    gift_codes.codes = original_codes
+
+    luassert.is_true(ok, tostring(found))
+    luassert.equal(100000, found and found.id, "default index should serve the swapped code table")
+  end)
+
+  -- 只换停用表、码表不变,默认索引也要重新校验:新停用表撞上现役码 id 即报配置错误。
+  it("test_default_index_revalidates_a_swapped_retired_table_alone", function()
+    local gift_codes = require("src.config.content.gift_codes")
+    local original_codes, original_retired_ids = gift_codes.codes, gift_codes.retired_ids
+    gift_codes.codes = { { id = 100000, code_hash = HASH_SUMMER, rewards = { 5005 } } }
+    local built = pcall(gift_code_table.default)
+    gift_codes.retired_ids = { 100000 }
+    local ok, err = pcall(gift_code_table.default)
+    gift_codes.codes, gift_codes.retired_ids = original_codes, original_retired_ids
+
+    luassert.is_true(built, "sanity: the swapped code table should build")
+    luassert.is_false(ok, "a retired table colliding with a live code id should fail revalidation")
+    _assert_mentions(tostring(err), "gift code id is retired: 100000")
+  end)
 end)

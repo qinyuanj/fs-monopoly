@@ -176,6 +176,23 @@ it("test_pay_others_stops_distributing_once_the_payer_goes_bankrupt", function()
   _assert_eq(_balance(g, g.players[4]) - before[4], 0, "distribution breaks before the third recipient")
 end)
 
+it("test_pay_others_queues_no_cash_receive_anim_for_payer_or_recipients", function()
+  local g = _game({ "P1", "P2", "P3" })
+  local h = chance_handlers.build()
+  local payer = g.players[1]
+  g:set_player_cash(payer, 99999)
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+  h.pay_others(g, payer, { effect = "pay_others", amount = 3000, target = "self" })
+  local kinds = {}
+  if g.turn.action_anim ~= nil then
+    kinds[1] = g.turn.action_anim.kind
+  end
+  for _, anim in ipairs(g.turn.action_anim_queue or {}) do
+    kinds[#kinds + 1] = anim.kind
+  end
+  _assert_eq(table.concat(kinds, ","), "", "pay_others suppresses every per-transfer cash_receive anim")
+end)
+
 -- collect_from_others branches -------------------------------------------
 
 it("test_collect_from_others_caps_the_actor_s_gain_at_the_target_s_liquidity", function()

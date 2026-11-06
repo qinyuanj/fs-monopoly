@@ -168,6 +168,19 @@ it("test_reset_tiles_on_path_resets_owned_and_unowned_land_tiles_skips_non_land"
   luassert.is.equal(false, owner_writes["t1"], "owned land should clear its owner")
 end)
 
+it("test_path_handlers_reject_a_context_without_visited", function()
+  -- context 存在但缺 visited 时须由前置断言点名,而不是让 ipairs(nil) 抛出无关错误。
+  local events, reset_tiles = {}, {}
+  local common = _common_with_collectors(events, reset_tiles)
+  local handlers = _new_handlers(common)
+  for _, name in ipairs({ "destroy_buildings_on_path", "reset_tiles_on_path" }) do
+    local ok, err = pcall(handlers[name], {}, {}, {}, {})
+    luassert.is_false(ok, name .. " must reject a context without visited")
+    luassert.truthy(tostring(err):find("missing context.visited", 1, true),
+      name .. " should name the missing field; got " .. tostring(err))
+  end
+end)
+
 it("test_discard_properties_with_count_0_drops_every_property_the_player_owns", function()
   local events = {}
   local reset_tiles = {}

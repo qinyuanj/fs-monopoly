@@ -140,6 +140,33 @@ describe("TestItemHandlersTargetIdValidation", function()
     _assert_eq(res, false, "a target missing from the candidates is rejected")
   end)
 
+  -- 偷窃卡对空背包目标被拒且不带 reason：拒因取上下文给的兜底拒因。
+  it("test_a_reasonless_rejection_on_a_named_target_reports_the_context_fallback_reason", function()
+    local g = _game()
+    local thief, victim = g.players[1], g.players[2]
+    thief.inventory:add({ id = item_ids.steal })
+    luassert.is.equal(0, inventory.count(victim), "the victim starts with an empty bag")
+    local res = handlers.handle_target_player_item(g, thief, item_ids.steal, {
+      resolve_target_candidates = function() return { victim } end,
+      target_id = victim.id,
+      reject_reason_fallback = "no_candidates",
+    })
+    _assert_eq(res.ok, false, "stealing from an empty bag is rejected")
+    _assert_eq(res.reason, "no_candidates", "the caller's fallback reason names the rejection")
+  end)
+
+  it("test_a_reasonless_rejection_on_a_named_target_defaults_to_invalid_target", function()
+    local g = _game()
+    local thief, victim = g.players[1], g.players[2]
+    thief.inventory:add({ id = item_ids.steal })
+    local res = handlers.handle_target_player_item(g, thief, item_ids.steal, {
+      resolve_target_candidates = function() return { victim } end,
+      target_id = victim.id,
+    })
+    _assert_eq(res.ok, false, "stealing from an empty bag is rejected")
+    _assert_eq(res.reason, "invalid_target", "without a caller fallback the rejection is invalid_target")
+  end)
+
 -- --------------------------------------------------------------------------
 -- item handlers — apply orchestration helpers
 -- --------------------------------------------------------------------------
@@ -326,6 +353,8 @@ describe("TestItemHandlersRemoteDice", function()
     _assert_eq(spec.title, "遥控骰子：选择点数", "the title is pinned")
     _assert_eq(spec.cancel_label, "放弃", "the cancel label is pinned")
     _assert_eq(#spec.options, 6, "all six dice faces are offered")
+    _assert_eq(spec.pre_confirm_on_select, false, "picking a dice face opts out of the pre-confirm gate")
+    _assert_eq(spec.allow_cancel, true, "the dice value choice can be abandoned")
   end)
 
   it("test_candidates_start_at_one_and_are_stringified_as_labels", function()
@@ -405,6 +434,7 @@ describe("TestItemHandlersRoadblock", function()
     _assert_eq(spec.route_key, "target", "the route key dispatches to the target picker")
     _assert_eq(spec.title, "路障卡：选择位置", "the title is pinned")
     _assert_eq(spec.cancel_label, "放弃", "the cancel label is pinned")
+    _assert_eq(spec.allow_cancel, true, "the roadblock position choice can be abandoned")
   end)
 
   it("test_no_placeable_position_short_circuits_to_false", function()
