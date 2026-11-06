@@ -139,6 +139,26 @@ end)
     check.matches("1..1", result.output, 1, true)
   end)
 
+  -- spec 用 package.preload 换掉磁盘上的模块(如 default_ports 的 effect_track 替身);
+  -- worker 下 cache_loader 先占 searchers[1],helper 的仓内搜索器不得因此越过 preload。
+  it("lets a spec's package.preload stub win over the worker source file", function()
+    check.truthy(fs.write_file(worker .. "/src/worker_preload_probe.lua", "return { marker = 'disk-bytes' }\n"))
+    check.truthy(fs.write_file(worker .. "/test/fixtures/stock_busted/test_worker_preload.lua", [[
+local check = require('luassert')
+describe('worker preload', function()
+  it('resolves a preloaded stub before the repo file', function()
+    package.loaded['src.worker_preload_probe'] = nil
+    package.preload['src.worker_preload_probe'] = function() return { marker = 'preload-stub' } end
+    check.equal('preload-stub', require('src.worker_preload_probe').marker)
+  end)
+end)
+]]))
+    local result = worker_probe("arg={'--ignore-lua','test/fixtures/stock_busted/test_worker_preload.lua'};"
+      .. "require('busted.runner')({standalone=false})")
+    check.equal(0, result.code, result.output)
+    check.matches("ok 1", result.output, 1, true)
+  end)
+
   it("runs a real nested project runner without installing a worker environment", function()
     check.truthy(fs.write_file(worker .. "/test/fixtures/stock_busted/test_worker_runner.lua", [[
 describe('nested worker source', function()

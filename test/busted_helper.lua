@@ -4,6 +4,9 @@
 --- (RNG reseed before the before_each chain, baseline-leak guard after
 --- after_each, leaks fail the run) holds under the stock runner too.
 return function(busted, _, helper_options)
+  -- 标准库的 preload 搜索器;worker 下 cache_loader.install 会在它前面再插一个,
+  -- 仓内搜索器按身份定位到它之后,spec 的 package.preload 替身才始终优先。
+  local preload_searcher = package.searchers[1]
   -- busted reads .busted from the cwd, so the cwd is the repo root. Adopt the
   -- runner's preloads before test.bootstrap widens package.path (tools/ is not
   -- on the pinned path yet, so register the loader under its module name).
@@ -69,7 +72,11 @@ return function(busted, _, helper_options)
     if chunk == nil then raise(err, 2) end
     return chunk()
   end
-  table.insert(package_lib.searchers, 2, function(name)
+  local preload_index
+  for index, searcher in ipairs(package_lib.searchers) do
+    if searcher == preload_searcher then preload_index = index break end
+  end
+  table.insert(package_lib.searchers, assert(preload_index, "preload searcher missing") + 1, function(name)
     local path = package_lib.searchpath(name, package_lib.path)
     if path == nil or canonical(path) == nil then return nil end
     local chunk, err = load_canonical(path)
