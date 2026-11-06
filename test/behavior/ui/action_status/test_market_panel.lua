@@ -887,8 +887,12 @@ describe("TestMarketPanel", function()
     _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_c.product_id,
       "first buyable item wins")
 
-    local other_state, other_visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
-    _refresh_market_options(other_state, { _maxed_option(entry_a), _unaffordable_option(entry_b) })
+    local other_state, other_visible = _build_market_state({
+      entry_a.product_id, entry_b.product_id, entry_c.product_id,
+    })
+    _refresh_market_options(other_state, {
+      _maxed_option(entry_a), _unaffordable_option(entry_b), _unaffordable_option(entry_c),
+    })
     _assert_eq(_ui_runtime(other_state).pending_choice_selected_option_id, entry_b.product_id,
       "without a buyable item the first item not maxed is selected")
     _assert_eq(other_visible[market_layout.confirm_button], false, "an unaffordable default has no button")
