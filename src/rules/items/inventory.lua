@@ -44,6 +44,15 @@ function inventory.add(player, item)
   return _inv(player):add(item)
 end
 
+-- 退还入口:原槽位空着就回原位,否则(或无槽位信息)落编号最小的空洞。
+function inventory.restore(player, item, slot_index)
+  assert(item ~= nil, "missing item")
+  if slot_index ~= nil and _inv(player):add_at(slot_index, item) then
+    return true
+  end
+  return inventory.add(player, item)
+end
+
 function inventory.find_index(player, item_id)
   return _inv(player):find_index(function(it)
     return it.id == item_id
@@ -54,6 +63,15 @@ function inventory.consume(player, item_id)
   local inv = _inv(player)
   local idx = assert(inventory.find_index(player, item_id), "missing item: " .. tostring(item_id))
   inv:remove_by_index(idx)
+  return true
+end
+
+-- 按槽位扣卡:槽位上必须正是这张卡,不符时报错,不改扣别的卡。
+function inventory.consume_at(player, item_id, slot_index)
+  local item = inventory.items(player)[slot_index]
+  assert(item and item.id == item_id,
+    "consume_at: slot " .. tostring(slot_index) .. " does not hold item " .. tostring(item_id))
+  _inv(player):remove_by_index(slot_index)
   return true
 end
 

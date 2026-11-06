@@ -13,6 +13,7 @@
 --
 -- 裁定结果三选一：
 --   { status = "select", action = <choice_select> }  放行，转成 choice 选择
+--     action.slot_index 带上被点击的槽位，结算按它扣卡，同种卡不会扣错张
 --   { status = "denied", reason = <拒因> }           已发提示
 --   { status = "empty" }                             槽位无卡，静默（与空槽位口径一致）
 local logger = require("src.foundation.log")
@@ -94,16 +95,22 @@ local function _resolve_click_target(game, action)
     logger.warn("item slot click without a mapped actor:", tostring(action.actor_role_id))
     return nil
   end
-  return { actor = actor, actor_role_id = actor_role_id, item_id = _slot_item_id(actor, slot_index) }
+  return {
+    actor = actor,
+    actor_role_id = actor_role_id,
+    item_id = _slot_item_id(actor, slot_index),
+    slot_index = slot_index,
+  }
 end
 
-local function _select_action(choice, action, item_id)
+local function _select_action(choice, action, item_id, slot_index)
   return {
     status = "select",
     action = {
       type = "choice_select",
       choice_id = choice.id,
       option_id = item_id,
+      slot_index = slot_index,
       actor_role_id = action.actor_role_id,
       input_source = action.input_source,
     },
@@ -139,7 +146,7 @@ function M.resolve(game, action)
     return denial.deny(game, actor_role_id, item_id, denial.unavailable_reason(game, target.actor, choice, item_id))
   end
 
-  return _select_action(choice, action, item_id)
+  return _select_action(choice, action, item_id, target.slot_index)
 end
 
 return M

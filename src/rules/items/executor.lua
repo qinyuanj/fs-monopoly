@@ -26,7 +26,7 @@ local function _use_post_effect(game, player, item_id, context, fallback_reason)
     local res = effects.apply_post(game, player, item_id, context)
     assert(res ~= nil, "missing item post effect result: " .. tostring(item_id))
     return res
-  end, { consume = "before_apply", fallback_reason = fallback_reason })
+  end, { consume = "before_apply", fallback_reason = fallback_reason, slot_index = context.slot_index })
 end
 
 -- 历史 handler 契约:效果已在 handler 内部生效(含消耗),结算只负责

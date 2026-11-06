@@ -67,6 +67,7 @@ local function _settle_target_player(game, player, item_id, target, context, opt
   end, {
     consume = "after_success",
     fallback_reason = opts and opts.fallback_reason or "invalid_target",
+    slot_index = context.slot_index,
   })
 end
 
@@ -185,12 +186,12 @@ function handlers.handle_remote_dice(game, player, item_id, context)
     candidates = function()
       return { 1, 2, 3, 4, 5, 6 }
     end,
-    ai_select = function(inner_game, inner_player, inner_item_id)
+    ai_select = function(inner_game, inner_player, inner_item_id, _, inner_context)
       local value, target_tile = auto_play_port.pick_remote_dice_value(inner_game, inner_player, dice_count)
       assert(value ~= nil, "missing remote dice value")
       local settled = settlement.execute(inner_game, inner_player, inner_item_id, function()
         return remote_dice.apply(inner_game, inner_player, dice_count, value)
-      end, { consume = "before_apply" })
+      end, { consume = "before_apply", slot_index = inner_context.slot_index })
       if settled.ok and target_tile then
         -- #109:用卡提示只此一条(remote_dice.apply 已发);目标格走
         -- remote_dice_target(tip=false),只进行动日志,不再弹第二条提示。
@@ -242,7 +243,7 @@ function handlers.handle_roadblock(game, player, item_id, context)
       assert(best ~= nil and best.idx ~= nil, "missing roadblock target")
       return settlement.execute(inner_game, inner_player, inner_item_id, function()
         return roadblock.apply(inner_game, inner_player, best.idx)
-      end, { consume = "before_apply" })
+      end, { consume = "before_apply", slot_index = context.slot_index })
     end,
     choice_spec = function(inner_game, inner_player, inner_item_id, candidates)
       local flat_options = {}
@@ -288,6 +289,7 @@ function handlers.handle_demolish(game, player, item_id, context)
   end, {
     consume = "applier_owned",
     fallback_reason = context.reject_reason_fallback,
+    slot_index = context.slot_index,
   })
 end
 

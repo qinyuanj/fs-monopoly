@@ -76,6 +76,16 @@ function inventory:add(item)
   return false
 end
 
+-- 定点入位:只落空洞;槽位已占或越界返回 false 且不写表。
+function inventory:add_at(idx, item)
+  if self.items[idx] ~= false then
+    return false
+  end
+  self.items[idx] = item
+  self:_notify_change()
+  return true
+end
+
 -- 空洞(false)与越界(nil)一律返回 nil 且不写表:越界写 false 会撑破
 -- #items 恒等于槽位数的红线。
 function inventory:remove_by_index(idx)

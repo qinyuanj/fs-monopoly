@@ -37,8 +37,12 @@ end
 
 -- 台账的 escrow 种子:优先读结算私有令牌,同时承认公共跨层布尔
 -- choice.meta.item_preconsumed(turn/choice 层与既有 fixture 的既定接口)。
+local function _choice_meta(opts)
+  return opts.choice and opts.choice.meta or nil
+end
+
 local function _escrow_token(opts)
-  local meta = opts.choice and opts.choice.meta or nil
+  local meta = _choice_meta(opts)
   return meta and meta[ESCROW_META_KEY] or nil
 end
 
@@ -47,7 +51,7 @@ local function _token_escrowed(token)
 end
 
 local function _meta_escrowed(opts)
-  local meta = opts.choice and opts.choice.meta or nil
+  local meta = _choice_meta(opts)
   return meta ~= nil and meta.item_preconsumed == true
 end
 
@@ -62,6 +66,20 @@ local function _seed_escrow(ledger, opts)
   end
 end
 
+-- 被点击的槽位:直用道具经 opts.slot_index,followup 经 choice.meta.item_slot_index;
+-- 都没有(AI、效果触发)时台账无槽位,按 id 扣第一张。
+local function _seed_slot(ledger, opts)
+  local meta = _choice_meta(opts)
+  ledger.slot_index = opts.slot_index or (meta and meta.item_slot_index) or nil
+end
+
+local function _consume(player, item_id, ledger)
+  if ledger.slot_index ~= nil then
+    return inventory.consume_at(player, item_id, ledger.slot_index)
+  end
+  return inventory.consume(player, item_id)
+end
+
 local function _make_commit(player, item_id, ledger)
   return function()
     assert(ledger.committed ~= true, "item use already committed: " .. tostring(item_id))
@@ -69,7 +87,7 @@ local function _make_commit(player, item_id, ledger)
     if ledger.escrowed or ledger.consumed then
       return true
     end
-    assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
+    assert(_consume(player, item_id, ledger) == true, "consume committed item failed: " .. tostring(item_id))
     ledger.consumed = true
     return true
   end
@@ -125,7 +143,7 @@ local function _consume_after_success(player, item_id, ledger, consume_mode)
   if consume_mode ~= "after_success" or _item_consumed(ledger) then
     return
   end
-  assert(inventory.consume(player, item_id) == true, "consume applied item failed: " .. tostring(item_id))
+  assert(_consume(player, item_id, ledger) == true, "consume applied item failed: " .. tostring(item_id))
   ledger.consumed = true
 end
 
@@ -164,7 +182,7 @@ local function _consume_before_apply(player, item_id, ledger, consume_mode)
   if consume_mode ~= "before_apply" or ledger.escrowed then
     return
   end
-  assert(inventory.consume(player, item_id) == true, "consume item failed: " .. tostring(item_id))
+  assert(_consume(player, item_id, ledger) == true, "consume item failed: " .. tostring(item_id))
   ledger.consumed = true
 end
 
@@ -183,6 +201,7 @@ function settlement.execute(game, player, item_id, apply, opts)
   local consume_mode = _resolve_consume_mode(item_id, opts)
   local ledger = { consumed = false, escrowed = false, committed = false }
   _seed_escrow(ledger, opts)
+  _seed_slot(ledger, opts)
   _consume_before_apply(player, item_id, ledger, consume_mode)
 
   local before_seq = _action_anim_seq(game)
@@ -202,21 +221,29 @@ end
 -- 非重复阶段 followup 的预消耗托管:卡即刻入台账 escrow(令牌随 choice 走),
 -- resolve 时 _seed_escrow 认领不二次消耗,放弃路径经 settlement.abandon 退还。
 -- 同时写公共跨层布尔 item_preconsumed(turn/choice 层既定接口)并禁用取消。
-local function _seed_escrow_meta(choice_spec, player, item_id)
+local function _seed_escrow_meta(choice_spec, player, item_id, slot_index)
   local meta = choice_spec.meta or {}
   choice_spec.meta = meta
-  meta[ESCROW_META_KEY] = { consumed = true, item_id = item_id, player_id = player.id }
+  meta[ESCROW_META_KEY] = { consumed = true, item_id = item_id, player_id = player.id, slot_index = slot_index }
   meta.item_preconsumed = true
   meta.item_id = meta.item_id or item_id
   meta.player_id = meta.player_id or player.id
+end
+
+-- 托管要记住卡从哪个槽位扣走,无点击槽位时也先落到第一张匹配卡的槽位。
+local function _escrow_slot(player, item_id, choice_spec)
+  local meta = choice_spec.meta
+  return meta and meta.item_slot_index
+    or assert(inventory.find_index(player, item_id), "missing item: " .. tostring(item_id))
 end
 
 -- 行为测试公共接缝：test_item_use_flow / test_force_skip_refund_pin 经此入口建立托管，
 -- 再由真实选择解析或强制跳过验证仅消费一次、退还幂等与背包容量约束。
 function settlement.escrow(player, item_id, choice_spec)
   assert(type(choice_spec) == "table", "escrow needs a choice spec")
-  assert(inventory.consume(player, item_id) == true, "escrow consume failed: " .. tostring(item_id))
-  _seed_escrow_meta(choice_spec, player, item_id)
+  local slot_index = _escrow_slot(player, item_id, choice_spec)
+  assert(inventory.consume_at(player, item_id, slot_index) == true, "escrow consume failed: " .. tostring(item_id))
+  _seed_escrow_meta(choice_spec, player, item_id, slot_index)
   choice_spec.allow_cancel = false
   choice_spec.cancel_label = nil
   return choice_spec
@@ -279,7 +306,7 @@ function settlement.abandon(game, choice, _)
   if player == nil then
     return false
   end
-  if inventory.add(player, { id = item_id }) ~= true then
+  if inventory.restore(player, { id = item_id }, token and token.slot_index) ~= true then
     return false
   end
   if token ~= nil then

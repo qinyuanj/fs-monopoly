@@ -5,19 +5,20 @@ local normalize = require("src.rules.choice_handlers.item_normalize")
 
 local phase_handlers = {}
 
-local function _decorate_phase_followup(choice_spec, meta, item_id, player)
+local function _decorate_phase_followup(choice_spec, meta, item_id, player, slot_index)
   choice_spec.meta = choice_spec.meta or {}
   choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
   choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
   choice_spec.meta.passive_origin = true
+  choice_spec.meta.item_slot_index = slot_index
   item_phase.decorate_followup_choice_spec(choice_spec, meta)
 end
 
-local function _handle_passive_waiting_result(game, result, meta, player, item_id)
+local function _handle_passive_waiting_result(game, result, meta, player, item_id, slot_index)
   local intent = result.intent or {}
   local choice_spec = intent.choice_spec
   if type(choice_spec) == "table" then
-    _decorate_phase_followup(choice_spec, meta, item_id, player)
+    _decorate_phase_followup(choice_spec, meta, item_id, player, slot_index)
   end
   intent_output_port.dispatch(game, intent)
   return { stay = true }
@@ -52,11 +53,12 @@ function phase_handlers.build(helpers)
     local meta = choice.meta
     local player = normalize.validate_item_player(game, choice.kind, meta)
     local item_id = action.option_id
+    local slot_index = action.slot_index
 
-    local result = begin_item_use(game, player, item_id, { phase = meta.phase })
+    local result = begin_item_use(game, player, item_id, { phase = meta.phase, slot_index = slot_index })
     assert(result ~= nil, "missing use_item result")
     if type(result) == "table" and result.waiting then
-      return _handle_passive_waiting_result(game, result, meta, player, item_id)
+      return _handle_passive_waiting_result(game, result, meta, player, item_id, slot_index)
     end
 
     return settle_choice_window(game, item_phase.resolve_completion(game, player, meta, result))
