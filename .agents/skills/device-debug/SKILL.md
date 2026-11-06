@@ -1,6 +1,6 @@
 ---
 name: device-debug
-description: 真机运行时取证：分析部署目录 log.txt 定位异常，或经 editor-cli 驱动运行中的编辑器（查状态/读日志/远程执行 Lua/截图/插桩复现/查官方文档与 API）。触发：分析日志、排查发布后异常、真机验证、复现 UI bug、查 EUI 节点、查宿主文档，或用户提到 "debuglog"、"editor-cli"、"真机调试"、"19836"。
+description: 真机运行时取证：分析部署目录 log.txt 定位异常，或经 editor-cli 驱动运行中的编辑器（查状态/读日志/远程执行 Lua/截图/插桩复现/查官方文档与 API）。触发：分析日志、排查发布后异常、真机验证、复现 UI bug、按钮点不到、查 EUI 节点、查宿主文档，或用户提到 "debuglog"、"editor-cli"、"真机调试"、"19836"。
 ---
 
 # 真机调试
@@ -85,6 +85,24 @@ lua5.4 tools/cli.lua probe <lua文件> [--timeout <秒>]   # 脚本内调 probe(
 3. **触发**：等自然触发（大富翁回合自动推进），或 `probe` 脚本直调目标模块（用桩 game 表隔离依赖）。
 4. **取证**：试玩态读状态用 `probe`（自带标记与轮询）；源码插桩的 `DEBUG-xxxx` 则后台轮询 `log grep DEBUG-xxxx` 直到命中（命中即退出拿一次通知），别前台 sleep。要视觉证据就在命中时立刻 `screenshot game` 并 Read 看图；遇近黑帧按「截图已知坑」改由用户目视确认。
 5. **清理**：提示用户结束试玩并轮询确认翻回编辑态；部署目录从仓库原样拷回，全目录搜 `DEBUG-xxxx` 确认无残留；提醒用户编辑器内的结构改动要保存地图。
+
+### 点击类 bug 复现
+
+按钮点不到、点了没反应时，先分段，再定谁来点：
+
+- **处理段**（CLICK 已到，结果不对）：`probe` 直调处理入口，全程不用点。
+- **命中段**（`register_node_click` 的回调没进）：FS 下只有真人点击走 EUI 命中。`input touch` 的 FS 链路止于 Lua `UserInputService`，按钮收不到 CLICK（`editor-cli help detail input touch`；SE 才走 cocos 分发）。
+
+命中段的成本是真人点击的轮数，目标是一局验完一组：
+
+1. **提案**：一次列清这组对照实验：每个变体改哪个节点、用户点哪里、预期日志、回滚方式。同意的是方案；deploy、`play start` / `stop` 与每条 `input` 执行前仍逐次单独确认（AGENTS.md 操作边界）。
+2. **备场**：`probe` 读到 1P 的 `control_mode` 为 `direct`，且目标屏已开（未开就造状态直调开屏入口），两项都过才请用户点。`afk_delegation` 表示连续超时已被托管接管，这轮作废，先恢复。
+3. **对照**：优先同局用 `probe` 逐个翻嫌疑节点的 `set_node_touch_enabled`，点一次读一次日志，省掉每变体一次部署（本法待真机首跑核实）。
+4. **判定**：唯一标记插在 `src/ui/coord/canvas_event_router.lua` 的点击回调；标记命中证明 CLICK 到达，再加规则侧结果（日志或 `probe` 读状态）才算修好。截图只证明画面。
+
+`input touch` 适用于 SE、`UserInputService` 回调，或核实 FS 能力：坐标是设备像素、左上原点，直接量 `screenshot game` 的像素最准；节点 `pos` / `size` / `anchor` 要换算后用截图核对。默认一次完整点击，`--hold` 后用 `input touch stop` 收尾。想在 FS 点按钮，先对已知可点的按钮探路一次：回调标记命中才改写本节，否则按上面走。
+
+**已知陷阱**：运行时探针的可交互节点快照看不到编辑器的「可以交互」配置（运行时只有 `set_node_touch_enabled`，没有读取接口）。节点不在快照里不等于它不吸触摸：9e9ae37 里盖住取消按钮的是四个装饰节点。排除嫌疑只认对照：关掉该节点触摸后 CLICK 是否到达。
 
 ## 输出约定
 
