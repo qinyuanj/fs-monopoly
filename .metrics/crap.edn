@@ -1,14 +1,15 @@
 {:entries [
   {:name "default_ports.build", :namespace "host.default_ports", :complexity 16, :coverage 100.0, :crap 16.0}
   {:name "anim_ports.build", :namespace "ui.ports.anim", :complexity 11, :coverage 91.6667, :crap 11.07}
-  {:name "synthetic_actor_registry.new", :namespace "host.synthetic_actor_registry", :complexity 11, :coverage 97.3684, :crap 11.0022}
   {:name "completions.build", :namespace "rules.choice_handlers.item_completions", :complexity 11, :coverage 100.0, :crap 11.0}
+  {:name "synthetic_actor_registry.new", :namespace "host.synthetic_actor_registry", :complexity 10, :coverage 97.2973, :crap 10.002}
   {:name "_build_session", :namespace "turn.scheduler.session", :complexity 10, :coverage 100.0, :crap 10.0}
   {:name "Class", :namespace "ui.manager.class", :complexity 10, :coverage 100.0, :crap 10.0}
   {:name "M.build_route_specs", :namespace "ui.screens.target_choice", :complexity 10, :coverage 100.0, :crap 10.0}
   {:name "M.init", :namespace "app", :complexity 9, :coverage 100.0, :crap 9.0}
   {:name "_patch_queued_anim_targets", :namespace "rules.items.demolish_hospital", :complexity 9, :coverage 100.0, :crap 9.0}
   {:name "ENode:listen", :namespace "ui.manager.enode", :complexity 9, :coverage 100.0, :crap 9.0}
+  {:name "market_view_slots.populate_market_slots", :namespace "ui.render.market.slots", :complexity 9, :coverage 100.0, :crap 9.0}
   {:name "panel_player_slots.apply_player_colors", :namespace "ui.render.widgets.player_slots", :complexity 9, :coverage 100.0, :crap 9.0}
   {:name "sequence_builder.resolve_role", :namespace "ui.render.move_anim.sequence_builder", :complexity 3, :coverage 14.2857, :crap 8.6676}
   {:name "movement_handlers.register", :namespace "rules.chance.movement_handlers", :complexity 8, :coverage 96.0, :crap 8.0041}
@@ -18,7 +19,6 @@
   {:name "_record_matches", :namespace "turn.output.player_control_snapshot", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "_remember", :namespace "turn.output.player_control_snapshot", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "view_command_ports.build", :namespace "ui.ports.view_command", :complexity 8, :coverage 100.0, :crap 8.0}
-  {:name "M.build_controls", :namespace "ui.screens.market", :complexity 8, :coverage 100.0, :crap 8.0}
   {:name "choice_resolution.install", :namespace "turn.deadlines.choice_resolution", :complexity 7, :coverage 76.4706, :crap 7.6383}
   {:name "_grant_and_record", :namespace "rules.skin_ownership.redeem", :complexity 7, :coverage 86.6667, :crap 7.1161}
   {:name "sequence_builder.build_steps", :namespace "ui.render.move_anim.sequence_builder", :complexity 7, :coverage 95.0, :crap 7.0061}
@@ -31,6 +31,7 @@
   {:name "defaults.register", :namespace "ui.render.anim.defaults", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_resolve_contiguous_rent", :namespace "ui.render.board.visual_sync_tile", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_schedule_followup_sound", :namespace "ui.render.board_feedback.sound_player", :complexity 7, :coverage 100.0, :crap 7.0}
+  {:name "M.build_controls", :namespace "ui.screens.market", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "M.open_market_panel", :namespace "ui.screens.market", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "_owner_rent_for_tile", :namespace "ui.view.board_slice", :complexity 7, :coverage 100.0, :crap 7.0}
   {:name "gift_code.remember_input", :namespace "ui.screens.gift_code", :complexity 6, :coverage 77.7778, :crap 6.3951}
@@ -52,6 +53,7 @@
   {:name "state_callback_ports.install", :namespace "ui.ports.callbacks", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "camera_sync.sync_camera_position", :namespace "ui.ports.ui_sync.camera", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_walk_branch_children", :namespace "ui.render.anim.unit_overlay_robot", :complexity 6, :coverage 100.0, :crap 6.0}
+  {:name "market_view_slots.resolve_selected_option", :namespace "ui.render.market.slots", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "_skin_names", :namespace "ui.screens.gift_code", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "M.build_route_specs", :namespace "ui.screens.remote_choice", :complexity 6, :coverage 100.0, :crap 6.0}
   {:name "host_slot.new", :namespace "ui.seams.host_slot", :complexity 6, :coverage 100.0, :crap 6.0}
@@ -115,7 +117,6 @@
   {:name "entity_pool.release", :namespace "host.entity_pool", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_all_valid_roles", :namespace "host.like_collect_subscribe", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_check_subscription", :namespace "host.like_collect_subscribe", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "_get_ctrl_unit", :namespace "host.like_collect_subscribe", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_send_unit_event", :namespace "host.like_collect_subscribe", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_callback_goods_id", :namespace "host.paid_purchase_gateway", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_consume_pending", :namespace "host.paid_purchase_gateway", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -186,7 +187,6 @@
   {:name "_is_demolishable_tile", :namespace "rules.items.demolish_choice", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_gain_popup_body", :namespace "rules.items.gain_reveal", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "handlers.apply_target_player", :namespace "rules.items.handlers", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "handlers.handle_roadblock", :namespace "rules.items.handlers", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "inventory.give", :namespace "rules.items.inventory", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_clear_obstacles_on_tile", :namespace "rules.items.obstacle_clear_tiles", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "obstacle_clear_tiles.visit_tile", :namespace "rules.items.obstacle_clear_tiles", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -430,7 +430,7 @@
   {:name "_resolve_market_page_value", :namespace "ui.render.market.controls", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_resolve_runtime", :namespace "ui.render.market.controls", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_for_each_market_slot", :namespace "ui.render.market.slots", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "market_view_slots.populate_market_slots", :namespace "ui.render.market.slots", :complexity 5, :coverage 100.0, :crap 5.0}
+  {:name "market_view_slots.same_option_ids", :namespace "ui.render.market.slots", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_apply_modifier_to_unit", :namespace "ui.render.move_anim.playback", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_execute_step", :namespace "ui.render.move_anim.playback", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "_should_skip_stop_active_sequence", :namespace "ui.render.move_anim.playback", :complexity 5, :coverage 100.0, :crap 5.0}
@@ -495,7 +495,6 @@
   {:name "player_colors.remap_by_index", :namespace "ui.view.player_colors", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "role_avatar.sanitize_image_key", :namespace "ui.view.role_avatar", :complexity 5, :coverage 100.0, :crap 5.0}
   {:name "role_context.resolve", :namespace "ui.view.role_context", :complexity 5, :coverage 100.0, :crap 5.0}
-  {:name "_show_like_panel", :namespace "host.like_collect_subscribe", :complexity 4, :coverage 66.6667, :crap 4.5926}
   {:name "_emit_text", :namespace "rules.movement_events", :complexity 4, :coverage 66.6667, :crap 4.5926}
   {:name "entries.resolve_timeout", :namespace "turn.deadlines.entries", :complexity 4, :coverage 66.6667, :crap 4.5926}
   {:name "_set_control_text", :namespace "ui.render.market.controls", :complexity 4, :coverage 66.6667, :crap 4.5926}
@@ -541,7 +540,6 @@
   {:name "_resolve_current_player", :namespace "ui.view", :complexity 4, :coverage 83.3333, :crap 4.0741}
   {:name "_resolve_role_via_game_api", :namespace "host.role_ports", :complexity 4, :coverage 85.7143, :crap 4.0466}
   {:name "_try_get_role_id", :namespace "host.role_ports", :complexity 4, :coverage 85.7143, :crap 4.0466}
-  {:name "_own_item_window", :namespace "turn.actions.item_slot_click", :complexity 4, :coverage 85.7143, :crap 4.0466}
   {:name "M.resolve_grouped_override", :namespace "turn.loop.ports_merge", :complexity 4, :coverage 85.7143, :crap 4.0466}
   {:name "_try_wall_diff", :namespace "turn.loop.tick_clock", :complexity 4, :coverage 85.7143, :crap 4.0466}
   {:name "_find_role_in_roster", :namespace "ui.coord.actor_context", :complexity 4, :coverage 85.7143, :crap 4.0466}
@@ -579,7 +577,6 @@
   {:name "obstacle_clear_walk.walk_and_clear", :namespace "rules.items.obstacle_clear_walk", :complexity 4, :coverage 94.4444, :crap 4.0027}
   {:name "intents.build", :namespace "ui.input.route_base", :complexity 4, :coverage 96.9697, :crap 4.0004}
   {:name "composition_root.new_game", :namespace "app.compose_game", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_insert_normalized_player", :namespace "app.game_defaults", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_create_players", :namespace "app.game_factory", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_auto_flag", :namespace "app.game_factory", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_coin_role", :namespace "app.game_factory", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -597,8 +594,6 @@
   {:name "_has_enabled_debug_role", :namespace "app.init_runtime", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "init_runtime.build_ui_warn_sink", :namespace "app.init_runtime", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_add_debug_auto_player", :namespace "app.roster_debug", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_add_synthetic_roles_to_roster", :namespace "app.roster_roles", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_pick_synthetic_unit_keys", :namespace "app.roster_roles", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_board_map", :namespace "app.ui_bootstrap", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_initialize_game_ui", :namespace "app.ui_bootstrap", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_missing_node", :namespace "app.ui_bootstrap_nodes", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -651,6 +646,8 @@
   {:name "_wall_now_hms", :namespace "host.clock_ports", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_ensure_runtime_helper_fields", :namespace "host.context", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_refresh_roles", :namespace "host.context", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_get_ctrl_unit", :namespace "host.like_collect_subscribe", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_show_like_panel", :namespace "host.like_collect_subscribe", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_show_tips", :namespace "host.like_collect_subscribe", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_subscription_event_name", :namespace "host.like_collect_subscribe", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_consume_callback_pending", :namespace "host.paid_purchase_gateway", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -667,7 +664,6 @@
   {:name "sfx_runtime.play_3d_sound", :namespace "host.sound", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_start_tile_id", :namespace "host.synthetic_actor_registry", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_safe_query_start_pos", :namespace "host.synthetic_actor_registry", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_validate_spawn_preconditions", :namespace "host.synthetic_actor_registry", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_queue_cash_anim", :namespace "player.actions.balance", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_require_finite_integer", :namespace "player.actions.balance", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_role_method", :namespace "player.actions.balance", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -747,6 +743,7 @@
   {:name "demolish_choice.find_target", :namespace "rules.items.demolish_choice", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_run_item_choice_flow", :namespace "rules.items.handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "handlers.handle_remote_dice", :namespace "rules.items.handlers", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "handlers.handle_roadblock", :namespace "rules.items.handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "handlers.handle_target_player_item", :namespace "rules.items.handlers", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_notify_full", :namespace "rules.items.inventory", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_queue_anim", :namespace "rules.items.obstacle_clear", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -824,7 +821,6 @@
   {:name "_is_full_buy", :namespace "rules.market.purchase_settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_should_keep_market_open", :namespace "rules.market.purchase_settlement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_append_visible_entries", :namespace "rules.market.query", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_entry_available", :namespace "rules.market.query", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "eligibility.sorted_entries", :namespace "rules.market.query", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_predict_walk", :namespace "rules.movement", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "movement.move", :namespace "rules.movement", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -878,6 +874,7 @@
   {:name "M.resolve", :namespace "turn.actions.item_slot_click", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_current_turn_player", :namespace "turn.actions.item_slot_click", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_early_resolve_result", :namespace "turn.actions.item_slot_click", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_own_item_window", :namespace "turn.actions.item_slot_click", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_turn_pending_choice", :namespace "turn.actions.item_slot_click", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "item_slot_denial.choice_offers_item", :namespace "turn.actions.item_slot_denial", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "item_slot_denial.unavailable_reason", :namespace "turn.actions.item_slot_denial", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1129,13 +1126,14 @@
   {:name "_units_by_player_id", :namespace "ui.render.board_feedback.service", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "service.play_player_cue", :namespace "ui.render.board_feedback.service", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "M.play_followups", :namespace "ui.render.board_feedback.sound_player", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_can_buy_with_free_slot", :namespace "ui.render.market", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "_refresh_populated_market", :namespace "ui.render.market", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_cash_display", :namespace "ui.render.market", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_deps", :namespace "ui.render.market", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_item_display_name", :namespace "ui.render.market.slot_assets", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_has_option_id", :namespace "ui.render.market.slots", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_opt_id", :namespace "ui.render.market.slots", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "market_view_slots.filter_market_options", :namespace "ui.render.market.slots", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "market_view_slots.resolve_selected_option", :namespace "ui.render.market.slots", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_begin_panel_move", :namespace "ui.render.move_anim.playback", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_end_panel_move", :namespace "ui.render.move_anim.playback", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_log_finish_stop", :namespace "ui.render.move_anim.playback", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1204,7 +1202,6 @@
   {:name "_resolve_other_action_prompt_text", :namespace "ui.render.widgets.turn_effects", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_resolve_runtime", :namespace "ui.render.widgets.turn_effects", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_message", :namespace "ui.screens.gift_code", :complexity 4, :coverage 100.0, :crap 4.0}
-  {:name "_selected_host_limit_reached", :namespace "ui.screens.market", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "M.open", :namespace "ui.screens.secondary_confirm", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "M.open_pre_confirm", :namespace "ui.screens.secondary_confirm", :complexity 4, :coverage 100.0, :crap 4.0}
   {:name "_start_purchase", :namespace "ui.screens.skin_panel.panel", :complexity 4, :coverage 100.0, :crap 4.0}
@@ -1264,7 +1261,6 @@
   {:name "_should_set_owner_colors", :namespace "ui.render.support.assets", :complexity 3, :coverage 66.6667, :crap 3.3333}
   {:name "_resolve_popup_countdown", :namespace "turn.waits.countdown_resolve", :complexity 3, :coverage 71.4286, :crap 3.2099}
   {:name "achievement.current_progress", :namespace "app.host_integrations.achievement", :complexity 3, :coverage 75.0, :crap 3.1406}
-  {:name "_b_has_no_extra_fields", :namespace "foundation.memo", :complexity 3, :coverage 75.0, :crap 3.1406}
   {:name "_numeric_part", :namespace "host.clock_ports", :complexity 3, :coverage 75.0, :crap 3.1406}
   {:name "_safe_timestamp_diff", :namespace "host.clock_ports", :complexity 3, :coverage 75.0, :crap 3.1406}
   {:name "_maybe_normalize_action", :namespace "rules.choice.resolver", :complexity 3, :coverage 75.0, :crap 3.1406}
@@ -1307,7 +1303,6 @@
   {:name "_refresh_card_image", :namespace "ui.render.widgets.skin_panel_cards", :complexity 3, :coverage 85.7143, :crap 3.0262}
   {:name "_on_purchase_complete", :namespace "ui.screens.skin_panel.panel", :complexity 3, :coverage 85.7143, :crap 3.0262}
   {:name "host_types.call", :namespace "foundation.host_types", :complexity 3, :coverage 87.5, :crap 3.0176}
-  {:name "_retire_actor", :namespace "host.synthetic_actor_registry", :complexity 3, :coverage 87.5, :crap 3.0176}
   {:name "_append_target_candidate_option", :namespace "rules.items.handlers", :complexity 3, :coverage 87.5, :crap 3.0176}
   {:name "M.reset_to_self", :namespace "ui.ports.ui_sync.camera_lock", :complexity 3, :coverage 87.5, :crap 3.0176}
   {:name "unit_position.read_unit_position", :namespace "ui.render.support.unit_position", :complexity 3, :coverage 87.5, :crap 3.0176}
@@ -1400,6 +1395,7 @@
   {:name "logger.is_anim_debug_enabled", :namespace "foundation.log", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "logger.log_once", :namespace "foundation.log", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_a_fields_match_in_b", :namespace "foundation.memo", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_b_has_no_extra_fields", :namespace "foundation.memo", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_shallow_freeze", :namespace "foundation.memo", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_snapshots_equal", :namespace "foundation.memo", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "number_utils.diff_or_zero", :namespace "foundation.number", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1462,8 +1458,6 @@
   {:name "_has_indexed_component", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_has_named_component", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_is_vector_like", :namespace "host.sound", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_actor_unit", :namespace "host.synthetic_actor_registry", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_destroy_actor", :namespace "host.synthetic_actor_registry", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_game_api_of", :namespace "host.synthetic_actor_registry", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_resolve_destroy_unit", :namespace "host.synthetic_actor_registry", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_spec_field", :namespace "host.synthetic_actor_registry", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1479,7 +1473,6 @@
   {:name "deity_ops.player_has_any_deity", :namespace "player.actions.deity", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_each_occupied", :namespace "player.actions.inventory", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "inventory:add", :namespace "player.actions.inventory", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "inventory:clear", :namespace "player.actions.inventory", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "inventory:find_index", :namespace "player.actions.inventory", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_board_of", :namespace "player.actions.location", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_cache_put", :namespace "player.actions.location", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -1694,18 +1687,19 @@
   {:name "_market_pending_choice", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_valid_market_buy", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "session.apply_navigation", :namespace "rules.market.choice", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_purchase_count", :namespace "rules.market.host_limit", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "paid_purchase_flow.handle", :namespace "rules.market.paid_purchase_flow", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "local_purchase.execute", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "paid_fulfillment.fulfill_entry", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "policy.validate_entry", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "policy.validate_order", :namespace "rules.market.purchase", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_charge_if_needed", :namespace "rules.market.purchase_fulfillment", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_purchase_count", :namespace "rules.market.purchase_limit", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_decode_ok", :namespace "rules.market.purchase_result", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_decode_rejected", :namespace "rules.market.purchase_result", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "purchase_result.rejected", :namespace "rules.market.purchase_result", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_handle_keep_open", :namespace "rules.market.purchase_settlement", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "purchase_settlement.resolve", :namespace "rules.market.purchase_settlement", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "_entry_on_offer", :namespace "rules.market.query", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_split_entries_by_buyable", :namespace "rules.market.query", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "context.entry_currency", :namespace "rules.market.query", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "eligibility.list_available", :namespace "rules.market.query", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2154,9 +2148,9 @@
   {:name "_resolve_tile_position", :namespace "ui.render.board_feedback.service", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "M.play", :namespace "ui.render.board_feedback.sound_player", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_current_cash_amount", :namespace "ui.render.market", :complexity 3, :coverage 100.0, :crap 3.0}
-  {:name "_refresh_populated_market", :namespace "ui.render.market", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "market_view.close_market_panel", :namespace "ui.render.market", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "market_view.refresh_cash_display", :namespace "ui.render.market", :complexity 3, :coverage 100.0, :crap 3.0}
+  {:name "market_view.select_market_option", :namespace "ui.render.market", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_frame_name_for", :namespace "ui.render.market.controls", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_refresh_market_controls", :namespace "ui.render.market.controls", :complexity 3, :coverage 100.0, :crap 3.0}
   {:name "_set_label_or_button", :namespace "ui.render.market.controls", :complexity 3, :coverage 100.0, :crap 3.0}
@@ -2336,7 +2330,6 @@
   {:name "gift_code.handle_action", :namespace "ui.screens.gift_code", :complexity 2, :coverage 66.6667, :crap 2.1481}
   {:name "_assert_valid_dirty_key", :namespace "ui.state.canvas_store", :complexity 2, :coverage 66.6667, :crap 2.1481}
   {:name "_play_branches", :namespace "ui.render.anim.unit_overlay_robot", :complexity 2, :coverage 71.4286, :crap 2.0933}
-  {:name "_clamp_limit", :namespace "app.roster_roles", :complexity 2, :coverage 75.0, :crap 2.0625}
   {:name "_remote_priority_for_tile_type", :namespace "computer.agent.path", :complexity 2, :coverage 75.0, :crap 2.0625}
   {:name "inventory:_notify_change", :namespace "player.actions.inventory", :complexity 2, :coverage 75.0, :crap 2.0625}
   {:name "shared.queue_action_anim", :namespace "rules.chance.handlers", :complexity 2, :coverage 75.0, :crap 2.0625}
@@ -2377,6 +2370,7 @@
   {:name "ENode:init", :namespace "ui.manager.enode", :complexity 2, :coverage 91.6667, :crap 2.0023}
   {:name "_step_anim", :namespace "turn.output.anim", :complexity 2, :coverage 92.3077, :crap 2.0018}
   {:name "M.uninstall", :namespace "app.event_bridge", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_insert_normalized_player", :namespace "app.game_defaults", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_new_player_entry", :namespace "app.game_factory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_new_rng", :namespace "app.game_factory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.start", :namespace "app.gameplay_start", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2401,6 +2395,8 @@
   {:name "M.build_game_factory", :namespace "app.roster", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_choice_id", :namespace "app.roster", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_first_auto_slot", :namespace "app.roster_debug", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_add_synthetic_roles_to_roster", :namespace "app.roster_roles", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_pick_synthetic_unit_keys", :namespace "app.roster_roles", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_unit_key_pool", :namespace "app.roster_roles", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.build_state", :namespace "app.state_factory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "M.install", :namespace "app.ui_bootstrap", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2525,7 +2521,9 @@
   {:name "_resolve_rotation", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_scale_invalid", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_with_sound_flag", :namespace "host.sound", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_destroy_actor", :namespace "host.synthetic_actor_registry", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_normalize_pending_spec", :namespace "host.synthetic_actor_registry", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "_retire_actor", :namespace "host.synthetic_actor_registry", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_spawn_actor", :namespace "host.synthetic_actor_registry", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_spawn_unit", :namespace "host.synthetic_actor_registry", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_call_create", :namespace "host.units", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2544,6 +2542,7 @@
   {:name "_ensure_deity", :namespace "player.actions.deity", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "deity_ops.player_deity_type", :namespace "player.actions.deity", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "inventory:add_at", :namespace "player.actions.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "inventory:clear", :namespace "player.actions.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "inventory:count", :namespace "player.actions.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "inventory:remove_by_index", :namespace "player.actions.inventory", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_add_to_occupancy", :namespace "player.actions.location", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2709,14 +2708,14 @@
   {:name "_apply_navigation_action", :namespace "rules.market.choice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_normalize_tab", :namespace "rules.market.choice", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "builder.build", :namespace "rules.market.choice", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "host_limit.is_reached", :namespace "rules.market.host_limit", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "host_limit.record_purchase", :namespace "rules.market.host_limit", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_ensure_in_flight_map", :namespace "rules.market.paid_purchase_flow", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_schedule_in_flight_clear", :namespace "rules.market.paid_purchase_flow", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "paid_purchase_flow.clear_in_flight", :namespace "rules.market.paid_purchase_flow", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_validate_purchase_order", :namespace "rules.market.purchase", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "paid_purchase_callback.handle_untracked", :namespace "rules.market.purchase", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_success_text", :namespace "rules.market.purchase_fulfillment", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "purchase_limit.is_reached", :namespace "rules.market.purchase_limit", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "purchase_limit.record_purchase", :namespace "rules.market.purchase_limit", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "purchase_result.deferred", :namespace "rules.market.purchase_result", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "purchase_result.fulfilled", :namespace "rules.market.purchase_result", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_try_failure_stay", :namespace "rules.market.purchase_settlement", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -2725,6 +2724,7 @@
   {:name "context.assert_cash_currency", :namespace "rules.market.query", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "context.entry_price", :namespace "rules.market.query", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "eligibility.can_buy_entry", :namespace "rules.market.query", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "eligibility.can_buy_with_free_slot", :namespace "rules.market.query", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_predict_market_resume", :namespace "rules.movement", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_record_passed_step", :namespace "rules.movement", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_persisted_facing", :namespace "rules.movement", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3099,7 +3099,6 @@
   {:name "service.play_tile_cue", :namespace "ui.render.board_feedback.service", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_resolve_sound_params", :namespace "ui.render.board_feedback.sound_player", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_set_market_preview_icon", :namespace "ui.render.market", :complexity 2, :coverage 100.0, :crap 2.0}
-  {:name "market_view.select_market_option", :namespace "ui.render.market", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_frame_matches", :namespace "ui.render.market.controls", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_has_ui_method", :namespace "ui.render.market.controls", :complexity 2, :coverage 100.0, :crap 2.0}
   {:name "_iterate_option_ids", :namespace "ui.render.market.controls", :complexity 2, :coverage 100.0, :crap 2.0}
@@ -3397,6 +3396,7 @@
   {:name "_invalid_positive_integer_id", :namespace "host.sound", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_play_sfx_call", :namespace "host.sound", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_warn_skip", :namespace "host.sound", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_validate_spawn_preconditions", :namespace "host.synthetic_actor_registry", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_zero_pos", :namespace "host.synthetic_actor_registry", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "unit_lifecycle.create_unit_group", :namespace "host.units", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "unit_lifecycle.create_unit_with_scale", :namespace "host.units", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3610,7 +3610,6 @@
   {:name "_clamp_page", :namespace "rules.market.choice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "feedback.emit_buy_failed", :namespace "rules.market.choice", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "feedback.emit_inventory_full", :namespace "rules.market.choice", :complexity 1, :coverage 100.0, :crap 1.0}
-  {:name "_count_key", :namespace "rules.market.host_limit", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_in_flight_key", :namespace "rules.market.paid_purchase_flow", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_reject_in_flight_purchase", :namespace "rules.market.paid_purchase_flow", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_handle_paid_purchase", :namespace "rules.market.purchase", :complexity 1, :coverage 100.0, :crap 1.0}
@@ -3618,6 +3617,7 @@
   {:name "purchase.setup_for_game", :namespace "rules.market.purchase", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_emit_bought_item", :namespace "rules.market.purchase_fulfillment", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_query_context", :namespace "rules.market.purchase_fulfillment", :complexity 1, :coverage 100.0, :crap 1.0}
+  {:name "_count_key", :namespace "rules.market.purchase_limit", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "_new", :namespace "rules.market.purchase_result", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "purchase_result.is_result", :namespace "rules.market.purchase_result", :complexity 1, :coverage 100.0, :crap 1.0}
   {:name "purchase_result.residual", :namespace "rules.market.purchase_result", :complexity 1, :coverage 100.0, :crap 1.0}
