@@ -60,6 +60,8 @@ local function _can_computer_actor_choose(is_computer_controlled_actor, min_visi
   if not is_computer_controlled_actor then
     return false
   end
+  -- elapsed 已夹到 >= 0,min_visible == 0 时两支同真;<= 改 < 只在 elapsed 为 NaN 时可观测,
+  -- 留着守卫兜非法帧 dt(等价变异体,不可杀,不要为它补测试)。
   return min_visible <= 0 or elapsed >= min_visible
 end
 

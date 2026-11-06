@@ -14,6 +14,7 @@ end
 -- 他卡的进出而移动;消耗/被偷/被弃留洞;新卡填编号最小的洞。
 -- 占用槽共用迭代器:跳过空洞(false)与越界空位(nil),判空口径只此一处,
 -- count/find_index/nth_occupied_slot 不得各自再写同形循环。
+-- 循环上界写成 <= 只多读一次恒为 nil 的 items[max_slots+1],照样结束(等价变异体,不可杀)。
 local function _each_occupied(items, max_slots)
   local i = 0
   return function()
@@ -33,6 +34,7 @@ function inventory:init(opts)
   local max_slots = opts.max_slots or (opts.constants and opts.constants.inventory_slots)
   assert(max_slots ~= nil, "Inventory.new(opts) requires opts.max_slots or opts.constants.inventory_slots")
 
+  -- 槽位从 1 起;起点改 0 只多写一个无读者的 items[0](等价变异体,不可杀,clear 同理)。
   self.items = {}
   for i = 1, max_slots do
     self.items[i] = false
@@ -43,10 +45,11 @@ end
 
 -- 清空全部槽位(槽位数不变、每槽置 false)。清空期间暂停变更通知，
 -- 整体替换 items 表，避免逐槽触发 _on_change。
+-- max_slots 由 init 断言恒非 nil,曾经的「or #self.items」是死默认(等价变异体,按 #257 三分类删冗余)。
 function inventory:clear()
   self._suspend_on_change = true
   local items = {}
-  for i = 1, self.max_slots or #self.items do
+  for i = 1, self.max_slots do
     items[i] = false
   end
   self.items = items
