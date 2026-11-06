@@ -37,10 +37,28 @@ def identity(path):
 
 def prepare(root, targets):
     found = []
-    for target in targets:
+    for target in expand_changed(root, targets):
         path, _ = snapshot(root, target)
         found.append({'target': target, 'prior': identity(path)})
     return found
+
+
+def expand_changed(root, targets):
+    """--changed resolves through mutator's own selection, so the evidence set is mutator's set."""
+    if targets != ['--changed']:
+        return targets
+    from mutator.cli import parse_args, select_files
+    config = json.loads((root / 'uml-quality.json').read_text(encoding='utf-8-sig'))
+    standard = config['standardTools']
+    argv = ['--root', str(root), '--changed']
+    for source_root in standard.get('sourceRoots', []):
+        argv += ['--source-root', source_root]
+    for pattern in standard.get('exclude', []):
+        argv += ['--exclude', pattern]
+    files = [path.relative_to(root).as_posix() for path in select_files(parse_args(argv))]
+    if not files:
+        raise ValueError('--changed selected no source files')
+    return files
 
 
 def no_sites(root, target):

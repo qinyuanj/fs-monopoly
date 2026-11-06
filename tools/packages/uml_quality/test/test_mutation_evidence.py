@@ -120,6 +120,32 @@ class MutationEvidenceTest(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn('no statistics', result.stdout)
 
+    def git(self, *args):
+        subprocess.run(['git', '-C', str(self.root), *args], check=True, capture_output=True)
+
+    def use_changed_target(self):
+        (self.root / 'uml-quality.json').write_text(json.dumps(
+            {'version': 1, 'standardTools': {'sourceRoots': ['src'], 'exclude': []}}), encoding='utf-8')
+        self.targets.write_text(json.dumps(['--changed']), encoding='utf-8')
+        self.git('init', '-q')
+        self.git('add', 'src')
+        self.git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'base')
+
+    def test_changed_target_expands_to_changed_sources_like_mutator(self):
+        self.use_changed_target()
+        self.source.write_text('function f() return 2 end\n', encoding='utf-8')
+        (self.root / 'src/demo/extra.lua').write_text('return 1\n', encoding='utf-8')
+        (self.root / 'outside.lua').write_text('return 1\n', encoding='utf-8')
+        self.prepare()
+        manifest = json.loads(self.manifest.read_text(encoding='utf-8'))
+        self.assertEqual(['src/demo/extra.lua', 'src/demo/init.lua'], [entry['target'] for entry in manifest])
+
+    def test_changed_target_without_changed_sources_fails(self):
+        self.use_changed_target()
+        result = self.run_phase('prepare')
+        self.assertEqual(1, result.returncode)
+        self.assertIn('--changed selected no source files', result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()
