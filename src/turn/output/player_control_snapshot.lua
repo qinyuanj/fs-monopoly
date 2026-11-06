@@ -45,6 +45,13 @@ function snapshot.build(game)
   return _freeze(by_player)
 end
 
+local function _record_matches(record, player)
+  return record ~= nil and record.player == player
+    and record.id == identity.normalize(player and player.id or nil)
+    and record.is_delegated == control.is_delegated(player)
+    and record.is_computer_controlled == control.is_computer_controlled(player or nil)
+end
+
 -- 每个遍历位置保留对象身份、归一 ID 和公开事实,包括无效/重复 ID。
 -- 比较不分配签名表;只有当前 game 持有当前结果,不保留历史版本。
 local function _matches(cache, players)
@@ -53,11 +60,7 @@ local function _matches(cache, players)
   end
   local count = 0
   for index, player in ipairs(players) do
-    local record = cache.records[index]
-    if record == nil or record.player ~= player
-      or record.id ~= identity.normalize(player and player.id or nil)
-      or record.is_delegated ~= control.is_delegated(player)
-      or record.is_computer_controlled ~= control.is_computer_controlled(player or nil) then
+    if not _record_matches(cache.records[index], player) then
       return false
     end
     count = index

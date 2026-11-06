@@ -84,6 +84,58 @@ local function _deity_cue_name(deity_type)
   return nil
 end
 
+local function _on_chance_applied(data)
+  local event_data = _event_data(data)
+  local ctx = context.state
+  local player = _event_field(event_data, "player")
+  local card = _event_field(event_data, "card")
+  _play_negative_card_cue(ctx, player, card, event_data)
+end
+
+local function _on_turn_started(data)
+  local event_data = _event_data(data)
+  local ctx = context.state
+  local player_id = _event_player_id(event_data)
+  if ctx and player_id ~= nil then
+    board_feedback.play_player_cue(ctx, "turn_started", player_id, event_data)
+    panel_interrupt.begin_player_action(ctx, player_id)
+  end
+end
+
+local function _on_status_applied(data)
+  local event_data = _event_data(data)
+  local ctx = context.state
+  local cue_name = _event_field(event_data, "cue_name")
+  local tile_index = _event_field(event_data, "tile_index")
+  if not _play_tile_cue(ctx, cue_name, tile_index, event_data) then
+    local player_id = _event_player_id(event_data)
+    if ctx and cue_name and player_id ~= nil then
+      board_feedback.play_player_cue(ctx, cue_name, player_id, event_data)
+    end
+  end
+end
+
+local function _on_deity_applied(data)
+  local event_data = _event_data(data)
+  local ctx = context.state
+  local player_id = _event_player_id(event_data)
+  local cue_name = _deity_cue_name(_event_field(event_data, "deity_type"))
+  if ctx and cue_name and player_id ~= nil then
+    board_feedback.play_player_cue(ctx, cue_name, player_id, event_data)
+  end
+end
+
+local function _on_angel_immune_blocked(data)
+  local event_data = _event_data(data)
+  local ctx = context.state
+  local player_id = _event_player_id(event_data)
+  if not _play_tile_cue(ctx, "angel_deity", _event_field(event_data, "tile_index"), event_data) then
+    if ctx and player_id ~= nil then
+      board_feedback.play_player_cue(ctx, "angel_deity", player_id, event_data)
+    end
+  end
+end
+
 function board_feedback_handlers.set_context(state)
   context.state = state
 end
@@ -95,57 +147,15 @@ function board_feedback_handlers.install(register_handler, monopoly_event)
 
   register_handler(monopoly_event.land.tax_paid, _player_cue_from_subject("tax_wave", "player"))
 
-  register_handler(monopoly_event.chance.applied, function(data)
-    local event_data = _event_data(data)
-    local ctx = context.state
-    local player = _event_field(event_data, "player")
-    local card = _event_field(event_data, "card")
-    _play_negative_card_cue(ctx, player, card, event_data)
-  end)
+  register_handler(monopoly_event.chance.applied, _on_chance_applied)
 
-  register_handler(monopoly_event.feedback.turn_started, function(data)
-    local event_data = _event_data(data)
-    local ctx = context.state
-    local player_id = _event_player_id(event_data)
-    if ctx and player_id ~= nil then
-      board_feedback.play_player_cue(ctx, "turn_started", player_id, event_data)
-      panel_interrupt.begin_player_action(ctx, player_id)
-    end
-  end)
+  register_handler(monopoly_event.feedback.turn_started, _on_turn_started)
 
-  register_handler(monopoly_event.feedback.status_applied, function(data)
-    local event_data = _event_data(data)
-    local ctx = context.state
-    local cue_name = _event_field(event_data, "cue_name")
-    local tile_index = _event_field(event_data, "tile_index")
-    if not _play_tile_cue(ctx, cue_name, tile_index, event_data) then
-      local player_id = _event_player_id(event_data)
-      if ctx and cue_name and player_id ~= nil then
-        board_feedback.play_player_cue(ctx, cue_name, player_id, event_data)
-      end
-    end
-  end)
+  register_handler(monopoly_event.feedback.status_applied, _on_status_applied)
 
-  register_handler(monopoly_event.feedback.deity_applied, function(data)
-    local event_data = _event_data(data)
-    local ctx = context.state
-    local player_id = _event_player_id(event_data)
-    local cue_name = _deity_cue_name(_event_field(event_data, "deity_type"))
-    if ctx and cue_name and player_id ~= nil then
-      board_feedback.play_player_cue(ctx, cue_name, player_id, event_data)
-    end
-  end)
+  register_handler(monopoly_event.feedback.deity_applied, _on_deity_applied)
 
-  register_handler(monopoly_event.feedback.angel_immune_blocked, function(data)
-    local event_data = _event_data(data)
-    local ctx = context.state
-    local player_id = _event_player_id(event_data)
-    if not _play_tile_cue(ctx, "angel_deity", _event_field(event_data, "tile_index"), event_data) then
-      if ctx and player_id ~= nil then
-        board_feedback.play_player_cue(ctx, "angel_deity", player_id, event_data)
-      end
-    end
-  end)
+  register_handler(monopoly_event.feedback.angel_immune_blocked, _on_angel_immune_blocked)
 
   register_handler(monopoly_event.feedback.bankruptcy, _player_cue_from_player_id("bankruptcy_slam"))
 
