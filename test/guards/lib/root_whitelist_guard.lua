@@ -24,7 +24,6 @@ local _WHITELIST = {
   ["GLOSSARY.md"] = true,
   ["CODING_STANDARDS.md"] = true,
   -- 项目使命。
-  ["mission.md"] = true,
   [".gitignore"] = true,
   -- 文本源码统一 LF 的唯一真源（#475）：部署目录 = 仓库字节级 LF 镜像契约的源侧保证。
   [".gitattributes"] = true,
@@ -34,7 +33,6 @@ local _WHITELIST = {
   ["tools"] = true,
   [".agents"] = true,
   [".claude"] = true,
-  ["skills-lock.json"] = true,
   -- 邻接 uml-viewer 的质量配置(#93):上游 uml_posix.py 只在项目根读 uml-quality.json,
   -- 位置由上游契约决定。.uml-viewer/、target/ 等本地产物走 .gitignore,不进白名单。
   ["uml-quality.json"] = true,
