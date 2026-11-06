@@ -20,6 +20,11 @@ CLI 形态与退出码以 `lua5.4 tools/cli.lua uml --help` 为准；为何钉�
 - 仓根若存在 `examples/`，上游 `ir` 会优先读 `examples/*.policy.edn` 而忽略生成的 `policy.edn`；预检因此拒绝仓根 `examples/`。
 - 上游 `ir` 按位置取 `[policy [output]]`，包装器必须两个都传；只传一个时输出会落到 `examples/uml-viewer.edn`。
 
+## `mutate` 排查
+
+- 单点核验某几处变异用 `lua5.4 tools/cli.lua uml mutate <文件> --lines <行号,...>`，不必重跑整个文件。
+- mutator 报存活、`spec-lane` 却能杀死同一变异时，先查 worker 模式和 spec-lane 的差异：`test/busted_helper.lua` 与 `tools/packages/test_runner/cache_loader.lua` 的 searcher 顺序决定模块从哪里加载，可对照 `tools/packages/uml_quality/test/test_uml_quality_busted.lua` 里的 worker 用例。
+
 ## 验证范围
 
 - 默认 tooling 车道只跑 Lua CLI 测试。改动 mutate 证据核验时，另在装好的环境里先过 `lua5.4 tools/cli.lua uml check`，再跑 `.uml-viewer/mutator/.venv/bin/python -I -B -m unittest discover -s tools/packages/uml_quality/test -p test_mutation_evidence.py`。环境缺失即「未执行」，不算通过或跳过。
