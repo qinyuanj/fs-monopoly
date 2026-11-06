@@ -28,6 +28,7 @@ local function _pad(message)
   local bit_length = #message * 8
   local zeros = (55 - #message) % 64
   local length_bytes = {}
+  -- 起点改 0 只多写一个 table.concat 不读的 length_bytes[0](等价变异体,不可杀)。
   for i = 1, 8 do
     length_bytes[i] = string.char((bit_length >> ((8 - i) * 8)) & 0xff)
   end
@@ -37,6 +38,7 @@ end
 local function _compress(h, block, offset)
   local w = {}
   for i = 1, 16 do
+    -- 结束下标多取 1~2 字节只多返回被丢弃的值,4 个变量取到的字节不变(等价变异体,不可杀)。
     local b1, b2, b3, b4 = string.byte(block, offset + (i - 1) * 4, offset + i * 4 - 1)
     w[i] = (b1 << 24) | (b2 << 16) | (b3 << 8) | b4
   end

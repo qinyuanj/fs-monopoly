@@ -61,26 +61,21 @@ local function _game_api_of(env)
   return env and env.GameAPI or nil
 end
 
-local function _actor_unit(actor)
-  return actor and actor.unit or nil
-end
-
+-- actor 恒非 nil、actor.unit 由 _spawn_unit 断言非 nil 且之后不改;曾经的
+-- 「actor and」「unit == nil」是恒真/恒假守卫(等价变异体,按 #257 三分类删冗余)。
 local function _destroy_actor(env, actor)
   local destroy_unit = _resolve_destroy_unit(_game_api_of(env))
-  local unit = _actor_unit(actor)
-  if destroy_unit == nil or unit == nil then
+  if destroy_unit == nil then
     return
   end
-  pcall(destroy_unit, unit)
+  pcall(destroy_unit, actor.unit)
 end
 
 -- 退役幂等(#610 遗留收口):已退役再调 die/lose 视为「出局态成立」返回 true,与宿主
 -- 单位路径的「已死幂等算成功」对齐;否则 role_die 会把 lose 之后的 die 误判为失败留痕。
 -- 单位只销毁一次由 destroyed 标志把门。
+-- 只由 adapter 闭包调用,actor 恒非 nil(曾经的 nil 守卫不可达,按 #257 删冗余)。
 local function _retire_actor(registry, actor)
-  if actor == nil then
-    return false
-  end
   if actor.destroyed == true then
     return true
   end
@@ -134,14 +129,12 @@ local function _normalize_pending_spec(spec)
   }
 end
 
-local function _validate_spawn_preconditions(registry, spec)
-  local game_api = registry.env and registry.env.GameAPI or nil
+-- GameAPI 可用性由 spawn_pending 入口断言一次并传入,这里不再重复断言(#257 删冗余)。
+local function _validate_spawn_preconditions(spec)
   local player_id = role_id_utils.normalize(spec.player_id)
   assert(player_id ~= nil, "missing synthetic player_id")
   assert(spec.unit_key ~= nil, "missing synthetic unit_key")
-  assert(game_api and type(game_api.create_creature_fixed_scale) == "function",
-    "missing GameAPI.create_creature_fixed_scale")
-  return game_api, player_id
+  return player_id
 end
 
 local function _spawn_unit(game_api, spec, spawn_pos, player_id)
@@ -168,8 +161,8 @@ local function _start_actor_ai(unit, player_id, unit_key)
   logger.warn("[Eggy]", "synthetic actor missing start_ai", tostring(player_id), tostring(unit_key))
 end
 
-local function _spawn_actor(registry, spec, spawn_pos)
-  local game_api, player_id = _validate_spawn_preconditions(registry, spec)
+local function _spawn_actor(registry, game_api, spec, spawn_pos)
+  local player_id = _validate_spawn_preconditions(spec)
   local unit = _spawn_unit(game_api, spec, spawn_pos, player_id)
   local actor = {
     player_id = player_id,
@@ -194,11 +187,11 @@ function synthetic_actor_registry.new(env)
   }
 
   function registry.reset()
+    -- 退役即从 actors_by_player_id 删表项,遍历到的 actor 恒未销毁(曾经的
+    -- destroyed 判断恒真,按 #257 删冗余)。
     for _, actor in pairs(registry.actors_by_player_id) do
-      if actor.destroyed ~= true then
-        actor.destroyed = true
-        _destroy_actor(registry.env, actor)
-      end
+      actor.destroyed = true
+      _destroy_actor(registry.env, actor)
     end
     registry.pending_specs = {}
     registry.actors_by_player_id = {}
@@ -244,7 +237,7 @@ function synthetic_actor_registry.new(env)
     _assert_spawn_api(game_api)
     local spawn_pos = _safe_query_start_pos(registry.env, map_cfg)
     for _, spec in ipairs(registry.pending_specs) do
-      _spawn_actor(registry, spec, spawn_pos)
+      _spawn_actor(registry, game_api, spec, spawn_pos)
     end
   end
 

@@ -47,6 +47,7 @@ function M.install(state, get_current_game)
 end
 
 function M.uninstall()
+  -- 终点写成 0 只多走一次 index=0,registered_triggers[0] 恒为 nil、注销 nil 是空操作(等价变异体,不可杀)。
   for index = #registered_triggers, 1, -1 do
     host_runtime.unregister_custom_event(registered_triggers[index])
     registered_triggers[index] = nil

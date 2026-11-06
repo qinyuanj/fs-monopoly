@@ -129,6 +129,7 @@ local function _sorted_property_ids(env, player)
     if ai ~= nil and bi ~= nil then
       return ai < bi
     end
+    -- pairs 的键互不相同,走到这里的非整数键字符串化后也不相等,< 改 <= 不改变排序结果(等价变异体,不可杀)。
     return tostring(a) < tostring(b)
   end)
   return ids
