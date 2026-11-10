@@ -1,8 +1,11 @@
 -- lua_env.lua —— 受控 Lua 环境(GLOSSARY「受控 Lua 环境」,spec #146 / #150)。
 --
--- 本仓测试与质量工具唯一允许的 Lua 装载来源:版本落在下方口径内的机器 LuaRocks 包树。
+-- 本仓测试与 lint 唯一允许的 Lua 装载来源:版本落在下方口径内的机器 LuaRocks 包树。
 -- 本模块只核对、不写入:preflight 只调 `luarocks config` / `luarocks list`,
 -- 不满足即返回失败文本并附可直接执行的安装命令,绝不自动安装。
+-- 单一实现、按入口选子集:各入口用 preflight({ only = {...} }) 只核对自己真正装载的
+-- rock(测试运行器 busted/luassert,lint luacheck),缺别的入口的 rock 不挡路。
+-- CRAP/变异由外部 DSH 插件自管 Lua 环境(ADR 0082),luacov 不在本仓口径内。
 --
 -- 本文件会被子进程 `dofile`(lint 的 luacheck 装载),故顶层不 require 任何项目模块;
 -- 需要 foundation 的函数在调用时才惰性 require。
@@ -14,8 +17,6 @@ local lua_env = {}
 lua_env.REQUIREMENTS = {
   { name = "busted", module = "busted.runner", min = "2.3.0", below = "3", install = "2.3.0-1" },
   { name = "luassert", module = "luassert", min = "1.9.0", below = "2", install = "1.9.0-1" },
-  { name = "luacov", module = "luacov.runner", min = "0.17.0", below = "1", install = "0.17.0-1" },
-  { name = "luacov-reporter-lcov", module = "luacov.reporter.lcov", min = "0.2", below = "1", install = "0.2-0" },
   { name = "luacheck", module = "luacheck.main", min = "1.2.0", below = "2", install = "1.2.0-1" },
 }
 
@@ -85,7 +86,7 @@ local function _quote(arg)
   return "'" .. text:gsub("'", "'\\''") .. "'"
 end
 
--- 本模块会在钉死 LUA_PATH/LUA_CPATH 的子进程里被调用(uml 启动链、busted helper),
+-- 本模块会在钉死 LUA_PATH/LUA_CPATH 的子进程里被调用(busted runner、lint 子进程),
 -- 而 `luarocks` 自己也要按它的默认路径装载。清掉四个 Lua 路径变量再起子进程:
 -- 核对的是「机器 tree 里装了什么」,与调用方钉死的装载面无关。
 local _CLEARED_PATHS = "env -u LUA_PATH -u LUA_PATH_5_4 -u LUA_CPATH -u LUA_CPATH_5_4 "
@@ -184,10 +185,39 @@ function lua_env.roots(opts)
   return roots
 end
 
+-- only 为 nil 取全部 REQUIREMENTS;否则按名称挑出子集。未知名称 fail closed:
+-- 写错或已退场的名字不能被静默当成「不用查」。
+local function _selected_requirements(only)
+  if only == nil then
+    return lua_env.REQUIREMENTS
+  end
+  local by_name = {}
+  for _, requirement in ipairs(lua_env.REQUIREMENTS) do
+    by_name[requirement.name] = requirement
+  end
+  local selected, unknown = {}, {}
+  for _, name in ipairs(only) do
+    if by_name[name] == nil then
+      unknown[#unknown + 1] = tostring(name)
+    else
+      selected[#selected + 1] = by_name[name]
+    end
+  end
+  if #unknown > 0 then
+    return nil, "受控 Lua 环境预检: only 含口径外的包名: " .. table.concat(unknown, ", ")
+  end
+  return selected
+end
+
 -- 预检受控 Lua 环境。返回 true, nil, { roots = {...}, versions = {name = version} };
--- 失败返回 nil, 诊断文本(含逐项安装命令)。run_command / luarocks_exe 为注入缝。
+-- 失败返回 nil, 诊断文本(含逐项安装命令)。opts.only 是要核对的 rock 名列表
+-- (缺省全部);run_command / luarocks_exe / exists 为注入缝。
 function lua_env.preflight(opts)
   opts = opts or {}
+  local requirements, select_err = _selected_requirements(opts.only)
+  if requirements == nil then
+    return nil, select_err
+  end
   local run = _run_command(opts)
   local exe = _luarocks_exe(opts)
 
@@ -199,7 +229,7 @@ function lua_env.preflight(opts)
   local problems, versions, modules = {}, {}, {}
   local search = _module_search_path(roots)
   local listings = _list_trees(run, exe, roots)
-  for _, requirement in ipairs(lua_env.REQUIREMENTS) do
+  for _, requirement in ipairs(requirements) do
     local copies = _installed_copies(listings, requirement.name)
     local described, out_of_range, chosen, verified_roots = {}, 0, nil, {}
     for _, copy in ipairs(copies) do

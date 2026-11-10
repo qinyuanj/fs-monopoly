@@ -24,10 +24,13 @@ end)
 
 -- 预检通过:luacheck 经受控 Lua 环境装载器拉起,不再引用仓内工具 tree。
 it("preflight success loads luacheck through the controlled environment", function()
-  local seen
+  local seen, preflight_opts
   local result = runner.execute({
     targets = { "tools/packages/lint" },
-    preflight = function() return true, nil, { roots = { ROOT } } end,
+    preflight = function(opts)
+      preflight_opts = opts
+      return true, nil, { roots = { ROOT } }
+    end,
     run_command = function(command)
       seen = command
       return { ok = true, output = "Total: 0 warnings\n" }
@@ -39,6 +42,8 @@ it("preflight success loads luacheck through the controlled environment", functi
   check.matches("require_controlled('luacheck.main'", joined, 1, true)
   check.matches("'/home/user/.luarocks'", joined, 1, true)
   check.is_nil(joined:find("bootstrap", 1, true), joined)
+  -- lint 入口只依赖 luacheck:缺 busted 等测试 rock 不应挡住 lint。
+  check.same({ "luacheck" }, preflight_opts.only)
 end)
 
 end)

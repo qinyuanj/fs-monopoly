@@ -94,9 +94,10 @@ function M.execute(options)
   end
 
   -- 受控 Lua 环境预检(#150):只核对机器 LuaRocks tree,不安装、不写入;
-  -- 不满足是真实失败(退 1),诊断里带可直接执行的安装命令。
+  -- 不满足是真实失败(退 1),诊断里带可直接执行的安装命令。lint 只装载 luacheck,
+  -- 故只核对它(按入口选子集,ADR 0072);缺测试 rock 不挡 lint。
   local preflight = options.preflight or require("foundation.lua_env").preflight
-  local verified, preflight_err, info = preflight()
+  local verified, preflight_err, info = preflight({ only = { "luacheck" } })
   if not verified then
     return _failure(preflight_err)
   end

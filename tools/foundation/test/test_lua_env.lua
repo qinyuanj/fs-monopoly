@@ -16,8 +16,6 @@ local TREES = "{\n   {\n      name = \"user\",\n      root = \"" .. ROOT:gsub("\
 local GOOD = {
   busted = "2.3.0-1",
   luassert = "1.9.0-1",
-  luacov = "0.17.0-1",
-  ["luacov-reporter-lcov"] = "0.2-0",
   luacheck = "1.2.0-1",
 }
 
@@ -81,6 +79,7 @@ local function _preflight(installed, options)
     luarocks_exe = "luarocks.exe",
     run_command = _fake_run(options.copies or _copies(installed), calls, options.roots),
     exists = options.exists or function() return true end,
+    only = options.only,
   })
   return ok, err, info, calls
 end
@@ -139,17 +138,22 @@ describe("controlled lua environment preflight", function()
     check.matches("<2", err, 1, true)
   end)
 
-  it("compares a zero major like luacov-reporter-lcov 0.2 against 0.2 and below 1", function()
-    check.is_true((_preflight(_with("luacov-reporter-lcov", "0.2-0"))))
-    check.is_nil((_preflight(_with("luacov-reporter-lcov", "0.1-1"))))
-    check.is_nil((_preflight(_with("luacov-reporter-lcov", "1.0-0"))))
+  -- 零大版本(0.x)的口径:min 含、below 不含,0.2 不能被当成 0.20 或越过 1。
+  it("compares a zero major version against an inclusive min and an exclusive next major", function()
+    local requirement = { name = "zero-major", min = "0.2", below = "1" }
+    check.is_true(lua_env.version_in_range("0.2-0", requirement))
+    check.is_true(lua_env.version_in_range("0.10-0", requirement))
+    check.is_false(lua_env.version_in_range("0.1-1", requirement))
+    check.is_false(lua_env.version_in_range("1.0-0", requirement))
   end)
 
-  it("does not let luacov satisfy luacov-reporter-lcov by substring", function()
-    local installed = _with("luacov-reporter-lcov", nil)
+  -- luarocks list 按子串匹配;实现必须按名称精确过滤,同前缀的别的 rock 不能冒充。
+  it("does not let a package whose name merely contains the required name satisfy it", function()
+    local installed = _with("busted", nil)
+    installed["busted-htest"] = "2.3.0-1"
     local ok, err = _preflight(installed)
     check.is_nil(ok)
-    check.matches("luacov-reporter-lcov", err, 1, true)
+    check.matches("busted 未安装", err, 1, true)
   end)
 
   it("reports every violation at once", function()
@@ -208,6 +212,45 @@ describe("controlled lua environment preflight", function()
     check.is_nil(ok)
     check.matches("busted.runner", err, 1, true)
     check.matches("被核对 tree 以外", err, 1, true)
+  end)
+
+  -- 按入口选子集:只核对 only 列出的 rock,其余缺失不影响该入口。
+  it("checks only the listed packages when only is given", function()
+    local installed = _with("luacheck", nil)
+    local ok, err, info = _preflight(installed, { only = { "busted", "luassert" } })
+    check.is_true(ok, err)
+    check.equal("2.3.0-1", info.versions.busted)
+    check.is_nil(info.versions.luacheck)
+  end)
+
+  it("still fails on a listed package that is out of range", function()
+    local installed = _with("busted", "2.2.0-1")
+    installed.luacheck = nil
+    local ok, err = _preflight(installed, { only = { "busted", "luassert" } })
+    check.is_nil(ok)
+    check.matches("busted 2.2.0-1", err, 1, true)
+    check.is_nil(err:find("luacheck", 1, true), err)
+  end)
+
+  it("asks luarocks once per tree even when only a subset is checked", function()
+    local _, _, _, calls = _preflight(GOOD, { roots = { ROOT, "/usr/local" }, only = { "luacheck" } })
+    -- lint-allow: call-count 子进程数是预检的性能契约(每个 runner 进程启动都付这笔)
+    check.equal(1 + 2, #calls)
+  end)
+
+  -- fail closed:only 里写错或已退场的名字不能被静默忽略成「什么都不查」。
+  it("fails when only names a package outside the requirements", function()
+    local ok, err = _preflight(GOOD, { only = { "busted", "luacov" } })
+    check.is_nil(ok)
+    check.matches("luacov", err, 1, true)
+  end)
+
+  it("no longer requires luacov or its lcov reporter", function()
+    local ok, err = _preflight(GOOD)
+    check.is_true(ok, err)
+    for _, requirement in ipairs(lua_env.REQUIREMENTS) do
+      check.is_nil(requirement.name:find("luacov", 1, true), requirement.name)
+    end
   end)
 
   it("fails when luarocks config yields no tree", function()
