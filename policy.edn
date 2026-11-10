@@ -1,0 +1,10 @@
+{:title "Monopoly"
+ :lang :lua
+ :src "src"
+ :prefix "src"
+ :hierarchical true
+ :levels [[:foundation] [:config :state] [:rules] [:computer :player] [:turn] [:ui] [:host] [:app]]
+ :foreign []
+ :out "tmp/uml/fs-monopoly.edn"
+ :proposals [{:id :p-1793868019 :layers [] :name "2026-11-05 16:40:19" :omit []}]
+ :omit []}

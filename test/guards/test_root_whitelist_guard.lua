@@ -26,25 +26,25 @@ describe("TestRootWhitelistGuard", function()
     luassert.is.same({ "README.md" }, violations)
   end)
 
-  -- uml-viewer 只在项目根读 uml-quality.json(#93);安装拷贝、覆盖率 target/
-  -- 走 .gitignore,不进白名单——放开它们即破此钉。
+  -- uml-viewer 插件只在项目根读 uml-quality.json(#93 / ADR 0082);插件自带二进制,
+  -- 仓内不再有 .uml-viewer/ 安装拷贝或 uml 包装,覆盖率 target/ 走 .gitignore,
+  -- 都不进白名单——放开它们即破此钉。
   it("test_uml_quality_config_whitelisted_but_not_its_local_outputs", function()
     luassert.is.same({}, guard.check({ "uml-quality.json" }))
     luassert.is.same({ ".uml-viewer", "target", "uml" },
       guard.check({ ".uml-viewer", "target", "uml" }))
   end)
 
-  -- 维护者决定按上游 README 将 .metrics/(真实 uml crap|mutate 的度量)入库(#69):
+  -- 维护者决定将 .metrics/(插件工具 uml_crap / uml_mutate 写出的度量)入库(#69):
   -- 入库后它是已跟踪的根级条目,必须在白名单里,否则 guard 会拦住提交。
   it("test_versioned_uml_metrics_dir_whitelisted", function()
     luassert.is.same({}, guard.check({ ".metrics" }))
   end)
 
-  -- uml ir 的仓根 policy.edn 是生成物(ADR 0070 / #99):走 .gitignore 不入库,
-  -- 推演写入库的 docs/architecture.proposals.edn。放行 policy.edn 即破此钉。
-  it("test_generated_uml_policy_is_ignored_not_whitelisted", function()
-    luassert.is.same({ "policy.edn" }, guard.check({ "policy.edn" }))
-    luassert.is.same({}, guard.check({ "docs" }))
+  -- 仓根 policy.edn 入库(ADR 0082):插件读写它,:proposals/:omit 直接写在里面,
+  -- 其余键由 uml_policy_guard 核对。撤掉放行即破此钉。
+  it("test_versioned_uml_policy_whitelisted", function()
+    luassert.is.same({}, guard.check({ "policy.edn" }))
   end)
 
   -- crapper / mutator 只从模块根(最近的 .busted)取 busted 配置(#99),

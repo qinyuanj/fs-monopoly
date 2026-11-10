@@ -6,14 +6,13 @@ local roots = lua_env.roots()
 lua_env.install_paths(roots)
 local mode = arg[1]
 
-local function pinned_paths(extra)
+local function pinned_paths()
   local paths = { root .. "/?.lua", root .. "/?/init.lua" }
   for _, tree in ipairs(roots) do
     local base = tree:gsub("\\", "/"):gsub("/+$", "")
     paths[#paths + 1] = base .. "/share/lua/5.4/?.lua"
     paths[#paths + 1] = base .. "/share/lua/5.4/?/init.lua"
   end
-  if extra then paths[#paths + 1] = extra end
   return table.concat(paths, ";")
 end
 
@@ -29,21 +28,21 @@ end
 
 if mode == "uninstalled" then
   assert(loader.verified_module("luassert") == nil)
-elseif mode == "adopted" or mode == "adopt_unpinned" then
-  -- uml crap 的钉死环境:只剩仓根与受控 Lua 环境两类搜索模板,busted 先于项目代码装载。
-  package.path = pinned_paths(mode == "adopt_unpinned" and "C:/elsewhere/?.lua" or nil)
+elseif mode == "adopted" then
+  -- 插件 busted 子进程的形态:busted 先于项目代码装载,helper 登记它装载的依赖身份。
+  package.path = pinned_paths()
   package.cpath = pinned_cpaths()
   require("busted.core")()
   require("busted")
   local object = require("luassert")
-  loader.adopt_preloaded(root)
+  loader.adopt_preloaded()
   assert(loader.verified_module("luassert") == object)
   require("test.support.scenario_suites.shared.helpers")
 elseif mode == "injected" then
   package.loaded.luassert = {}
   require("test.support.scenario_suites.shared.helpers")
 else
-  loader.install(root)
+  loader.install()
   require("busted.core")()
   require("busted")
   local object = require("luassert")

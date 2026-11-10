@@ -6,8 +6,6 @@ return {
     ["docs/agents/triage-labels.md"] = true,
     ["docs/agents/domain.md"] = true,
     ["docs/architecture.md"] = true,
-    -- uml ir 推演覆盖文件(ADR 0070 / #99):仓根 policy.edn 是生成物,:proposals/:omit 存这里。
-    ["docs/architecture.proposals.edn"] = true,
     ["docs/decisions.md"] = true,
   },
   retired_dirs = {

@@ -7,7 +7,7 @@
 --
 -- 清单与生产者对应:build/ tmp/ 为本地构建产物;
 -- luacov.* 是 luacov 默认落点的残留
--- (uml crap 的 crapper 经 luacov 采集覆盖率)。
+-- (插件 uml_crap 的 crapper 经 luacov 采集覆盖率)。
 -- 仓内不再有项目工具缓存:工具模块一律从受控 Lua 环境装载,clean 只清仓内
 -- 生成物。
 --

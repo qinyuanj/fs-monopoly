@@ -45,10 +45,12 @@ describe("TestDocsWhitelistGuard", function()
     luassert.is.equal(0, #violations)
   end)
 
-  -- uml ir 的推演覆盖文件(ADR 0070 / #99)入库在 docs/ 下,是唯一放行的非 Markdown 资产。
-  it("test_passes_the_uml_proposals_override", function()
+  -- 推演覆盖文件已退场(ADR 0082)::proposals/:omit 直接写在仓根 policy.edn,
+  -- docs/ 下不再放行任何非 Markdown 资产,复活它即报红。
+  it("test_flags_the_retired_uml_proposals_override", function()
     local violations = check({ ["docs/architecture.proposals.edn"] = "{:proposals []\n :omit []}\n" })
-    luassert.is.equal(0, #violations)
+    luassert.is.equal(1, #violations)
+    luassert.truthy(joined(violations):find("未在项目文档白名单", 1, true))
   end)
 
   it("test_flags_a_doc_outside_the_explicit_allowlist", function()

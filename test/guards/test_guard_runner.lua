@@ -73,6 +73,10 @@ local guards = {
     module = "test.guards.lib.eggy_json_guard",
   },
   {
+    name = "uml_policy_guard",
+    module = "test.guards.lib.uml_policy_guard",
+  },
+  {
     name = "docs_whitelist_guard",
     module = "test.guards.lib.docs_whitelist_guard",
   },

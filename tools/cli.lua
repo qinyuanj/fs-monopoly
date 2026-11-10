@@ -19,8 +19,6 @@
 local commands = {
   { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },
-  { name = "dry",               pkg = "dry",                summary = "结构重复检测(邻接 .uml-viewer/dryer;写 .metrics/dry.edn)" },
-  { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 入口(check/crap/mutate/ir/view;受控 Lua 环境)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
   { name = "deploy",            pkg = "ops",                summary = "部署到 Windows 侧 Eggy 目录(WSL 写 /mnt/c;零参数)" },
   { name = "deploy-diff",       pkg = "ops", module = "deploy_diff", summary = "只读比对部署目录与工作区 payload(有漂移退 1;真机验收后、提交前跑)" },
@@ -64,7 +62,7 @@ local root = _repo_root()
 -- require("packages.<pkg>.cli")),path 拼到 tools/ 一层即可命中
 -- tools/packages/<pkg>/cli.lua(命名契约,#300 Q4——伪入口文件名不匹配
 -- packages.<name>.cli,物理进不了路由)。?/init.lua 让包内 cli 能 require 目录式
--- 包(如 uml ir 用的 packages.arch_policy)。
+-- 包(如 packages.arch_policy)。
 package.path = package.path .. ";" .. root .. "/tools/?.lua;" .. root .. "/tools/?/init.lua"
 
 -- 入口解释器预检(#191 用户故事 3):本机 PATH 上的 `lua` 是 5.1,兄弟仓依赖它,

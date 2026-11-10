@@ -100,9 +100,9 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 理由：uml-viewer 已承担「非 Clojure 的 CRAP 与变异」，具备 Lua 扫描与 WSL Ubuntu 复验记录（ADR 0073）；本仓沿用同一实现与架构边界，避免维护两套会漂移的真源。
 
-落地（#93 / #191）：本仓的受支持入口是 `lua5.4 tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 sh 启动脚本里调用邻接仓的 POSIX 命令模块 `scripts/uml_posix.py`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` 被忽略，不作为入口：它继承用户 `LUA_PATH`，不钉装载面、也不做受控 Lua 环境预检，工具可能从版本口径外的 tree 解析出来。`.metrics/` 按上游 README 入库：真实 `uml crap|mutate` 跑出的度量随改动提交（#69 维护者决定）。补充契约见 `tools/packages/uml_quality/CONTRACT.md`。
+落地：入口是 DSH 插件 `dsh-uml-viewer` 的 `uml_crap` / `uml_mutate` / `uml_dry` / `uml_ir`（ADR 0082），派发次序与 validResult 由插件二进制判定，本仓不再包装。`.metrics/` 按上游 README 入库：真实跑出的度量随改动提交（#69 维护者决定）。
 
-修订记录：2026-10-27 层序来源收窄到 `levels.edn`（ADR 0077 / #214）；2026-10-29 去掉已退场的 `uml.ps1`（#219）。
+修订记录：2026-10-27 层序来源收窄到 `levels.edn`（ADR 0077 / #214）；2026-10-29 去掉已退场的 `uml.ps1`（#219）；2026-11-10 入口由仓内 `uml` 包装改为 DSH 插件（ADR 0082 / #233）。
 
 ## ADR 0069 — 测试框架的终态是 busted
 
@@ -116,34 +116,27 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 ## ADR 0070 — uml-viewer 可视化接入：生成式 policy 与 companion 环境钉死
 
-接入 uml-viewer 的图窗与 companion 时，两件事按本仓口径而非上游默认处理：
-
-1. **policy 是生成物，推演另存**。仓根 `policy.edn` 由 `lua5.4 tools/cli.lua uml ir` 从 `arch_policy.project_uml_policy` 投影生成、不入库；上游 policy 中唯一需要人手维护的 `:proposals` 与 `:omit` 存于入库的 `docs/architecture.proposals.edn`，生成时合并。companion 不得直接改写 `policy.edn`：维护者改层序或同层分组时编辑 `arch_policy/levels.edn`（ADR 0077），改归属或其他边界时编辑组件策略与 guard；推演只写覆盖文件，再经 `uml ir` 重生。
-2. **companion 继承钉死的环境**。图窗只经 `lua5.4 tools/cli.lua uml view` 启动，它在调用上游启动器前钉死 `LUA_PATH` / `LUA_CPATH`；Herdr 由上游从继承的 PATH 中选取（>= 0.9.3、protocol 22 的最高版），本仓不钉版本、不改 PATH 次序。上游每次全新启动都为本项目新建 Herdr server，环境沿启动链原样下传到 companion 及其子 shell，`--restart` 与崩溃恢复复用同一 server；因此仓根 `./uml` 在该 companion 内可用，在其他场合仍按 ADR 0068 不作入口。
-
-理由：上游 policy 是单个 EDN 文件、不支持引用，companion 的系统提示要求它「写或更新 policy」——照做即生成与 `docs/architecture.md` 并行漂移的第二真源；而每次重生又会冲掉 `:proposals`，所以只把推演拆出。上游提示词硬编码 `./uml crap|mutate|ir`，仅靠 AGENTS.md 让 companion 改用 `lua5.4 tools/cli.lua uml` 会与系统提示冲突、遵从不可预期；在入口处钉环境让上游命令本身变对。上游 `c714f83` 起 Herdr 由精确 0.9.3 放宽为 PATH 上 >= 0.9.3 的最高版，此前「0.9.3 局部置前」的做法会与用户已装的新版并存而让上游选取失败，故撤除；预检只按同口径确认 PATH 上至少有一个达标版本，不改全局 Herdr，也不改只读的上游检出。companion 以 `--dangerously-skip-permissions` 运行，维护者接受，并以 AGENTS.md 限定其边界：只改覆盖文件与 `src/`，不动 git 远端、不关单。
-
-修订记录：2026-10-27 层序与同层分组的来源改由 ADR 0077 规定（#214）。
+已被 ADR 0082 取代（2026-11-10）；原文见 `13b7be4:docs/decisions.md`。
 
 ## ADR 0071 — 原生 Windows 自动化脚本形态与 CI 车道口径
 
 已被 ADR 0073 取代（2026-10-21）；原文见 `f71237e:docs/decisions.md`。
 
-## ADR 0072 — 测试与质量工具使用受控 Lua 环境
+## ADR 0072 — 测试与 lint 使用受控 Lua 环境
 
-测试与质量工具唯一允许的 Lua 装载来源是**受控 Lua 环境**：由 `luarocks config rocks_trees` 解析出的机器 LuaRocks 5.4 包树，版本口径为 busted `>=2.3.0,<3`、luassert `>=1.9.0,<2`、luacov `>=0.17.0,<1`、luacov-reporter-lcov `>=0.2,<1`、luacheck `>=1.2.0,<2`。本仓只核对、不写入、不在项目内自举安装 rock；不满足即真实失败（退 1）并打印可直接执行的安装命令。
+测试与 lint 唯一允许的 Lua 装载来源是**受控 Lua 环境**：由 `luarocks config rocks_trees` 解析出的机器 LuaRocks 5.4 包树，版本口径为 busted `>=2.3.0,<3`、luassert `>=1.9.0,<2`、luacheck `>=1.2.0,<2`。本仓只核对、不写入、不在项目内自举安装 rock；不满足即真实失败（退 1）并打印可直接执行的安装命令。
 
 落实口径：
 
-1. **单一预检**。`tools/foundation/lua_env.lua` 是 tree 根解析、版本核对与模块来源校验的唯一实现。`preflight` 依次调 `luarocks config rocks_trees` 与 `luarocks list <name> --porcelain`，不调 `install` / `make` / `remove`。
+1. **单一实现，按入口选子集**。`tools/foundation/lua_env.lua` 是 tree 根解析、版本核对与模块来源校验的唯一实现。各入口用 `preflight({ only = {...} })` 只核对自己装载的 rock：测试运行器核对 busted、luassert，lint 核对 luacheck；缺省核对全部口径，`only` 含口径外名称即失败。`preflight` 先调一次 `luarocks config rocks_trees`，再对每个 tree 调一次 `luarocks list --tree=<root> --porcelain`，在 Lua 侧按名称精确过滤，不调 `install` / `make` / `remove`。
 2. **测试运行器**。`tools/packages/test_runner/runner.lua` 先预检，再把受控 tree 的 share/lib 路径接入本进程；`cache_loader` 只从这些 tree 装载 busted 及依赖，解析到 tree 之外（含 C 模块）即失败，未验证的 `package.loaded` 预注入同样失败。项目内不提供安装入口。
-3. **变异 worker**。worker 的搜索模板只允许指向 worker 自身与受控 tree；模板指向其他 tree、源仓库代码、外部路径、路径穿越或空模板均失败。worker 不安装、不复制、不链接任何 rocks tree，`lfs` 校验器也从受控 tree 的 C 路径装载。
-4. **uml 子进程**。`uml` 预检把每个受控 tree 的 `share/lua/5.4` 与 `lib/lua/5.4` 写进子进程的 `LUA_PATH(_5_4)` / `LUA_CPATH(_5_4)`（另加仓根），模块探针按同一组根判定来源；`./uml` 安装器拷贝仍不是入口，因为它不钉装载面、也不做预检。
-5. **清理边界**。清生成物只有 `clean` 一个子命令。spec_lane 的实测时长缓存存于仓内 `tmp/`（gitignored，由 `clean` 清理）。
+3. **清理边界**。清生成物只有 `clean` 一个子命令。spec_lane 的实测时长缓存存于仓内 `tmp/`（gitignored，由 `clean` 清理）。
 
-代价与边界：每台开发机必须自行提供满足口径的机器 tree（CI 已于 2026-10-22 撤销，`.github/scripts/setup-lua.sh` 随之删除，历史供给口径仅存于本句）。缺失或版本越界是真实失败（退 1）；退 3 只保留给平台/工具显式不可用。模块来源、版本、worker 绑定与 uml 探针在每次运行时核对。
+本条只管仓内入口。luacov、luacov-reporter-lcov 不在口径内：插件的 CRAP 与变异子进程用什么 Lua 环境，由插件负责（ADR 0082）。
 
-修订记录：2026-10-29 删除 `distclean` 别名，清理只剩 `clean`（#220 / #218）。
+代价与边界：每台开发机必须自行提供满足口径的机器 tree（CI 已于 2026-10-22 撤销，`.github/scripts/setup-lua.sh` 随之删除，历史供给口径仅存于本句）。缺失或版本越界是真实失败（退 1）；退 3 只保留给平台/工具显式不可用。模块来源与版本在每次运行时核对。
+
+修订记录：2026-10-29 删除 `distclean` 别名，清理只剩 `clean`（#220 / #218）；2026-11-10 删除第 4 条 uml 子进程环境钉死，改由插件负责；口径去掉 luacov、luacov-reporter-lcov；预检改为按入口选子集；删除原第 3 条变异 worker 绑定（ADR 0082 / #233）。
 
 ## ADR 0073 — 开发与工具链保证面迁到 WSL Ubuntu 与 macOS
 
@@ -153,13 +146,12 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 2. **foundation 用 POSIX 原语**。`proc` 以 `os.execute`（`/bin/sh -c`）+ `find -print0` 执行与枚举，`fs` 用 `mkdir -p` / `rm -rf` / `cp -R` 并把存在性与目录判定收成纯 Lua（`io.open` + `rename` 自探测），`env` 以 `pwd -L` 取当前目录（继承的 `PWD` 可能被子进程 cwd 作废，只兜底）、取 `TMPDIR`，`shell` 按 POSIX 单引号拼装与 `NAME=value` 前缀导出。`parallel_lanes` 让 launcher 自成进程组并用进程组看门狗收容超时：Linux 用 `setsid`，macOS 没有 `setsid` 命令，改用 `set -m` 作业控制，组 id 与收容语义相同。Windows 时代的 `cmd.exe` / `chcp` / `robocopy` / `where.exe` / PowerShell Job Object 全部退场。
 3. **解释器统一 `lua5.4`**。入口显式写 `lua5.4 tools/cli.lua`，候选表只认 `lua5.4` / `lua54`，子进程沿用当前解释器身份；不改机器全局 `lua`（兄弟仓依赖 5.1），不引入 LuaJIT。macOS 上 `lua5.4` 由机器 Lua 5.4 提供（可为指向 5.4 解释器的同名链接）。受控 Lua 环境（ADR 0072）口径不变，机器 tree 是 `~/.luarocks`（LuaRocks 5.4）；`luarocks.loader` 须不可解析，或解析在受控 tree 内（luarocks 自装进 tree 时，loader 只会接回受控 tree 本身）。
 4. **deploy 是唯一的 Windows 互操作面**。`deploy` 在 WSL 中运行：在 `/mnt/c` 下经 `cmd.exe` 取 `%USERPROFILE%`，再用 `wslpath -u` 换算，目标仍是 `<home>/Desktop/dev/eggy/LuaSource_大富翁`，拷贝用 Linux 原生命令。`cmd.exe` 或 `wslpath` 缺失退 3（`status=unavailable`），不是部署失败，macOS 上即如此；`deploy` 仍是零参数。
-5. **uml 走邻接仓的 POSIX 入口**。`lua5.4 tools/cli.lua uml <…>` 是唯一入口，由它钉死 `LUA_PATH` / `LUA_CPATH` / `PATH` 并做受控环境预检后，执行邻接检出的 `scripts/uml_posix.py`（`UML_VIEWER_TOOL_ROOT` 可指向兄弟仓开发树）。cmd 批处理、`uml-command.ps1` 派发与仓根 `uml.ps1` 已从本仓退场；ADR 0068 / 0070 的「仓根 `./uml` 不作入口」语义不变。邻接 uml-viewer 自身的 macOS 交付见其 ADR 0007。
-6. **无 CI，hook 可选**。本仓不跑 CI，`.github/` 已删除；push 前的硬地板是本地 `lua5.4 tools/cli.lua verify`。`.githooks/pre-push` 是可选本地拦截（`git config core.hooksPath .githooks` 启用），只做转发：`exec lua5.4 tools/cli.lua verify </dev/null`。
-7. **新脚本默认 bash**。仓库内新增或改写的自动化脚本用 bash（`#!/usr/bin/env bash`），不再以 PowerShell 为默认形态。
+5. **无 CI，hook 可选**。本仓不跑 CI，`.github/` 已删除；push 前的硬地板是本地 `lua5.4 tools/cli.lua verify`。`.githooks/pre-push` 是可选本地拦截（`git config core.hooksPath .githooks` 启用），只做转发：`exec lua5.4 tools/cli.lua verify </dev/null`。
+6. **新脚本默认 bash**。仓库内新增或改写的自动化脚本用 bash（`#!/usr/bin/env bash`），不再以 PowerShell 为默认形态。
 
 理由：开发机已整体迁到 WSL Ubuntu（#106），部署目标与宿主仍在 Windows。保留一条没有消费者的原生 Windows 开发路径，等于为每个工具各写两套实现与两套测试；而 `deploy` 的互操作面很小、边界清楚，把它收成唯一的 Windows 接触点，其余部分就能用一套 POSIX 语义表达，macOS 也因此只需在进程组收容一处分派。代价写明：这是平台迁移而非双轨化，将来若回到原生 Windows 开发须重新引入平台分派层；`/mnt/c` 上的文件系统语义（大小写、权限）与 ext4 不同，部署只做纯拷贝，不依赖这些语义。
 
-修订记录：2026-10-22 撤销 CI，hook 改为可选（维护者决定）；2026-10-27 保证面增补 macOS（维护者决定，#215）；2026-10-29 平台边界由三态改为二态，删除显式跳过协议（#219）。
+修订记录：2026-10-22 撤销 CI，hook 改为可选（维护者决定）；2026-10-27 保证面增补 macOS（维护者决定，#215）；2026-10-29 平台边界由三态改为二态，删除显式跳过协议（#219）；2026-11-10 删除原第 5 条仓内 uml 入口，质量工具改由 DSH 插件提供（ADR 0082 / #233）。
 
 ## ADR 0074 — 皮肤归属以宿主玩家存档为真源
 
@@ -193,13 +185,15 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 ## ADR 0076 — 变异测试范围不含 UI 层
 
-源码变异测试（`uml mutate`）的全量范围是 `src/` 下除 `ui` 以外的全部顶层目录；`src/ui/**` 不做变异，也不登记为变异缺口（#172）。CRAP 与 dry 的范围不变，仍覆盖整个 `src/`。
+源码变异测试（插件 `uml_mutate`）的全量范围是 `src/` 下除 `ui` 以外的全部顶层目录；`src/ui/**` 不做变异，也不登记为变异缺口（#172）。CRAP 与 dry 的范围不变，仍覆盖整个 `src/`。
 
-1. **全量入口显式传目标**。全量变异写作 `lua5.4 tools/cli.lua uml mutate src/<目录> …`，逐个列出 `src/` 下除 `ui` 之外的顶层目录；新增顶层目录时一并加入。不带参数的调用会被上游拒绝，不作全量入口。
+1. **全量入口显式传目标**。全量变异写作一次 `uml_mutate({targets = {"src/<目录>", …}})`，在同一个数组里逐个列出 `src/` 下除 `ui` 之外的顶层目录；新增顶层目录时一并加入。
 2. **不写进 `uml-quality.json` 的 `exclude`**。`standardTools.exclude` 同时约束 crapper、dryer 与 mutator，写入后 `ui` 会一并从 CRAP 与 dry 中消失；mutator 自身没有 `--exclude`，因此只能靠目标清单收窄。
 3. **其余层不按目录排除**。`host` 适配层照常变异；无变异点的配置数据表与端口声明不显式排除，按「无变异点」记录。
 
 理由：UI 层代码主要是布局、文案与显隐，测试不断言视觉结果，存活变异多数只改变表现，难以转成可执行的测试缺口；而 `src/ui/` 约占 `src/` 文件数的 40%，是全量变异的最大开销。`coord`、`schema`、`state` 等子目录看似纯逻辑，实际依赖 UI 渲染与宿主角色上下文，按子目录拆分的边界不稳。代价：UI 层没有变异证据，只有 CRAP 的复杂度与行覆盖；确有纯逻辑的 UI 模块时可单独点名执行，但不进全量口径。
+
+修订记录：2026-11-10 入口由 `lua5.4 tools/cli.lua uml mutate` 改为插件 `uml_mutate`，范围不变（ADR 0082 / #233）。
 
 ## ADR 0077 — 层序与同层分组迁入原生 UML levels 配置
 
@@ -209,7 +203,9 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 只迁移层序与同层分组，是因为 `:levels` 无法表达模块匹配、substrate、额外禁向和环豁免；强行全量搬迁会削弱 guard 或制造第二套语义。初始投影保持 app L1、host L2、ui L3、turn L4、player/computer L5、rules L6、state/config L7，foundation 仍为 substrate，扫描仍只覆盖 `src/`。
 
-本条仅取代 ADR 0070 中「层序由架构文档与 guard 维护」的约定。仓根 `policy.edn` 仍是 ignored 生成物，proposals/omit 仍分离，环境钉死与 companion 写面不变；companion 不得修改层配置或组件策略。这与 ADR 0068 的「UML policy 是投影而非第二真源」一致。
+仓根 `policy.edn` 里的 `:levels` 只是 `levels.edn` 的镜像，由守卫核对一致（ADR 0082），层序不在 `policy.edn` 里改。这与 ADR 0068 的「UML policy 是投影而非第二真源」一致。
+
+修订记录：2026-11-10 `policy.edn` 由 ignored 生成物改为入库并受守卫核对（ADR 0082 / #233）。
 
 ## ADR 0078 — 黑市取消场内库存，数量上限由宿主限购执行
 
@@ -273,3 +269,16 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 5. **卡槽已满保留按钮**。卡槽已满时按钮照常显示，点击仍由 UI 本地闸提示「道具槽已满，无法购买」。商品既买满又槽满时按买满处理。因此按钮显隐不能直接用 `can_buy`（它含卡槽判定），规则层另给不看卡槽的可买字段，`can_buy` 现有用途不变。
 
 理由：买满只属于这件商品，且本局不可逆，留着可选、可点只会招来无效点击；金币不足是这件商品自己的条件，价格与现金都在屏上，隐藏按钮不需要额外解释。卡槽已满影响所有商品且可能在局内解除，黑市屏上没有别的解释位置，隐藏按钮会让玩家看不懂，所以保留按钮和提示。买满不自动跳选，是为了避免 #216 那类按钮原位连点误购。代价：金币不足时点按钮不再有「余额不足」提示；旧测试 `test_19`（选中不可买商品时按钮保持显示）作废。
+
+## ADR 0082 — 质量与架构图工具改由 DSH 插件提供，`policy.edn` 入库并受守卫核对
+
+uml-viewer 由 DSH 插件 `dsh-uml-viewer` 提供：`uml_ir` / `uml_crap` / `uml_mutate` / `uml_dry` / `uml_display`。插件自带二进制，读写仓根的 `policy.edn`、`uml-quality.json` 与 `.metrics/`。本仓不再包装上游（#233）。取代 ADR 0070 全文、ADR 0072 第 4 条与其中 luacov 两项口径，以及 ADR 0068、0076、0077 中关于仓内 `uml` 入口和 `policy.edn` 生成的部分。
+
+1. **仓内不留包装层**。删除 `lua5.4 tools/cli.lua uml` 与 `dry` 两个子命令及 `tools/packages/uml_quality/`、`tools/packages/dry/`。也不留调用插件二进制的薄壳：二进制路径绑定插件版本。
+2. **`policy.edn` 入库，推演直接写在里面**。`:proposals` 与 `:omit` 由 agent 按插件注入的规则直接修改 `policy.edn`。删除 `docs/architecture.proposals.edn` 及其合并逻辑。
+3. **其余键由守卫核对**。`policy.edn` 中 `:proposals` 与 `:omit` 以外的键，必须与 `arch_policy.project_uml_policy` 的投影一致，否则 `test/guards/` 报红。层序仍只在 `levels.edn` 改（ADR 0077），改完同步 `policy.edn`。IR 输出 `:out` 仍写到已忽略的 `tmp/uml/`。
+4. **插件结果以 `validResult` 为准**。仓内不再另做逐目标变异核验，也不预检插件子进程的 Lua 环境；只给插件用的 luacov、luacov-reporter-lcov 移出受控 Lua 环境口径（ADR 0072），预检改为各入口只核对自己装载的 rock。仓根 `.busted` 的 helper 只把 busted 已装载的依赖登记为可信身份，不再核对插件给的搜索路径与 worker 布局：crapper 不钉搜索路径，mutator 会把 `HOME` 改到 `target/mutator-home`，仓内再算一遍环境必然和插件对不上。插件在本仓是否给出有效结果，靠迁移时实跑一遍核对。
+5. **插件跑的 spec 只覆盖 `src/`**。`.busted` 只取 `test/behavior` 与 `test/contract`；测工具或测试设施、要起嵌套 runner 或调 luarocks 的 spec 放 `test/guards`，它们在插件改过的环境里本来就跑不通，也不计入 CRAP 与变异。
+6. **dry 只扫全量、用默认阈值**。插件 `uml_dry` 不接受路径和阈值参数。抽函数前跑一次，到 `.metrics/dry.edn` 里查目标文件的条目。
+
+理由：插件的面板操作会让 agent 去改 policy，注入的规则也要求改 policy 时保留 `:proposals`。若保留「`policy.edn` 是生成物、推演另存」，每个会话都要跟插件规则对着干，下次重生还会冲掉 agent 写进去的提案。投影中真正来自 arch_policy 的只有 `:levels` / `:foreign` / `:src`，用守卫核对一致，就能守住「层序只有一个真源」，不必再靠生成。代价：`policy.edn` 有两类内容，一类是镜像、一类可以手改，由守卫划界；dry 不能按文件跑、也不能调阈值；变异有没有假绿，只能信插件。

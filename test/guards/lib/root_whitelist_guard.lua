@@ -36,8 +36,8 @@ local _WHITELIST = {
   -- 邻接 uml-viewer 的质量配置(#93):上游 uml_posix.py 只在项目根读 uml-quality.json,
   -- 位置由上游契约决定。.uml-viewer/、target/ 等本地产物走 .gitignore,不进白名单。
   ["uml-quality.json"] = true,
-  -- 真实 uml crap|mutate 跑出的度量(.metrics/crap.edn、mutate/*.edn)按上游 README
-  -- 入库(#69 维护者决定),是已跟踪的根级目录。
+  -- 插件工具 uml_crap / uml_mutate 写出的度量(.metrics/crap.edn、mutate/*.edn)
+  -- 入库(#69 维护者决定,ADR 0082),是已跟踪的根级目录。
   [".metrics"] = true,
   -- crapper / mutator 以最近的 .busted 定模块根并读 busted 配置(#99),只认仓根。
   [".busted"] = true,
@@ -46,8 +46,9 @@ local _WHITELIST = {
   -- editor-cli 在工作区向上查找 eggy.json,以 isSEMap 判定 FS/SE 地图(缺省按 FS);
   -- 只保留该字段,维护者决定入库(2026-10-29)。
   ["eggy.json"] = true,
-  -- `uml ir` 生成的仓根 policy.edn(ADR 0070 / #99)走 .gitignore,不进白名单;
-  -- 人手维护的推演在 docs/architecture.proposals.edn。
+  -- uml-viewer 插件读写的仓根 policy.edn 入库(ADR 0082)::proposals/:omit 可手改,
+  -- 其余键由 uml_policy_guard 核对与 arch_policy 投影一致。
+  ["policy.edn"] = true,
 }
 
 local function _top_level_name(path)

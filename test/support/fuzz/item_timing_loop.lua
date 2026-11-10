@@ -371,7 +371,7 @@ local function _find_violation(records)
 end
 
 
--- 行级插桩环境（uml crap 经 luacov 挂 debug hook 采集覆盖率）下空跑：探针职责是
+-- 行级插桩环境（插件 uml_crap 经 luacov 挂 debug hook 采集覆盖率）下空跑：探针职责是
 -- 时序活锁捕捉，不是覆盖率来源；插桩把 fuzz 热循环拖慢一个量级。迁移前 property
 -- 车道本就不进 coverage/crap 口径（#190），这里保持一致。
 local function _instrumented()

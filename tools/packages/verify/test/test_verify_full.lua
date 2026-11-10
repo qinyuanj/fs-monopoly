@@ -226,7 +226,7 @@ missing_global_luacheck_keeps_project_install_lanes()
 end
 
 -- #94:旧外部架构工具 / CRAP / 覆盖率车道退场;层边界门禁住 guards 车道,
--- CRAP 与变异走显式 `uml crap|mutate`。slim 计划恰好七条车道。
+-- CRAP 与变异走插件 uml_crap / uml_mutate(ADR 0082)。slim 计划恰好七条车道。
 local function
 slim_plan_has_exactly_the_retained_lanes()
   local plan = verify_full._resolve_lanes({

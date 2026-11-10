@@ -12,9 +12,9 @@
 --
 -- `--help` / `-h` 的判定与 usage 输出也收在这里,所有包 cli 与顶层 tools/cli.lua
 -- 共用,不再各自内联。帮助有两种位置语义,按子命令既有的退出码保留,不统一:
---   help_exit         任一位置命中:lint / verify / dry / deploy(ops) / sync-data /
+--   help_exit         任一位置命中:lint / verify / deploy(ops) / sync-data /
 --                     test_runner。这些子命令的其余参数是目标或开关,帮助可写在任意位置。
---   leading_help_exit 只看首参:clean / uml。首参之后的参数各自报用法错误
+--   leading_help_exit 只看首参:clean。首参之后的参数各自报用法错误
 --                     (`clean foo --help` 退 2),统一成任一位置会改变退出码。
 --   is_help_flag      其余按位置识别的场合直接用判定本身:gift-code(写注入的 stdout,
 --                     且认 `new --help`)、probe / lint runner / encoding / spec_lane_args
@@ -36,7 +36,7 @@ local proc_lib = require("foundation.proc")
 local tool_cli = {}
 
 -- 归一化 run 返回值:数字退出码原样;布尔/真值语义 truthy→0、falsy→1。
--- 覆盖布尔与数字(dry/lint)两种 runner 契约。
+-- 覆盖布尔与数字(lint 等)两种 runner 契约。
 function tool_cli.normalize_exit_code(result)
   if type(result) == "number" then
     return result
@@ -77,7 +77,7 @@ function tool_cli.is_help_flag(value)
   return value == "--help" or value == "-h"
 end
 
--- 输出走 io.write(按调用时查表,dry / uml_quality 等测试替换全局 io.write)。
+-- 输出走 io.write(按调用时查表,包 cli 的测试替换全局 io.write)。
 local function _write_usage(usage)
   io.write(usage())
   return 0

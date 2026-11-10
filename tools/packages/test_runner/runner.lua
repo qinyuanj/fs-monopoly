@@ -85,12 +85,13 @@ local ok, err = pcall(function()
   end
   assert(#files > 0, "no available spec files selected")
   -- 受控 Lua 环境预检(#151):busted / luassert 只从机器 LuaRocks tree 装载,
-  -- 版本口径不满足是真实失败(退 1),不再在项目内自举安装。
+  -- 版本口径不满足是真实失败(退 1),不再在项目内自举安装。只核对本入口装载的
+  -- 两个 rock(按入口选子集,ADR 0072):缺 luacheck 不挡测试运行器。
   local lua_env = require("foundation.lua_env")
-  local verified_env, env_err, env_info = lua_env.preflight()
+  local verified_env, env_err, env_info = lua_env.preflight({ only = { "busted", "luassert" } })
   assert(verified_env, env_err)
   lua_env.install_paths(env_info.roots)
-  require("packages.test_runner.cache_loader").install(root)
+  require("packages.test_runner.cache_loader").install()
   -- --durations-out:busted file start/end 事件之间的墙钟秒数,取 busted.monotime
   -- (受控 Lua 环境里 luasystem 的单调时钟,busted 自身计时同源);os.clock 是进程
   -- CPU 时间,会把等待子进程的 spec 记成近 0。格式见 spec_sharding.format_durations,

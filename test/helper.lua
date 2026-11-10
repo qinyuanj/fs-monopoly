@@ -2,7 +2,7 @@
 --- and installs Eggy fakes.
 --- Specs that need per-test runtime refresh opt in explicitly.
 ---
---- 覆盖率不在本仓运行器内采集(uml crap 由 crapper 自带 luacov 路径，#94)，
+--- 覆盖率不在本仓运行器内采集(插件 uml_crap 由 crapper 自带 luacov 路径，#94)，
 --- helper 仅负责运行时与用例生命周期。
 
 require("test.bootstrap")

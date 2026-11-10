@@ -4,7 +4,7 @@
 --- (RNG reseed before the before_each chain, baseline-leak guard after
 --- after_each, leaks fail the run) holds under the stock runner too.
 return function(busted, _, helper_options)
-  -- 标准库的 preload 搜索器;worker 下 cache_loader.install 会在它前面再插一个,
+  -- 标准库的 preload 搜索器;嵌套的仓内 runner 会经 cache_loader.install 在它前面再插一个,
   -- 仓内搜索器按身份定位到它之后,spec 的 package.preload 替身才始终优先。
   local preload_searcher = package.searchers[1]
   -- busted reads .busted from the cwd, so the cwd is the repo root. Adopt the
@@ -12,16 +12,13 @@ return function(busted, _, helper_options)
   -- on the pinned path yet, so register the loader under its module name).
   local cache_loader = dofile("tools/packages/test_runner/cache_loader.lua")
   package.loaded["packages.test_runner.cache_loader"] = cache_loader
+  cache_loader.adopt_preloaded()
   local root = require("lfs").currentdir():gsub("\\", "/"):gsub("/+$", "") .. "/"
-  cache_loader.adopt_preloaded(root)
   -- 注册期不构造完整 traceback(与 busted_backend 同一实现,见 registration_trace)。
   dofile("tools/packages/test_runner/registration_trace.lua").install(busted)
-  -- Resolve bootstrap from worker source before it adds tools/test templates.
-  -- install revalidates the worker/source binding and confines paths to the
-  -- worker plus the controlled Lua environment.
-  if os.getenv("MUTATOR_WORKER_ROOT") ~= nil or os.getenv("MUTATOR_SOURCE_ROOT") ~= nil then
+  -- mutator worker 下先装仓内搜索面(插件已钉好 worker 与 tree 路径,ADR 0082)。
+  if os.getenv("MUTATOR_WORKER_ROOT") ~= nil then
     require("test.bootstrap").install_package_paths()
-    cache_loader.install(root)
   end
 
   -- crapper's luacov config drops absolute chunk names (^%a:), but test.bootstrap

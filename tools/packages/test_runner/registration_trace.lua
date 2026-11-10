@@ -1,5 +1,5 @@
 -- 纯模块、零 require:busted_backend 经 require、stock busted 的 test/busted_helper.lua
--- (uml crap / mutate 车道,tools/ 尚不在 package.path)经 dofile 共用这一份。
+-- (插件 uml_crap / uml_mutate,tools/ 尚不在 package.path)经 dofile 共用这一份。
 local M = {}
 
 -- busted 注册每个 describe / it / hook 时(core 的 publisher,住在 busted.register

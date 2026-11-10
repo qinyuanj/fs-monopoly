@@ -60,144 +60,20 @@ function M.roots()
   return _roots
 end
 
-local function absolute(path)
-  local normalized = tostring(path):gsub("\\", "/"):gsub("/+$", "")
-  assert(normalized:sub(1, 1) == "/", "worker context requires absolute paths")
-  for part in normalized:gmatch("[^/]+") do
-    assert(part ~= "." and part ~= "..", "worker context forbids path traversal")
-  end
-  return normalized
-end
-
--- 按字节比较(ADR 0073):两侧都取自同一来源(MUTATOR_* 与磁盘路径),macOS 保留大小写,
--- 不需要大小写折叠。
-local function within(path, base)
-  return path:sub(1, #base + 1) == base .. "/"
-end
-
--- 只认 POSIX 根 "/" 起头的绝对路径(ADR 0073)。
-local function _real_directory(lfs, path)
-  local tail = path:match("^/(.*)$")
-  assert(tail ~= nil, "worker context requires an absolute path: " .. tostring(path))
-  local current = ""
-  for part in tail:gmatch("[^/]+") do
-    current = current .. "/" .. part
-    assert(lfs.symlinkattributes(current, "mode") == "directory", "worker requires real directories: " .. current)
-  end
-end
-
--- Load the validator C module from the controlled tree itself. A fresh nested
--- runner has not installed the dependency searcher yet, so resolve `lfs` against
--- the controlled roots' cpath templates explicitly instead of trusting preload.
-local function _controlled_lfs(roots)
-  local search = {}
-  for _, root in ipairs(roots) do
-    local base = tostring(root):gsub("\\", "/"):gsub("/+$", "")
-    search[#search + 1] = base .. "/lib/lua/5.4/?.so"
-  end
-  local file, err = lua_env.locate("lfs", roots, table.concat(search, ";"))
-  assert(file, err)
-  return assert(package.loadlib(file, "luaopen_lfs"))()
-end
-
--- Mutator alone supplies this pair, after creating an isolated worker. It grants
--- access to source rocks, never to source Lua files. Do not infer it from cwd.
-local function worker_context(root)
-  local worker, source = os.getenv("MUTATOR_WORKER_ROOT"), os.getenv("MUTATOR_SOURCE_ROOT")
-  if worker == nil and source == nil then return nil end
-  assert(worker and worker ~= "" and source and source ~= "", "incomplete mutation worker context")
-  worker, source = absolute(worker), absolute(source)
-  assert(within(worker, source), "mutation worker outside source repository")
-  local suffix = worker:sub(#source + 2)
-  assert(suffix:match("^target/mutation%-workers/run%-[^/]+/worker%-[^/]+$"), "invalid mutation worker layout")
-
-  local roots = M.roots()
-  local lfs = _controlled_lfs(roots)
-  assert(absolute(lfs.currentdir()) == worker, "mutation worker cwd mismatch")
-  assert(absolute(root) == worker, "mutation worker root mismatch")
-  -- Inspect each component: textual containment must not authorize junctions or
-  -- symlinks escaping the physical source repository (or a linked tree).
-  _real_directory(lfs, worker)
-  for _, controlled in ipairs(roots) do
-    _real_directory(lfs, tostring(controlled):gsub("\\", "/"):gsub("/+$", ""))
-  end
-  assert(lfs.attributes(source .. "/.git", "mode"), "mutation source is not a source repository")
-  for _, entry in ipairs({ "src", "test", "tools", "tools/cli.lua" }) do
-    assert(lfs.attributes(source .. "/" .. entry, "mode"), "mutation source repository missing: " .. entry)
-  end
-  return { worker = worker, source = source, roots = roots }
-end
-
-local function _is_controlled_template(template, roots)
-  local normalized = template:gsub("\\", "/")
-  local probe = normalized:gsub("%?.*$", "x")
-  if not lua_env.is_inside(probe, roots) then return false end
-  return normalized:match("^.*/share/lua/5%.4/[^;]*$") ~= nil
-    or normalized:match("^.*/lib/lua/5%.4/[^;]*$") ~= nil
-end
-
-local function worker_paths(context)
-  local function validate(paths)
-    local kept = {}
-    assert(paths ~= "" and not paths:match("^;") and not paths:match(";$") and not paths:find(";;", 1, true),
-      "empty mutation worker search template")
-    for template in paths:gmatch("[^;]+") do
-      local normalized = absolute(template)
-      local in_worker = within(normalized, context.worker)
-      local controlled = _is_controlled_template(normalized, context.roots)
-      assert(in_worker or controlled,
-        "search path outside mutation worker/controlled environment: " .. template)
-      kept[#kept + 1] = template
-    end
-    return table.concat(kept, ";")
-  end
-  package.path, package.cpath = validate(package.path), validate(package.cpath)
-end
-
--- Validate the mutation worker/source binding and confine the search paths to
--- the worker plus the controlled Lua environment. Returns nil outside a worker.
-function M.prepare_worker(root)
-  local context = worker_context(root)
-  if context then worker_paths(context) end
-  return context
-end
-
-local function _assert_templates(search, context, repo_prefix, roots)
-  assert(search ~= "" and not search:match("^;") and not search:match(";$") and not search:find(";;", 1, true),
-    "empty dependency search template")
-  for template in search:gmatch("[^;]+") do
-    local normalized = template:gsub("\\", "/")
-    local inside_repo = repo_prefix ~= nil and normalized:sub(1, #repo_prefix) == repo_prefix
-    local inside_worker = context ~= nil and within(normalized, context.worker)
-    assert(inside_repo or inside_worker or _is_controlled_template(normalized, roots),
-      "search path outside repo root/controlled environment: " .. template)
-  end
-end
-
--- Stock busted.runner (uml crap / mutate via .busted, #99) loads these before any
--- project code runs. Adopt them only inside the pinned environment: every search
--- template lies under the repo root (or the mutation worker) plus the controlled
--- Lua environment, and every preloaded dependency resolves inside those roots.
-function M.adopt_preloaded(root)
-  local repo = root:gsub("\\", "/"):gsub("/+$", "") .. "/"
-  local context = M.prepare_worker(root)
-  local roots = context and context.roots or M.roots()
-  _assert_templates(package.path, context, repo, roots)
-  _assert_templates(package.cpath, context, repo, roots)
+-- Stock busted.runner (plugin uml_crap / uml_mutate via .busted, #99) loads its
+-- dependencies before any project code runs. The plugin owns that process's Lua
+-- environment (ADR 0082): record what it loaded as the verified identities that
+-- test/support reads through verified_module, without re-judging its search path.
+function M.adopt_preloaded()
   for name, object in pairs(package.loaded) do
-    if dependency(name) and object and verified[name] ~= object then
-      local source = package.searchpath(name, package.path) or package.searchpath(name, package.cpath)
-      source = tostring(source):gsub("\\", "/")
-      assert(lua_env.is_inside(source, roots),
-        "dependency outside controlled Lua environment: " .. name .. " " .. source)
+    if dependency(name) and object and verified[name] == nil then
       verified[name] = object
     end
   end
 end
 
-function M.install(root)
-  local context = M.prepare_worker(root)
-  local roots = context and context.roots or M.roots()
+function M.install()
+  local roots = M.roots()
   for name, object in pairs(package.loaded) do
     if dependency(name) and object and verified[name] ~= object then
       error("unverified preloaded module: " .. name, 0)

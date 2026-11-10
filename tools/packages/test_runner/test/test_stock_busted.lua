@@ -1,16 +1,16 @@
 ---@diagnostic disable: undefined-global
-if arg then rawset(arg, 0, "tools/packages/uml_quality/test/test_uml_quality_busted.lua") end
+if arg then rawset(arg, 0, "tools/packages/test_runner/test/test_stock_busted.lua") end
 require("test.bootstrap").install_package_paths()
 
--- 仓根 .busted + test/busted_helper.lua(#99):crapper / mutator 直接调原版
--- busted.runner。子进程按 uml 钉死环境装 package.path(仅仓根 + 受控 Lua 环境
--- 的 tree),只跑 test/fixtures/stock_busted 下的样本,不跑整套。
+-- 仓根 .busted + test/busted_helper.lua(#99):插件的 crapper / mutator(ADR 0082)
+-- 直接调原版 busted.runner。子进程只把仓根与受控 Lua 环境的 tree 装进
+-- package.path,只跑 test/fixtures/stock_busted 下的样本,不跑整套。
 local check = require("luassert")
 local proc = require("foundation.proc")
 local lua54 = require("foundation.lua54")
 local fs = require("foundation.fs")
 local env = require("foundation.env")
-local runtime = require("packages.uml_quality.runtime")
+local shell = require("foundation.shell")
 local lua_env = require("foundation.lua_env")
 local root = require("foundation.bootstrap").resolve(debug.getinfo(1, "S").source).repo_root:gsub("\\", "/")
 local controlled = lua_env.roots()
@@ -43,7 +43,7 @@ local function _stock_busted(spec)
     "--", "busted", "--ignore-lua", spec }, { cwd = root })
 end
 
-describe("uml quality stock busted adapter", function()
+describe("stock busted adapter for crapper and mutator", function()
 
 it("runs specs through test/helper.lua with project events and relative chunk names", function()
   local result = _stock_busted("test/fixtures/stock_busted/test_adapter.lua")
@@ -57,16 +57,68 @@ it("keeps a failing assertion failing", function()
   check.truthy(result.output:find("not ok 1", 1, true), result.output)
 end)
 
+-- 插件拥有子进程的 Lua 环境(ADR 0082 第 4 条),helper 照插件给的环境跑。
+-- crapper 形态:不设 LUA_PATH,沿用解释器默认搜索路径,由 luarocks.loader 接上 tree。
+-- mutator 形态:钉了搜索路径,但 HOME 指向插件自己的空目录。
+local function _plugin_busted(spec, home)
+  local argv = { "env", "-u", "LUA_PATH", "-u", "LUA_PATH_5_4", "-u", "LUA_CPATH", "-u", "LUA_CPATH_5_4" }
+  local boot = "pcall(require, 'luarocks.loader'); "
+  if home then
+    argv[#argv + 1] = "HOME=" .. home
+    boot = "package.path = " .. string.format("%q", _paths(root))
+      .. "; package.cpath = " .. string.format("%q", _cpaths()) .. "; "
+  end
+  for _, value in ipairs({ lua54.lua54_bin(), "-e",
+    boot .. "require('busted.runner')({ standalone = false }); os.exit(0)",
+    "--", "busted", "--ignore-lua", spec }) do
+    argv[#argv + 1] = value
+  end
+  return proc.run_command(argv, { cwd = root })
+end
+
+it("runs under the plugin crapper's unpinned default search path", function()
+  local result = _plugin_busted("test/fixtures/stock_busted/test_adapter.lua")
+  check.equal(0, result.code, result.output)
+  check.truthy(result.output:find("1..2", 1, true), result.output)
+end)
+
+it("runs under the plugin mutator's redirected HOME", function()
+  local home = env.make_temp_path("plugin_home", "")
+  check.truthy(fs.ensure_dir(home))
+  local result = _plugin_busted("test/fixtures/stock_busted/test_adapter.lua", home)
+  fs.remove_path(home)
+  check.equal(0, result.code, result.output)
+  check.truthy(result.output:find("1..2", 1, true), result.output)
+end)
+
+it("keeps a failing assertion failing under the plugin environment", function()
+  local result = _plugin_busted("test/fixtures/stock_busted/test_failing.lua")
+  check.equal(1, result.code, result.output)
+  check.truthy(result.output:find("not ok 1", 1, true), result.output)
+end)
+
 -- Worker fixtures copy tracked source only. The controlled Lua environment is
 -- shared read-only by path, never copied or linked into the worker.
 local worker, run_root
+
+-- 环境变量逐行 export、单引号包裹,在 cwd 下执行 argv(与 mutator 起 worker 的形态同构)。
+local function _launch_text(cwd, env_list, argv)
+  local lines = { "#!/bin/sh", "cd " .. shell.shell_quote(cwd) .. " || exit 1" }
+  for _, entry in ipairs(env_list) do
+    lines[#lines + 1] = entry[1] .. "=" .. shell.shell_quote(tostring(entry[2])) .. "; export " .. entry[1]
+  end
+  lines[#lines + 1] = shell.build_command(argv)
+  lines[#lines + 1] = ""
+  return table.concat(lines, "\n")
+end
+
 local function worker_probe(body, options)
   options = options or {}
   local script = "package.path=" .. string.format("%q", _paths(worker, options.path))
     .. ";package.cpath=" .. string.format("%q", _cpaths())
     .. ";" .. body
   local launch = env.make_temp_path("worker_env_probe", ".sh")
-  local text = runtime.launch_text(options.cwd or worker, {
+  local text = _launch_text(options.cwd or worker, {
     { "MUTATOR_WORKER_ROOT", options.worker_root or worker },
     { "MUTATOR_SOURCE_ROOT", options.source_root or root },
     { "LUA54_BIN", lua54.lua54_bin() },
@@ -77,9 +129,9 @@ local function worker_probe(body, options)
   return result
 end
 local adopt = "local loader=dofile('tools/packages/test_runner/cache_loader.lua');"
-  .. "require('busted.core')();require('busted');loader.adopt_preloaded(require('lfs').currentdir());"
+  .. "require('busted.core')();require('busted');loader.adopt_preloaded();"
 
-describe("mutation worker source and controlled environment binding", function()
+describe("stock busted inside a mutation worker", function()
   setup(function()
     run_root = root .. "/target/mutation-workers/run-consumer-" .. tostring(os.time())
     worker = run_root .. "/worker-env-test"
@@ -97,15 +149,15 @@ describe("mutation worker source and controlled environment binding", function()
   end)
   teardown(function() if run_root then fs.remove_path(run_root) end end)
 
-  it("adopts real stock preloads and preserves binding on subsequent install", function()
-    local result = worker_probe(adopt .. "loader.install(require('lfs').currentdir());"
+  it("adopts real stock preloads and keeps them on a later install", function()
+    local result = worker_probe(adopt .. "loader.install();"
       .. "package.loaded['luassert.spy']=nil;assert(require('luassert.spy'));"
       .. "print('WORKER_ENV_BOUND')")
     check.equal(0, result.code, result.output)
     check.matches("WORKER_ENV_BOUND", result.output, 1, true)
   end)
 
-  it("runs the stock helper with worker source and controlled environment after bootstrap", function()
+  it("runs the stock helper on worker source bytes with tree dependencies", function()
     local fixture = worker .. "/test/fixtures/stock_busted/test_worker_binding.lua"
     check.truthy(fs.write_file(worker .. "/src/worker_env_probe.lua", "return { marker = 'worker-only-bytes' }\n"))
     check.truthy(fs.write_file(fixture, [[
@@ -121,11 +173,6 @@ describe('worker binding', function()
     check.equal('@tools/foundation/fs.lua', debug.getinfo(require('foundation.fs').read_raw, 'S').source)
     check.is_true(lua_env.is_inside(resolved('luassert', package.path), roots))
     check.is_nil(resolved('luassert', package.path):find(worker, 1, true))
-    local loader = require('packages.test_runner.cache_loader')
-    dofile('tools/foundation/bootstrap.lua').install('test/helper.lua')
-    loader.install(worker)
-    package.loaded['luassert.spy'] = nil
-    check.truthy(require('luassert.spy'))
     local rocks_loader = package.searchpath('luarocks.loader', package.path)
     check.is_true(rocks_loader == nil or lua_env.is_inside(rocks_loader, roots))
   end)
@@ -177,23 +224,6 @@ end)
       .. "dofile('tools/packages/test_runner/runner.lua')")
     check.equal(0, result.code, result.output)
     check.matches("cases=1 passed=1 failed=0 errors=0", result.output, 1, true)
-  end)
-
-  it("rejects source code fallback, foreign trees, traversal and empty templates", function()
-    for _, path in ipairs({ root .. "/?.lua", "C:/elsewhere/?.lua", "C:/foreign-tree/share/lua/5.4/?.lua",
-      worker .. "/../?.lua", root .. "/target/../../?.lua", ";;" }) do
-      local result = worker_probe(adopt, { path = path })
-      check.equal(1, result.code, path .. "\n" .. result.output)
-    end
-  end)
-
-  it("rejects forged worker roots, mismatched cwd, and incomplete context", function()
-    for _, options in ipairs({ { worker_root = root }, { cwd = root }, { source_root = worker },
-      { worker_root = worker .. "/../worker-env-test" }, { source_root = "" }, { worker_root = "" } }) do
-      local result = worker_probe("local loader=dofile('tools/packages/test_runner/cache_loader.lua');"
-        .. "loader.adopt_preloaded(require('lfs').currentdir())", options)
-      check.equal(1, result.code, result.output)
-    end
   end)
 
   it("does not turn failing worker assertions into a passing baseline", function()

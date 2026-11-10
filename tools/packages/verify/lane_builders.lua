@@ -45,8 +45,8 @@ local function _add_lint_or_skip(lanes, skipped, env)
 end
 
 -- 层边界门禁住在 guards 车道(arch_policy_guard 执行 policy.json);旧外部
--- 架构工具的独立 arch 车道随 #94 退场。CRAP / 变异不进 verify,走显式
--- `lua5.4 tools/cli.lua uml crap|mutate`。
+-- 架构工具的独立 arch 车道随 #94 退场。CRAP / 变异不进 verify,走 DSH 插件的
+-- uml_crap / uml_mutate(ADR 0082)。
 function builders.default(env, include_tooling, serial, evidence_dir)
   local lanes, skipped = {}, {}
   lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract", evidence_dir, env.lua54_bin) }
