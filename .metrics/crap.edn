@@ -1,5 +1,5 @@
 {:entries [
-  {:name "default_ports.build", :namespace "host.default_ports", :complexity 16, :coverage 100.0, :crap 16.0}
+  {:name "default_ports.build", :namespace "host.default_ports", :complexity 16, :coverage 97.6744, :crap 16.0032}
   {:name "anim_ports.build", :namespace "ui.ports.anim", :complexity 11, :coverage 91.6667, :crap 11.07}
   {:name "completions.build", :namespace "rules.choice_handlers.item_completions", :complexity 11, :coverage 100.0, :crap 11.0}
   {:name "synthetic_actor_registry.new", :namespace "host.synthetic_actor_registry", :complexity 10, :coverage 97.2973, :crap 10.002}
