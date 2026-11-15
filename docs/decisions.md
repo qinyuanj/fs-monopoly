@@ -161,7 +161,7 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 礼包码是游戏自身的兑换系统：玩家在独立的礼包码屏输入兑换码并点兑换按钮提交，Lua 对照配置中的码表校验并发放礼包码奖励（目前只有皮肤），奖励写入 ADR 0074 的皮肤归属存档。礼包码按玩家计次：一款需要补偿的皮肤一个码，同一个码不限兑换人数。
 
-1. **码表在配置，只存哈希**。每个码有 `id`（上线后不可复用，停用的登记在 `retired_ids`，不再分配）、`code_hash`、`rewards`（皮肤 product_id 列表）与可选的 `expires_at`。`code_hash` 是规范化后码的 SHA-256；规范化为去掉全部空白与连字符再转大写。码表不存明文 `code`，出现明文即加载报错。码由 `lua5.4 tools/cli.lua gift-code new` 生成：8 位随机码（31 字符集，去掉 0、O、1、I、L），按 `XXXX-XXXX` 发放，默认 60 天过期（`--days` 可覆盖）。
+1. **码表在配置，只存哈希**。每个码有 `id`（上线后不可复用，停用的登记在 `retired_ids`，不再分配）、`code_hash`、`rewards`（皮肤 product_id 列表）与可选的 `expires_at`。`code_hash` 是规范化后码的 SHA-256；规范化为去掉全部空白与连字符再转大写。码表不存明文 `code`，出现明文即加载报错。码由 `lua tools/cli.lua gift-code new` 生成：8 位随机码（31 字符集，去掉 0、O、1、I、L），按 `XXXX-XXXX` 发放，默认 60 天过期（`--days` 可覆盖）。
 2. **兑换记录用一个 Str 存档 key**，存放已兑换码的 `id` 列表。按玩家计次：每名玩家每个码限兑一次，同一个码不限兑换人数，发放方式（一对一或公开）不限。游戏不核对兑换者身份，码一经分享即泄露；泄露时把码移入 `retired_ids` 并重新部署，已兑出的奖励不追回。
 3. **存档不可用就拒绝兑换**，与 ADR 0074 第 2 条一致。码无效、已过期、已兑换过，分别在礼包码屏给出提示；奖励全部已拥有时仍记为已兑换，并提示已拥有。
 4. **先确认再提交**。输入完成事件只用来记下输入内容，点兑换按钮才真正提交。
@@ -277,15 +277,15 @@ uml-viewer 由 DSH 插件 `dsh-uml-viewer` 提供：`uml_ir` / `uml_crap` / `uml
 开发与工具链的保证面收窄为**原生 Windows 单平台**；WSL 与 macOS 退出保证面。取代 ADR 0073，并回到 ADR 0066 / 0071 的立场（后两者已被 0073 取代，见各自存根）。与 ADR 0066 的差别只有一条：本决策**允许 Git for Windows / MSYS 的 bash 充当工具脚本的 shell**（ADR 0066 当年把这一层也排除在外）。
 
 1. **平台判定与二态**。`foundation/platform_boundary.lua` 的 `supported_platform()` 只接受 `windows`；`host_platform()` 仍识别 `windows` / `linux` / `macos` / `posix`，但只用于给出可诊断的不可用判决——非 Windows 一律退 3（`status=unavailable`），不静默成功。不可用 / 真实失败二态不变：平台或工具不可用退 3，真实失败退 1、用法错误退 2。
-2. **bash 是运行前提，且只用于执行命令**。工具脚本经 `bash -c` 执行；bash 发现顺序为 `MONOPOLY_BASH` / `BASH` 环境变量 → PATH 上的 `bash` → 常见 Git 安装路径；缺失判不可用退 3 并打印安装指引。代价写明：这把「兼容 Windows」具体化为「兼容某个 Git Bash」，MSYS 的路径改写会作用于传给原生 exe 的参数——这是本决策相对 ADR 0066 显式接受的代价。
-3. **唯一执行缝**。新增 `foundation.shell.execute(command)` 作为全仓唯一的命令执行入口，内部一律 `bash -c`；`fs` / `proc` / `parallel_lanes` 里现有的 `os.execute` 全部改走它。命令串与 POSIX 引号（`shell.shell_quote` / `build_env_lines`）原样保留，其余模块不动。原因是原生 Lua 的 `os.execute` 在 Windows 走 `cmd.exe`，不经这一层任何 POSIX 命令都会失败。
-4. **内部路径统一正斜杠 Windows 绝对路径**。`foundation.path` / `runtime_path_ops` 内部一律用 `D:/...` / `C:/...` 形态（原生 Lua 的 `io.open` 与 bash 都接受）；`current_dir` 经 `cygpath -m .`（或 `pwd -W`）取得 `D:/...`、兜底归一 `PWD`；`is_absolute` 识别盘符（`^%a:/`）；`system_tmp_dir` 取 `TEMP` / `TMP`，缺省 `C:/Windows/Temp`，弃用 `/tmp`。`/c/...` 与 `/d/...` 的 MSYS 形态原生 Lua 打不开，不得作为内部路径。
+2. **bash 是运行前提，且只用于执行命令**。工具脚本经 bash 执行（执行形态是脚本文件，见第 3 条）；bash 发现顺序为 `MONOPOLY_BASH` / `BASH` 环境变量 → PATH 上的 `bash` → 常见 Git 安装路径；缺失判不可用退 3 并打印安装指引。代价写明：这把「兼容 Windows」具体化为「兼容某个 Git Bash」，MSYS 的路径改写会作用于传给原生 exe 的参数——这是本决策相对 ADR 0066 显式接受的代价。
+3. **唯一执行缝，执行形态是脚本文件**。新增 `foundation.shell.execute(command)` 作为全仓唯一的命令执行入口：每次执行把命令文本原样写进临时 `.sh` 文件，再用 `bash <脚本>` 运行；`fs` / `proc` / `parallel_lanes` 里现有的 `os.execute` 全部改走它。命令串与 POSIX 引号（`shell.shell_quote` / `build_env_lines`）原样保留，其余模块不动。**不采用 `bash -c` 内联**：原生 Lua 的 `os.execute` 在 Windows 走 `cmd.exe`，而 `cmd.exe` 会展开命令文本里的 `%...%`、把 `& | < > ^ ( )` 当元字符，内联 `-c` 会静默改写命令文本；脚本文件形态实测把 `a"b&c|d<e>f^g%PATH%h(i)j!k` 逐字节送达 bash（#235 验收，既有命令串语义不变）。
+4. **内部路径统一正斜杠 Windows 绝对路径**。`foundation.path` / `runtime_path_ops` 内部一律用 `D:/...` / `C:/...` 形态（原生 Lua 的 `io.open` 与 bash 都接受）；`current_dir` 经 `cygpath -a -m .` 取得 `D:/...`（`cygpath -m .` 只会返回相对 `.`、`pwd -W` 在 MSYS bash 下不支持，故只用 `-a -m`）、起不了子进程时兜底归一 `PWD`；`is_absolute` 识别盘符（`^%a:/`）；`system_tmp_dir` 取 `TEMP` / `TMP`，缺省 `C:/Windows/Temp`，弃用 `/tmp`。`/c/...` 与 `/d/...` 的 MSYS 形态原生 Lua 打不开，不得作为内部路径。
 5. **部署面原生**。`deploy` / `probe` / `data_sync` 不再经 `cmd.exe` + `wslpath` + `/mnt/c`：`deploy` 直接取 `os.getenv("USERPROFILE")`（缺失再 `cmd /c echo %USERPROFILE%` 兜底），目标仍是 `%USERPROFILE%\Desktop\dev\eggy\LuaSource_大富翁`，拷贝走原生 `robocopy`，仍零参数；`probe` 原生定位 `editor-cli.exe`；`data_sync` 复用 deploy 的解析。部署面独立于 bash 选择。
 6. **并行车道退场**。`parallel_lanes` 的 `setsid` 进程组收容在原生 Windows / MSYS 均无（Git Bash 也没有 `setsid`），`verify --parallel` 退场，默认串行（约慢 3~4 倍）。原生进程树收容（`cmd /c start` + `taskkill /T /F /PID` 一类）记为后续取证项，不在本决策落地。
 7. **解释器候选**。`lua54` 的候选表改为 `lua5.4` → `lua54` → `lua` → `lua.exe`，每个都以 `-v` 校验含「Lua 5.4」，`LUA54_BIN` 可覆盖；入口与文档命令写 `lua tools/cli.lua`。受控 Lua 环境（ADR 0072）口径不变，机器 tree 仍是 LuaRocks 5.4。
 8. **质量工具依赖归插件**。CRAP / 变异 / dry / IR 由 DSH 插件 `dsh-uml-viewer` 在本机原生运行，其所需 Lua 环境（含 luacov、lcov reporter）由插件自带二进制自管；本仓不预检、不承载、不包装（ADR 0082）。ADR 0068 理由句里的「WSL Ubuntu 复验记录」据此改为插件原生口径。
 9. **测试与入口改写**。断言 `/mnt/c`、`wslpath`、`setsid` 与纯 POSIX 形态的测试改为 Windows 口径，并把「在非 Windows 上运行会红」写成显式断言（ADR 0066 的同一条要求）；删除纯 WSL 互操作测试；`.githooks/pre-push` 与各入口的 `lua5.4` 改为 `lua`。
 
-理由：开发机、部署目标与 Eggy 宿主都在 Windows；上一轮为 WSL 建的 POSIX 分支没有消费者，却要为它维护两套实现与两套测试（ADR 0073 已把这条路走到底）。回到原生 Windows 并把执行面收在一个 `bash -c` 缝里，能用最小改动保留既有 POSIX 命令串与测试语义，同时把「必须装某个 bash」这一前提显式化。
+理由：开发机、部署目标与 Eggy 宿主都在 Windows；上一轮为 WSL 建的 POSIX 分支没有消费者，却要为它维护两套实现与两套测试（ADR 0073 已把这条路走到底）。回到原生 Windows 并把执行面收在一个 bash 脚本文件执行缝里，能用最小改动保留既有 POSIX 命令串与测试语义，同时把「必须装某个 bash」这一前提显式化。
 
 代价：这是平台收窄而非双轨化——非 Windows 平台直接不可用；依赖 Git Bash，MSYS 路径改写是已知脆弱点（`C:/...` 正斜杠形态是对抗它的统一口径）；并行车道退场使 `verify` 变慢，进程树收容留待后续取证；`robocopy`、`taskkill`、`cygpath` 等原生工具成为新的环境前提。

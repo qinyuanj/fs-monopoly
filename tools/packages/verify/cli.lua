@@ -61,6 +61,8 @@ function M.usage()
     "pipeline 不包含(按需走插件工具):uml_crap / uml_mutate / uml_dry。",
     "真源:tools/packages/verify/(main.lua / lane_builders.lua / lanes.lua)。",
     "",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。",
+    "退出码: 0 成功 / 1 有真实失败 / 2 用法错误 / 3 有车道不可用且无真实失败",
   }, "\n") .. "\n"
 end
 

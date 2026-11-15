@@ -272,7 +272,7 @@ describe("probe cli", function()
     local code, out = _run({ "--help" })
 
     check.equal(0, code)
-    check.truthy(out:find("lua5.4 tools/cli.lua probe <lua文件>", 1, true), out)
+    check.truthy(out:find("lua tools/cli.lua probe <lua文件>", 1, true), out)
     check.truthy(out:find("--timeout", 1, true), out)
     check.truthy(out:find("原生", 1, true), out)
     check.is_nil(out:find("经 cmd.exe + wslpath 解析", 1, true), "usage 不得再说经 cmd.exe + wslpath 解析")

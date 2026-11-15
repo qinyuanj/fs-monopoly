@@ -301,7 +301,7 @@ local function _test_cli_entry_rejects_non_lua54_interpreter()
   end
 end
 
--- WSL 部署契约:文本检查与安全帮助入口;复制由 ops 隔离目录测试覆盖。
+-- 部署契约:文本检查与安全帮助入口;复制由 ops 隔离目录测试覆盖。
 local function _test_deploy_lua_matches_simplified_cli()
   local script_text = assert(fs_lib.read_file(path_lib.join_path(project_root, "tools/packages/ops/deploy.lua")))
 

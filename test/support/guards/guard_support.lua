@@ -1,11 +1,8 @@
-local M = {}
+local proc_lib = require("foundation.proc")
+local fs_lib = require("foundation.fs")
+local env_lib = require("foundation.env")
 
--- 递归枚举 root 下的 .lua 文件。`find -print0` 保证空格/中文/换行文件名原样读回;
--- 目录缺失时 find 非零,由调用方报 "no lua files found"。
-local function _build_list_command(root)
-  return "find " .. ("'" .. tostring(root):gsub("'", "'\\''") .. "'")
-    .. " -type f -name '*.lua' -print0 2>/dev/null"
-end
+local M = {}
 
 local function _is_file_path(path)
   local file = io.open(path, "r")
@@ -16,17 +13,29 @@ local function _is_file_path(path)
   return true
 end
 
+-- 存在性判定复用 foundation.fs:纯 Lua 探测(io.open + 目录探针文件),不用
+-- os.rename(p, p)——原生 Windows 上它对目录间歇性失败,会把「目录存在」误判成「不存在」。
 function M.path_exists(path)
-  if _is_file_path(path) then
-    return true
-  end
-  local ok = os.rename(path, path)
-  if ok then
-    return true
-  end
-  return false
+  return fs_lib.path_exists(path)
 end
 
+-- 把枚举得到的绝对路径折回仓内相对形态,与旧 `find <相对根>` 输出口径一致:
+-- dep_rules 的行级白名单按 "src/…"/"tools/…"/"test/…" 这类相对路径登记,
+-- 直接喂绝对路径会让白名单失配、把合法行误报成违规。
+local function _to_repo_relative(path, base)
+  local normalized = M.normalize_path(path)
+  if base ~= "" and normalized:sub(1, #base + 1) == base .. "/" then
+    return normalized:sub(#base + 2)
+  end
+  return normalized
+end
+
+-- 递归枚举 root 下的 .lua 文件(含隐藏文件与隐藏目录)。
+--
+-- 枚举走统一执行缝 foundation.proc.collect_lua_files(内部经 bash 跑 `find -print0`),
+-- 不再自己起 io.popen("find …"):原生 Windows 的 io.popen 走 cmd.exe,cmd 的 find.exe
+-- 不认 -type/-name/-print0 与 POSIX 单引号,进程一开就失败,守卫只会误报
+-- 「list command failed」而不是真的判定违规。平台收窄要成为被测事实,不靠放宽守卫。
 function M.collect_lua_files(root)
   local normalized_root = M.normalize_path(root)
   if normalized_root:match("%.lua$") then
@@ -39,22 +48,19 @@ function M.collect_lua_files(root)
     return nil, "no lua files found under root: " .. tostring(root)
   end
 
-  local process = io.popen(_build_list_command(root))
-  if not process then
-    return nil, "cannot run list command for root: " .. tostring(root)
-  end
-
-  local files = {}
-  local raw = process:read("*a") or ""
-  for line in (raw .. "\0"):gmatch("(.-)\0") do
-    if line ~= "" then
-      files[#files + 1] = M.normalize_path(line)
+  local absolute_files, err = proc_lib.collect_lua_files(root)
+  if absolute_files == nil then
+    -- 根不存在时 proc 报 "Directory does not exist";其余(find 真失败)保持可诊断。
+    if tostring(err or ""):find("Directory does not exist", 1, true) then
+      return nil, "no lua files found under root: " .. tostring(root)
     end
+    return nil, "list command failed for root: " .. tostring(root)
   end
 
-  local ok = process:close()
-  if ok == nil or ok == false then
-    return nil, "list command failed for root: " .. tostring(root)
+  local base = M.normalize_path(env_lib.current_dir())
+  local files = {}
+  for _, absolute in ipairs(absolute_files) do
+    files[#files + 1] = _to_repo_relative(absolute, base)
   end
 
   if #files == 0 then

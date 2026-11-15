@@ -41,6 +41,8 @@ function M.usage()
     "",
     "清生成物:build/ tmp/、luacov 残留。",
     "",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。",
+    "退出码: 0 成功 / 1 真实失败 / 2 用法错误 / 3 平台或工具不可用",
   }, "\n") .. "\n"
 end
 

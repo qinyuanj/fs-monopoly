@@ -14,7 +14,7 @@ local sync_data = require("packages.data_sync.sync_data")
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua sync-data",
+    "用法: lua tools/cli.lua sync-data",
     "",
     "从部署目录(LuaSource_大富翁/)把编辑器最新导出回同步进仓库:",
     "  Data/Prefab.lua    字节原样拷贝;",
@@ -22,6 +22,7 @@ function M.usage()
     "  EggyAPI.lua / EggyEditorAPI.lua  字节原样拷贝到仓库根(宿主 API 存根,第三方边界)。",
     "零参数、零开关;家目录与部署目录解析复用 deploy(原生 %USERPROFILE%,ADR 0083),",
     "不出现第二份实现。本命令只读部署目录,不需要 robocopy。",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或取不到 %USERPROFILE% 判不可用,退 3。",
     "退出码: 0 成功 / 1 业务失败(部署目录缺文件或解析失败) / 2 多余参数 /",
     "3 不可用:取不到 %USERPROFILE%(status=unavailable,未写任何文件;环境问题不是业务失败)。",
     "行为真源见 packages/data_sync/sync_data.lua。",

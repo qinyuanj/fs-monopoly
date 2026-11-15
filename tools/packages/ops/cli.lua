@@ -17,7 +17,7 @@ local DEPLOY_ENTRY = "tools/packages/ops/deploy.lua"
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua deploy",
+    "用法: lua tools/cli.lua deploy",
     "",
     "把 src/ + main.lua + Data/ 按原样部署到 Windows 侧 Eggy 宿主目录(LuaSource_大富翁)。",
     "拷贝的是工作树而非 HEAD:payload 里有未提交文件时列出(WARNING,仅提示,不影响退出码)。",
@@ -29,7 +29,7 @@ function M.usage()
     "这是环境问题,不是部署失败)。本子命令不用 2。",
     "目标路径: <家目录>/Desktop/dev/eggy/LuaSource_大富翁;家目录即 %USERPROFILE%,",
     "设了 MONOPOLY_DEPLOY_HOME 时以它为准(测试与沙箱用)。",
-    "要看实际路径或比对部署目录,跑只读的 `lua5.4 tools/cli.lua deploy-diff`,不要全盘 find。",
+    "要看实际路径或比对部署目录,跑只读的 `lua tools/cli.lua deploy-diff`,不要全盘 find。",
     "行为真源见 tools/packages/ops/deploy.lua。",
     "",
   }, "\n") .. "\n"
