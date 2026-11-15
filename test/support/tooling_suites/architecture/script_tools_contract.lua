@@ -54,7 +54,7 @@ local function _with_ascii_tmp(tag, fn)
 end
 
 local function _run_lua(args)
-  -- 工具入口统一 lua5.4(ADR 0073);本机 PATH 上的 `lua` 是 5.1。
+  -- 工具入口统一写 `lua`(ADR 0083),具体解释器由候选表按 `-v` 校验选出。
   local command = { require("foundation.lua54").lua54_bin() }
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
@@ -286,7 +286,7 @@ local function _test_cli_entry_rejects_non_lua54_interpreter()
   local dispatch_at = cli_source:find("pcall(require", 1, true)
   check.truthy(guard_at ~= nil, "tools/cli.lua must gate on the interpreter version")
   check.truthy(guard_at < dispatch_at, "version gate must run before subcommand dispatch")
-  _assert_contains(cli_source, "lua5.4 tools/cli.lua", "gate must print the supported entry")
+  _assert_contains(cli_source, "lua tools/cli.lua", "gate must print the supported entry")
 
   -- 动态契约:机器上有非 5.4 解释器时真跑一次,确认真被拦下且不退 0。
   for _, candidate in ipairs({ "lua5.1", "lua5.3", "lua5.2" }) do

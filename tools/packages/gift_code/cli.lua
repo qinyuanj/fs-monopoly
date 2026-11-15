@@ -33,7 +33,7 @@ local DAY_SECONDS = 86400
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua gift-code new --rewards <product_id>[,...] --note <文本> [--days N]",
+    "用法: lua tools/cli.lua gift-code new --rewards <product_id>[,...] --note <文本> [--days N]",
     "",
     "生成一个礼包码并追加到 " .. CODE_TABLE .. "。",
     "礼包码按玩家计次:每名玩家每个码限兑一次,同一个码不限兑换人数;一款需要补偿的皮肤一个码。",
