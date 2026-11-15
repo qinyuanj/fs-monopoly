@@ -1,14 +1,12 @@
 -- verify 车道的执行与输出聚合。
 -- _build_output 是纯函数(results -> stdout/exit_code),verify_full_spec 直接拿它断言。
 local number_utils = require("src.foundation.number")
-local parallel_lanes = require("foundation.parallel_lanes")
 local availability = require("foundation.tool_availability")
 
 local runner = {}
 
-runner.PHASE_TIMEOUT = 600
-
--- 串行跑一步。输出回收、stdout/stderr 合流、退出码归一都由 foundation.proc 负责
+-- 跑一步。这是 verify 唯一的车道执行路径(#237 / ADR 0083:并行车道退场,逐车道
+-- 串行)。输出回收、stdout/stderr 合流、退出码归一都由 foundation.proc 负责
 -- (不在这里手拼 `> file 2>&1` 重定向);
 -- 这里只把 ok/code 两路折成 verify 的 success 判据。
 function runner.run_step(label, cmd, opts)
@@ -21,32 +19,6 @@ function runner.run_step(label, cmd, opts)
     success = code == 0
   end
   return { label = label, ok = success, exit_code = code, elapsed = elapsed, output = result.output or "" }
-end
-
--- 启动 + 调度 + 输出聚合委托给 foundation.parallel_lanes（曾经在这里复制粘贴一份）。
--- stream=false 维持 architect 的"收集后选择性 emit"模型：success 路径压缩、
--- failure/verbose 路径全量打印，由下游 build_output 处理。
-function runner.run_parallel(lanes, opts)
-  opts = opts or {}
-  local started = os.time()
-  local all_ok, lane_results = parallel_lanes.run(lanes, {
-    stream = false,
-    timeout = runner.PHASE_TIMEOUT,
-    env = opts.env,
-  })
-  local elapsed = math.max(0, os.time() - started)
-
-  local results = {}
-  for index, lane in ipairs(lane_results) do
-    results[index] = {
-      label = lane.label,
-      ok = lane.ok,
-      exit_code = lane.exit_code,
-      elapsed = nil,
-      output = lane.output or "",
-    }
-  end
-  return all_ok, results, elapsed
 end
 
 -- 退 3 的车道是「不可用」(平台或工具不可用):不算通过,
