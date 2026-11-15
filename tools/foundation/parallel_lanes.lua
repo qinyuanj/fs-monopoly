@@ -144,7 +144,6 @@ function M.run(lanes, opts)
   local env_lines = shell.build_env_lines(opts.env)
   local cwd = env.current_dir()
   local entries = {}
-  local started = os.time()
   for _, lane in ipairs(lanes or {}) do
     local unique = env.make_temp_path("parallel_lane", "")
     local dir = opts.lane_dir and path.join_path(opts.lane_dir, unique:match("[^/]+$")) or unique
