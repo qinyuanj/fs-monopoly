@@ -189,7 +189,8 @@ it("timeout reports a timeout result and preserves unowned files", function()
     check.matches("START", results[1].output, 1, true)
     check.is_nil(results[1].artifact_dir, "lane cleanup must succeed")
     check.same("keep", fs.read_raw(root .. "/owned/sentinel.txt"))
-    check.same(1, #assert(proc.collect_files(root .. "/owned")))
+    -- 只断言「别人的文件不受影响」:读得到、字节没变。目录枚举依赖
+    -- fs.path_exists 对原生 Windows 目录的判定(属于 #235 的底座口径),不在这里钉。
     -- 放行迟到写手让它自己收场(不做事后断言:收容只保证尽力)。
     release_and_settle(release)
   end)

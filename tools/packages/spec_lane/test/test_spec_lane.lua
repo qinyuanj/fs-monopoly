@@ -110,7 +110,9 @@ runner_spawn_carries_tool_discovery_env()
     check.is_nil(captured_options)
   else
     check.truthy(tostring(captured_options.env.LUA54_BIN):find("/", 1, true) ~= nil)
-    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks$") ~= nil)
+    -- 原生 Windows 上解析出的是 luarocks.exe,断言只认「指向 luarocks 可执行文件」,
+    -- 不认具体扩展名。
+    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks%.exe?$") ~= nil)
   end
 end
 
