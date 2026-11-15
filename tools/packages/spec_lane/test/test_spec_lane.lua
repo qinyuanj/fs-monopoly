@@ -66,7 +66,7 @@ compress_tap_collapses_all_pass_tap_to_single_passed_line()
 end
 
 -- 不再支持 busted_bin 单 token 覆写，命令
--- 前缀恒为 argv_prefix 默认值({ lua5.4, test_runner/runner.lua })。workers=1 强制单进程
+-- 前缀恒为 argv_prefix 默认值({ lua, test_runner/runner.lua })。workers=1 强制单进程
 -- 串行路径(分片判定要求 worker > 1 且 profile 文件数超过阈值)。
 local function
 run_defaults_to_explicit_real_busted_runner()

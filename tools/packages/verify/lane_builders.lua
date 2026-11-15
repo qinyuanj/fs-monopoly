@@ -12,7 +12,7 @@ local builders = {}
 -- 原样保留,不在本工单里改。
 local function _spec_lane_cmd(profile, evidence_dir, lua54_bin)
   local argv = {
-    lua54_bin or "lua5.4",
+    lua54_bin or "lua",
     "tools/packages/spec_lane/spec_lane.lua",
     "--profile",
     profile,
@@ -58,7 +58,7 @@ function builders.default(env, include_tooling, evidence_dir)
   lanes[#lanes + 1] = { label = "behavior", cmd = _spec_lane_cmd("behavior", evidence_dir, env.lua54_bin) }
   _add_lint_or_skip(lanes, skipped, env)
   lanes[#lanes + 1] = { label = "encoding",
-    cmd = shell_lib.build_command({ env.lua54_bin or "lua5.4", "tools/packages/encoding/encoding.lua", "check" }) }
+    cmd = shell_lib.build_command({ env.lua54_bin or "lua", "tools/packages/encoding/encoding.lua", "check" }) }
   -- property 车道已退场(测试极简化决策/monopoly#190):道具时机 fuzz 探针分片并入
   -- behavior 车道,默认 verify 就跑得到,不再需要独立入口。
   if include_tooling then

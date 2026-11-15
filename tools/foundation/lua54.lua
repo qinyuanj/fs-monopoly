@@ -5,7 +5,6 @@
 --- 「Lua 5.4」才采用(本机 PATH 上的 `lua` 也可能是 5.1)。
 --- `LUA54_BIN` 可覆写,覆写同样要过版本校验;覆写不通过就返回 nil,
 --- 不悄悄回落到候选表——显式覆写失败是环境问题,不该被静默替换。
-local fs = require("foundation.fs")
 local proc = require("foundation.proc")
 local M = {}
 local cached, resolved
@@ -22,13 +21,13 @@ function M.candidates()
 end
 
 -- 版本校验的唯一实现:跑一次 `<候选> -v`,输出含「Lua 5.4」才算数。
+--
 -- 命令经统一执行缝(foundation.proc → bash),所以候选是绝对路径还是裸命令名
--- 都走同一条路:裸命令名不存在时子进程自己退 127,这里一并按「不是 5.4」处理,
--- 不再单独做存在性探测(command -v 在原生 Windows 的旧执行面上判不准)。
+-- 都走同一条路:候选不存在时子进程自己退 127、输出里没有「Lua 5.4」,一并按
+-- 「不是 5.4」处理。这里**不再单独做存在性探测**:路径形态的候选在不同 shell
+-- 下可能是 MSYS 形态(/c/…)也可能是原生形态(C:/…),纯 Lua 的 io.open 只认后者,
+-- 预探测会把可用的解释器误判成不存在(路径探测反而成了错的来源)。
 local function is_lua54(value)
-  if (value:find("/") or value:find("\\")) and not fs.path_exists(value) then
-    return false
-  end
   local result = proc.run_command({ value, "-v" })
   return result.ok == true and tostring(result.output or ""):find("Lua 5%.4") ~= nil
 end

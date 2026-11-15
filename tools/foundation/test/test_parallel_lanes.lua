@@ -198,6 +198,35 @@ end)
 -- lane 脚本与收容只依赖 sh / sleep,不引入编译器或宿主专用运行时
 -- (Windows 时代的 PowerShell + Job Object 已随 ADR 0073 退场;setsid 已随
 -- ADR 0083 退场——原生 Windows 与 Git Bash 都没有它)。
+-- 分片并行必须真的并行:MSYS 的 bash 在退出前会等完自己的后台作业,
+-- 所以「逐 lane 起一次 bash」会把 lane 串行化。这条用例钉住 supervisor 形态:
+-- 两条 lane 各自等对方出现,墙钟必须明显小于串行耗时之和。
+it("lanes overlap in wall clock instead of running one after another", function()
+  fixture(function(root)
+    local file = script(root, "rendezvous", [[
+local dir, me, peer = arg[1], arg[2], arg[3]
+local f = assert(io.open(dir .. "/started_" .. me, "wb")); f:close()
+local give_up = os.time() + 10
+local met = false
+while os.time() < give_up do
+  local h = io.open(dir .. "/started_" .. peer, "rb")
+  if h then h:close(); met = true; break end
+end
+print(met and "MET" or "ALONE")
+]])
+    local began = os.time()
+    local ok, results = parallel.run({
+      { label = "a", cmd = { native_lua, file, root, "a", "b" } },
+      { label = "b", cmd = { native_lua, file, root, "b", "a" } },
+    }, { stream = false, timeout = 30 })
+    local elapsed = os.time() - began
+    check.is_true(ok)
+    check.matches("MET", results[1].output, 1, true)
+    check.matches("MET", results[2].output, 1, true)
+    check.is_true(elapsed < 10, "lanes must overlap in wall clock, took " .. tostring(elapsed) .. "s")
+  end)
+end)
+
 it("lane owner needs no external compiler", function()
   fixture(function(root)
     local file = script(root, "builtin", 'print("BUILTIN_ONLY")')

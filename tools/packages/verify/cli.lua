@@ -31,7 +31,7 @@ end
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua verify [--serial|--tooling|--verbose] [--evidence-dir=<目录>]",
+    "用法: lua tools/cli.lua verify [--serial|--tooling|--verbose] [--evidence-dir=<目录>]",
     "",
     "质量门禁编排器:默认 slim 车道(contract + guards(含 arch_policy 层边界门禁)",
     "+ behavior 七层 + foundation + lint-src/lint-test/lint-tools + encoding),",
@@ -44,7 +44,7 @@ function M.usage()
     "  --tooling      正交叠加 tooling lane(改 tools/** 时)",
     "  --verbose      展开各 lane 明细",
     "  --evidence-dir 测量证据落盘(#130):spec-lane 车道把原始 TAP/COUNTS 写到 <目录>/<lane>",
-    "                 (用 `lua5.4 tools/cli.lua spec-lane --recount <目录>/<lane>` 重算核对),",
+    "                 (用 `lua tools/cli.lua spec-lane --recount <目录>/<lane>` 重算核对),",
     "                 verify 另存每条 lane 完整输出 <lane>.out 与整体报告 summary.txt",
     "",
     "挑选提示:",
