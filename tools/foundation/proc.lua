@@ -3,9 +3,9 @@
 -- run_command 把 stdout/stderr 重定向到临时文件再读回来,所以本模块依赖 env(临时落点)
 -- 与 fs(读回与清理)。反向不成立:fs 不认识子进程,这条单向依赖是分层的关键。
 --
--- WSL Ubuntu 单平台(ADR 0073)。字符串按 POSIX sh 解释,数组是字面 argv
--- (经 shell 引号拼装后由 os.execute 交 /bin/sh -c 执行,argv 不会被二次解释)。环境变量以
--- `NAME=value` 前缀导出。不对输出换行或字节编码做隐式转换,非零退出码原样返回。
+-- 原生 Windows 单平台(ADR 0083)。字符串按 POSIX sh 解释,数组是字面 argv
+-- (经 shell 引号拼装后交 foundation.shell.execute → bash 执行,argv 不会被二次解释)。
+-- 环境变量以 `NAME=value` 前缀导出。不对输出换行或字节编码做隐式转换,非零退出码原样返回。
 local text_lib = require("foundation.text")
 local path_lib = require("foundation.path")
 local shell_lib = require("foundation.shell")
@@ -20,9 +20,12 @@ function proc.command_exists(name)
     return false
   end
 
+  -- 经执行缝跑 `command -v`(ADR 0083):command -v 是 bash 内建,直接交给原生
+  -- Lua 的 os.execute 在 Windows 上会走 cmd.exe,那里没有 command -v → 恒假。
   local command = "command -v " .. shell_lib.shell_quote(command_name) .. " >/dev/null 2>&1"
-  local ok, kind, code = os.execute(command)
-  return shell_lib.exit_status(ok, kind, code)
+  local ok, kind, code = shell_lib.execute(command)
+  -- 显式收成一个布尔:谓词只该答"是/否",不能把 (成功, 退出码) 一对值继续往上传。
+  return (shell_lib.exit_status(ok, kind, code))
 end
 
 function proc.run_command(command, options)
@@ -59,7 +62,7 @@ function proc.run_command(command, options)
   end
   redirected = redirected .. " > " .. shell_lib.shell_quote(output_path) .. " 2>&1"
   redirected = shell_lib.wrap_command_with_cwd(redirected, cwd_path)
-  local ok, kind, code = os.execute(redirected)
+  local ok, kind, code = shell_lib.execute(redirected)
   local success, exit_code = shell_lib.exit_status(ok, kind, code)
   local output = fs_lib.read_raw(output_path) or ""
   fs_lib.remove_path(output_path)

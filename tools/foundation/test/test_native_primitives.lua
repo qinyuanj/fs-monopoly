@@ -1,4 +1,4 @@
--- Native WSL Ubuntu public primitive regressions(ADR 0073); also runnable directly with Lua.
+-- 原生 Windows 公共原语的回归(ADR 0083 / #235);也可用 Lua 直接跑。
 package.path = package.path .. ";./tools/?.lua"
 local runtime = dofile("tools/foundation/runtime_path_ops.lua")
 local env = require("foundation.env")
@@ -15,23 +15,20 @@ describe("native primitives", function()
   before_each(function() saved_cpath = package.cpath end)
   after_each(function() package.cpath = saved_cpath end)
 
-it("real cwd is an absolute Linux path", function()
+-- 内部路径口径(ADR 0083):D:/… / C:/… 正斜杠 Windows 绝对路径。
+it("real cwd is an absolute Windows path", function()
   local cwd = runtime.current_dir()
-  check.matches("^/", cwd, "cwd must be an absolute POSIX path: " .. cwd)
+  check.matches("^%a:/", cwd, "cwd must be an absolute Windows path: " .. cwd)
   check.equal(cwd, env.current_dir(), "bootstrap and process cwd must agree")
   check.is_true(runtime.path_exists(cwd .. "/tools/cli.lua"), "cwd must load the real project")
 end)
 
 it("stale inherited PWD does not override the real working directory", function()
-  -- mutator 用 Python subprocess(cwd=...) 起 worker,PWD 仍是父进程的值;
-  -- current_dir 必须以真实 cwd 为准,否则嵌套 runner 会把仓根当 worker。
+  -- 子进程用 cwd= 起时只改真实 cwd,不更新继承来的 PWD;current_dir 必须以真实 cwd 为准,
+  -- 否则嵌套 runner 会把仓根当 worker。
   local root = env.make_temp_path("stale_pwd", "")
   local ok, err = xpcall(function()
     check.truthy(fs.ensure_dir(root))
-    -- 期望值取物理路径:macOS 的 TMPDIR 在 /var -> /private/var 软链下。
-    local physical = proc.run_command("cd " .. require("foundation.shell").shell_quote(root) .. " && pwd -P")
-    check.truthy(physical.ok, physical.output)
-    root = (physical.output:gsub("%s+$", ""))
     local script = root .. "/probe.lua"
     check.truthy(fs.write_file(script, [[
 local root = "]] .. env.current_dir() .. [["
@@ -73,11 +70,11 @@ end)
 
 it("ensure_dir on an existing directory spawns no shell; a file path still fails", function()
   local root = env.make_temp_path("native_ensure_dir", "")
-  local real_execute = os.execute
+  local real_execute = shell.execute
   local spawned = {}
   local ok, err = xpcall(function()
     check.truthy(fs.write_file(root .. "/sub/file.txt", "x"))
-    rawset(os, "execute", function(command) spawned[#spawned + 1] = command; return real_execute(command) end)
+    rawset(shell, "execute", function(command) spawned[#spawned + 1] = command; return real_execute(command) end)
     check.is_true(fs.ensure_dir(root .. "/sub"))
     check.truthy(fs.write_file(root .. "/sub/again.txt", "y"))
     -- lint-allow: call-count 已有目录不起 mkdir 子进程是 write_file/copy_file 的性能契约
@@ -86,7 +83,7 @@ it("ensure_dir on an existing directory spawns no shell; a file path still fails
     check.truthy(fs.ensure_dir(root .. "/sub/new/deeper"))
     check.is_true(fs.is_dir(root .. "/sub/new/deeper"))
   end, debug.traceback)
-  rawset(os, "execute", real_execute)
+  rawset(shell, "execute", real_execute)
   check.truthy(fs.remove_path(root))
   check.is_true(ok, err)
 end)
@@ -138,10 +135,10 @@ end)
 
 it("controlled lua environment exposes native shared modules", function()
   local original = package.cpath
-  require("foundation.lua_env").install_paths({ "/opt/controlled/tree" })
+  require("foundation.lua_env").install_paths({ "C:/opt/controlled/tree" })
   local cpath = package.cpath
   package.cpath = original
-  check.truthy(cpath:find("/opt/controlled/tree/lib/lua/5.4/?.so", 1, true))
+  check.truthy(cpath:find("C:/opt/controlled/tree/lib/lua/5.4/?.dll", 1, true))
 end)
 
 it("verify forwards native flags without literal quotes", function()
@@ -150,12 +147,17 @@ it("verify forwards native flags without literal quotes", function()
   check.truthy(result.output:find("unknown flag: --ticket73-unknown", 1, true), result.output)
 end)
 
-it("POSIX path shapes and string command", function()
-  check.equal("/中文 space/file.lua", path.resolve_path("/中文 space/root", "../file.lua"))
-  -- 只认 POSIX 形态(ADR 0073):盘符与 UNC 前缀不是绝对路径的特例。
-  check.equal("/server/share/b", path.simplify_path("//server/share/a/../b"))
-  check.equal("/base/C:/x", path.resolve_path("/base", "C:/x"))
-  check.equal("/base/C:/x", runtime.resolve_source_path("@C:/x", "/base"))
+-- 路径口径(ADR 0083):盘符是绝对路径;MSYS 形态不是内部口径。
+it("Windows path shapes and string command", function()
+  check.equal("C:/中文 space/file.lua", path.resolve_path("C:/中文 space/root", "../file.lua"))
+  check.is_true(path.is_absolute_path("C:/x"))
+  check.is_true(path.is_absolute_path("D:/x"))
+  check.is_false(path.is_absolute_path("C:x"))
+  check.is_true(runtime.is_absolute("C:/x"))
+  check.is_false(runtime.is_absolute("relative/x"))
+  -- 盘符是绝对路径:绝对目标不再拼到基路径后面。
+  check.equal("C:/x", path.resolve_path("C:/base", "C:/x"))
+  check.equal("C:/x", runtime.resolve_source_path("@C:/x", "C:/base"))
   local root = env.make_temp_path("shell_中文 space", "")
   check.truthy(fs.ensure_dir(root))
   local command = shell.wrap_command_with_cwd(shell.build_command({ lua54.lua54_bin(), "-e", 'io.write("中文 ok")' }), root)
