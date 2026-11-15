@@ -32,7 +32,7 @@ local EXE_NAME = "editor-cli.exe"
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua probe <lua文件> [--timeout <秒,默认 " .. DEFAULT_TIMEOUT .. ">]",
+    "用法: lua tools/cli.lua probe <lua文件> [--timeout <秒,默认 " .. DEFAULT_TIMEOUT .. ">]",
     "",
     "在试玩态(in_game_runtime True)的游戏 Lua 环境里执行 <lua文件>,取回其 probe(...) 输出。",
     "  脚本前会注入 local function probe(...) print('<标记>', ...) end;标记形如 DEBUG-PROBE-<时间戳>-<随机>。",

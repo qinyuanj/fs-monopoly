@@ -30,7 +30,7 @@ local _REAL_FS = {
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua deploy-diff",
+    "用法: lua tools/cli.lua deploy-diff",
     "",
     "只读比对部署目录与工作区的 payload(与 deploy 同一张清单:src/、main.lua、",
     "Data/UIManagerNodes.lua、Data/Prefab.lua),不写入任何文件。真机验收后、提交前跑。",
@@ -39,6 +39,7 @@ function M.usage()
     "(直接读环境变量,复用 deploy 的同一份解析),设了 MONOPOLY_DEPLOY_HOME 时以它为准。",
     "实际路径在运行输出的 Deploy target 行;--help 本身不解析家目录、不起任何子进程。",
     "本命令只读,不需要 robocopy;缺它不影响比对。",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或取不到 %USERPROFILE% 判不可用,退 3。",
     "退出码: 0 一致 / 1 有漂移(列出文件)或比对失败 / 2 多余参数 /",
     "3 取不到 %USERPROFILE%(status=unavailable,未比对;环境问题不是漂移)。",
     "行为真源见 tools/packages/ops/deploy_diff.lua。",

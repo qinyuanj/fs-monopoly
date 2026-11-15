@@ -20,7 +20,7 @@ local commands = {
   { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
-  { name = "deploy",            pkg = "ops",                summary = "部署到 Windows 侧 Eggy 目录(WSL 写 /mnt/c;零参数)" },
+  { name = "deploy",            pkg = "ops",                summary = "部署到 Windows 侧 Eggy 目录(原生 %USERPROFILE% + robocopy;零参数)" },
   { name = "deploy-diff",       pkg = "ops", module = "deploy_diff", summary = "只读比对部署目录与工作区 payload(有漂移退 1;真机验收后、提交前跑)" },
   { name = "sync-data",         pkg = "data_sync",          summary = "从部署目录回同步导出(Data;EggyAPI/EggyEditorAPI 存根)" },
   { name = "probe",             pkg = "probe",              summary = "试玩态探针(经 editor-cli 在游戏内执行 lua 文件,取回 probe(...) 输出)" },
@@ -50,6 +50,7 @@ local function _usage()
     lines[#lines + 1] = string.format("  %-18s %s", entry.name, entry.summary)
   end
   lines[#lines + 1] = ""
+  lines[#lines + 1] = "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。"
   lines[#lines + 1] = "退出码:0 成功 / 1 真实失败 / 2 用法错误 / 3 平台或工具不可用(先查环境再重跑)"
   lines[#lines + 1] = ""
   lines[#lines + 1] = "用法提示:"

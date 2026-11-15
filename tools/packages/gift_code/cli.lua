@@ -42,22 +42,53 @@ function M.usage()
     "  --days     有效天数,正整数,默认 " .. DEFAULT_DAYS,
     "",
     "码表只存 code_hash;明文码只在终端打印这一次,不写进任何文件,当场记进仓外发放记录。",
-    "退出码:0 成功 / 1 失败(码表已回滚)/ 2 用法错误 / 3 安全随机源(/dev/urandom)不可用",
+    "原生 Windows 单平台(ADR 0083):安全随机源取 Windows CNG(RandomNumberGenerator,经 powershell 调用)。",
+    "退出码:0 成功 / 1 失败(码表已回滚)/ 2 用法错误 / 3 安全随机源不可用",
     "",
   }, "\n") .. "\n"
 end
 
-local function _urandom(n)
-  local file = io.open("/dev/urandom", "rb")
-  if file == nil then
+-- Windows 原生安全随机源(ADR 0083):/dev/urandom 是 POSIX 路径,原生 Windows 上没有。
+-- 改走 Windows CNG 的 RandomNumberGenerator(经 powershell 调用)取真随机字节;取不到就返回
+-- nil(绝不退回伪随机,码表安全要求不变)。一次取一批缓存,减少 powershell 启动次数。
+local _random_buffer = ""
+local _RANDOM_BATCH = 64
+
+local function _cng_random_chunk(n)
+  local proc = require("foundation.proc")
+  local script = "$b=[byte[]]::new(" .. tostring(n) .. ");"
+    .. "[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b);"
+    .. "[Console]::Out.Write(([System.BitConverter]::ToString($b) -replace '-',''))"
+  local result = proc.run_command({ "powershell", "-NoProfile", "-NonInteractive", "-Command", script })
+  if not result.ok then
     return nil
   end
-  local bytes = file:read(n)
-  file:close()
-  if type(bytes) ~= "string" or #bytes ~= n then
+  local hex = (result.output or ""):gsub("%s+", "")
+  if #hex ~= n * 2 or hex:find("[^0-9A-Fa-f]") ~= nil then
     return nil
   end
-  return bytes
+  local bytes = {}
+  for i = 1, #hex, 2 do
+    bytes[#bytes + 1] = string.char(tonumber(hex:sub(i, i + 1), 16))
+  end
+  return table.concat(bytes)
+end
+
+local function _default_random_bytes(n)
+  local wanted = number_utils.to_integer(n) or 0
+  if wanted <= 0 then
+    return nil
+  end
+  while #_random_buffer < wanted do
+    local chunk = _cng_random_chunk(math.max(wanted, _RANDOM_BATCH))
+    if chunk == nil then
+      return nil
+    end
+    _random_buffer = _random_buffer .. chunk
+  end
+  local out = _random_buffer:sub(1, wanted)
+  _random_buffer = _random_buffer:sub(wanted + 1)
+  return out
 end
 
 local function _parse_positive_integer(text)
@@ -226,10 +257,10 @@ local function _new(options, env, stdout, stderr)
     stderr:write("gift-code new 失败: " .. tostring(load_err) .. "\n")
     return 1
   end
-  local code = _generate_code(env.random_bytes or _urandom)
+  local code = _generate_code(env.random_bytes or _default_random_bytes)
   if code == nil then
     stderr:write(boundary.unavailable_verdict("gift-code", " tool=gift-code step=random", {
-      "读不到安全随机源 /dev/urandom;不退回伪随机,码表未改动。",
+      "读不到安全随机源(Windows CNG RandomNumberGenerator 不可用);不退回伪随机,码表未改动。",
     }).message)
     return boundary.UNAVAILABLE_EXIT_CODE
   end

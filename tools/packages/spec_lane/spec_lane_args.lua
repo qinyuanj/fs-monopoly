@@ -14,6 +14,9 @@ function spec_lane_args.usage()
     "--evidence-dir 把每条 lane 的原始输出(.tap)、文件清单(.files)与汇总值(summary.txt)落盘;",
     "--recount 只凭该目录重算 COUNTS 与 TAP 计数并核对汇总值,一致退 0、不一致退 1。",
     "--busted-bin / BUSTED_BIN 已删除，PATH 无 busted。",
+    "",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。",
+    "退出码: 0 全部通过 / 1 有失败 / 2 用法错误 / 3 平台或工具不可用",
   }, "\n") .. "\n"
 end
 
