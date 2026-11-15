@@ -11,10 +11,11 @@
 -- 仓内不再有项目工具缓存:工具模块一律从受控 Lua 环境装载,clean 只清仓内
 -- 生成物。
 --
--- 实现:WSL Ubuntu 单平台(ADR 0073)。目录与文件都经 foundation.fs.remove_path
+-- 实现:原生 Windows 单平台(ADR 0083)。目录与文件都经 foundation.fs.remove_path
 -- 删(整树删 / 删文件,未命中静默成功);luacov 的 glob 由 foundation.proc 枚举
 -- 仓根候选、Lua 模式按旧 glob 口径筛,只看仓根不递归,与被取代的 Makefile
--- `rm -rf` / `rm -f` 清单同一目标集。
+-- `rm -rf` / `rm -f` 清单同一目标集。枚举走 foundation.proc 的统一执行缝
+-- (内部 `bash -c`),所以 `find` 在原生 Windows 上不再经 cmd.exe。
 local M = {}
 
 local fs_lib = require("foundation.fs")
@@ -36,16 +37,20 @@ local _CLEAN_FILE_PATTERNS = {
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua clean",
+    "用法: lua tools/cli.lua clean",
     "",
     "清生成物:build/ tmp/、luacov 残留。",
     "",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。",
+    "退出码: 0 成功 / 1 真实失败 / 2 用法错误 / 3 平台或工具不可用",
   }, "\n") .. "\n"
 end
 
 -- 仓根下按 _CLEAN_FILE_PATTERNS 命中的文件名(不含目录)。
 -- 枚举用 `find -maxdepth 1 -name 'luacov.*'`(单层、含隐藏项),再由 Lua 模式复核
--- (与旧 glob 口径同一目标集)。目录不存在时 find 非零,交给调用方报错。
+-- (与旧 glob 口径同一目标集)。命令经 foundation.proc 的统一执行缝交给 bash,
+-- 不直接 `os.execute`(原生 Windows 的 os.execute 走 cmd.exe,不认单引号)。
+-- 目录不存在时 find 非零,交给调用方报错。
 local function _glob_targets(repo_root)
   local result = proc.run_command("find " .. shell_lib.shell_quote(path_lib.normalize_path(repo_root))
     .. " -maxdepth 1 -type f -name 'luacov.*' -print 2>/dev/null")

@@ -1,7 +1,8 @@
 #!/bin/sh
-# 可选 pre-push hook(#126):push 前跑硬地板 slim `lua5.4 tools/cli.lua verify`,非 0 即拦下 push。
+# 可选 pre-push hook(#126):push 前跑硬地板 slim `lua tools/cli.lua verify`,非 0 即拦下 push。
 # 启用:git config core.hooksPath .githooks;单次跳过:git push --no-verify。
-# WSL Ubuntu 上 sh 是常规运行面(ADR 0073),但业务逻辑仍只在原生侧:这里立即
-# exec 转交 lua5.4,退出码原样透传。退 3 的含义见 AGENTS.md 平台保证边界。
+# 原生 Windows + Git for Windows/MSYS 的 sh(ADR 0083):这里立即 exec 转交 `lua`,
+# 具体解释器由 foundation.lua54 的候选表选出,退出码原样透传。退 3 的含义见
+# AGENTS.md 平台保证边界。
 cd "$(git rev-parse --show-toplevel)" || exit 1
-exec lua5.4 tools/cli.lua verify </dev/null
+exec lua tools/cli.lua verify </dev/null

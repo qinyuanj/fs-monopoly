@@ -1,7 +1,7 @@
-#!/usr/bin/env lua5.4
+#!/usr/bin/env lua
 -- 直跑入口的解释器预检(#191 故事 3):与 tools/cli.lua 同口径,非 5.4 立即退 1。
 if _VERSION ~= "Lua 5.4" then
-  io.stderr:write("Lua 5.4 interpreter required; run `lua5.4 tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
+  io.stderr:write("Lua 5.4 interpreter required; run `lua tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
   os.exit(1)
 end
 local _self = debug.getinfo(1, "S").source or "@tools/packages/spec_lane/spec_lane.lua"
@@ -226,12 +226,29 @@ local function _run_sharded(options, profile, files, spawn_env)
   -- 诊断只转一份。混有真实失败仍退 1(#131)。
   local raw_parts = {}
   local entries = {}
+  local lane_env_errors = {}
+  local env_problem = false
   local code = 0
   local diagnostic
   for i, r in ipairs(results) do
+    local label = r.label or lane_specs[i].label
     local lane_diagnostic = tool_availability.child_diagnostic(r.exit_code, r.output)
     if lane_diagnostic ~= nil then
       diagnostic = diagnostic or lane_diagnostic
+    elseif r.reason == "timeout" then
+      -- 超时单独点名(#234 F6):lane 没跑完是环境/时长问题,不能冒充「用例失败」。
+      -- 不并进 TAP 计数与证据汇总;无真实失败时整体退 3(status=unavailable)。
+      env_problem = true
+      lane_env_errors[#lane_env_errors + 1] = string.format(
+        "[spec-lane] lane 超时 reason=timeout lane=%s: %s(环境问题:无真实失败时整体退 3)",
+        tostring(label), tostring(r.message or ""))
+    elseif r.reason == "launch_failed" or r.reason == "output_incomplete" then
+      -- lane 起不来(启动失败 / owner 没发布完成状态)既不是通过、也不是测试失败:
+      -- 单独点名,不并进 TAP 计数与证据汇总,免得被读成「测试红了」(ADR 0083)。
+      env_problem = true
+      lane_env_errors[#lane_env_errors + 1] = string.format(
+        "[spec-lane] lane 起不来 reason=%s lane=%s: %s",
+        tostring(r.reason), tostring(label), tostring(r.message or ""))
     else
       if not r.ok then
         code = 1
@@ -241,8 +258,7 @@ local function _run_sharded(options, profile, files, spawn_env)
         raw_parts[#raw_parts + 1] = out
       end
       -- 与 TAP 同口径:不可用 lane 也不进 COUNTS 聚合与证据汇总(#131/#130)。
-      entries[#entries + 1] = { label = r.label or lane_specs[i].label, raw = r.output,
-        files = lane_specs[i].files }
+      entries[#entries + 1] = { label = label, raw = r.output, files = lane_specs[i].files }
     end
   end
   local aggregated = evidence.aggregate(entries)
@@ -253,8 +269,17 @@ local function _run_sharded(options, profile, files, spawn_env)
   if failed > 0 and code == 0 then
     code = 1
   end
+  if #lane_env_errors > 0 then
+    compressed = compressed .. table.concat(lane_env_errors, "\n") .. "\n"
+  end
   if diagnostic ~= nil and code == 0 then
     return _unavailable_result(diagnostic)
+  end
+  -- 只有「lane 起不来 / 超时」而没有任何真实用例失败 → 环境问题,退 3(status=unavailable),
+  -- 与真实失败(退 1)区分开(#234 F6)。混有真实失败时仍以 1 收场。
+  if env_problem and code == 0 then
+    return { stdout = compressed .. _count_diagnostics(aggregated, true), code = 3,
+      status = "unavailable", passed = passed, failed = failed }
   end
   if code ~= 0 then
     compressed = compressed .. _lane_listing(lane_specs)
@@ -275,7 +300,7 @@ end
 function M.run(options)
   options = options or {}
 
-  -- 默认后端 = 真实 busted 运行器(argv_prefix 返回 { lua5.4,
+  -- 默认后端 = 真实 busted 运行器(argv_prefix 返回 { lua,
   -- tools/packages/test_runner/runner.lua }）。--busted-bin / BUSTED_BIN 已删除，
   -- PATH 无 busted,迁移已完成)。
   local prefix = runner_bin.argv_prefix()

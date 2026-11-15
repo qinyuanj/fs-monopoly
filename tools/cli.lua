@@ -1,8 +1,8 @@
 -- tools/cli.lua —— 工具链唯一对外面（#300）
 --
 -- 用法:
---   lua5.4 tools/cli.lua <子命令> [args...]
---   lua5.4 tools/cli.lua --help | -h
+--   lua tools/cli.lua <子命令> [args...]
+--   lua tools/cli.lua --help | -h
 --
 -- 调度机制:顶层静态路由表 commands(封闭命令集,子命令集合与「不进」清单
 -- 以本文件的封闭命令表为准；伪入口 / swarm / loc 不进）——查表 →
@@ -20,7 +20,7 @@ local commands = {
   { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
-  { name = "deploy",            pkg = "ops",                summary = "部署到 Windows 侧 Eggy 目录(WSL 写 /mnt/c;零参数)" },
+  { name = "deploy",            pkg = "ops",                summary = "部署到 Windows 侧 Eggy 目录(原生 %USERPROFILE% + robocopy;零参数)" },
   { name = "deploy-diff",       pkg = "ops", module = "deploy_diff", summary = "只读比对部署目录与工作区 payload(有漂移退 1;真机验收后、提交前跑)" },
   { name = "sync-data",         pkg = "data_sync",          summary = "从部署目录回同步导出(Data;EggyAPI/EggyEditorAPI 存根)" },
   { name = "probe",             pkg = "probe",              summary = "试玩态探针(经 editor-cli 在游戏内执行 lua 文件,取回 probe(...) 输出)" },
@@ -42,7 +42,7 @@ end
 
 local function _usage()
   local lines = {
-    "用法: lua5.4 tools/cli.lua <子命令> [args...]",
+    "用法: lua tools/cli.lua <子命令> [args...]",
     "",
     "子命令（封闭命令集）：",
   }
@@ -50,10 +50,11 @@ local function _usage()
     lines[#lines + 1] = string.format("  %-18s %s", entry.name, entry.summary)
   end
   lines[#lines + 1] = ""
+  lines[#lines + 1] = "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。"
   lines[#lines + 1] = "退出码:0 成功 / 1 真实失败 / 2 用法错误 / 3 平台或工具不可用(先查环境再重跑)"
   lines[#lines + 1] = ""
   lines[#lines + 1] = "用法提示:"
-  lines[#lines + 1] = "  lua5.4 tools/cli.lua <子命令> --help   子命令帮助(包内 usage 真源)"
+  lines[#lines + 1] = "  lua tools/cli.lua <子命令> --help   子命令帮助(包内 usage 真源)"
   return table.concat(lines, "\n") .. "\n"
 end
 
@@ -65,15 +66,26 @@ local root = _repo_root()
 -- 包(如 packages.arch_policy)。
 package.path = package.path .. ";" .. root .. "/tools/?.lua;" .. root .. "/tools/?/init.lua"
 
--- 入口解释器预检(#191 用户故事 3):本机 PATH 上的 `lua` 是 5.1,兄弟仓依赖它,
--- 所以入口不靠改全局别名,而是显式要求 `lua5.4`;误用别的解释器时立即退 1,
--- 而不是让 5.1 语义悄悄跑完一整套测试。
+-- 入口解释器预检(#191 用户故事 3):入口统一写 `lua`(ADR 0083),具体是哪个
+-- 可执行文件由 foundation.lua54 的候选表按 `-v` 校验选出;这里只兜住「有人拿
+-- 5.1/5.3 直接跑本文件」——误用别的解释器立即退 1,而不是让旧语义悄悄跑完
+-- 一整套测试。
 if _VERSION ~= "Lua 5.4" then
-  io.stderr:write("Lua 5.4 interpreter required; run `lua5.4 tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
+  io.stderr:write("Lua 5.4 interpreter required; run `lua tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
   os.exit(1)
 end
 
 local tool_cli = require("foundation.tool_cli")
+local boundary = require("foundation.platform_boundary")
+
+-- 平台保证面(ADR 0083 / #234 F2):非 Windows 一律退 3,不进入任何子命令。
+-- 判决渲染统一走 platform_boundary.unavailable_verdict(首行 `[cli] status=unavailable`),
+-- 不在这里另写一套诊断格式。platform_verdict 用宿主平台;测试可注入平台判定经
+-- dofile 驱动本文件而不必真换操作系统。
+local platform_verdict = boundary.platform_verdict("cli")
+if platform_verdict ~= nil then
+  os.exit(boundary.emit(platform_verdict))
+end
 
 local raw_args = arg or {}
 local name = raw_args[1]
@@ -110,7 +122,7 @@ end
 
 local env = {
   repo_root = root,
-  command = "lua5.4 tools/cli.lua " .. name,
+  command = "lua tools/cli.lua " .. name,
 }
 local code = cli.main(rest, env)
 os.exit(type(code) == "number" and code or 0)

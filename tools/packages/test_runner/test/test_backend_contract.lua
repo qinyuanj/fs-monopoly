@@ -150,7 +150,9 @@ describe("real busted execution", function()
     check.equal(1, result.code, result.output)
     check.matches("cases=22 passed=21 failed=1 errors=0", result.output, 1, true)
     check.matches("not ok %d+ %- registration trace failure keeps its registration line", result.output)
-    check.matches("# test/fixtures/busted_backend/registration_trace.lua @ 17\n", result.output, 1, true)
+    -- 换行形态不钉:原生 Windows 上子进程输出是 CRLF,POSIX 上是 LF,
+    -- 断言只认「注册行落在第 17 行」这一事实(plain 查找,不做模式匹配)。
+    check.matches("# test/fixtures/busted_backend/registration_trace.lua @ 17", result.output, 1, true)
   end)
   it("one runtime error is counted once", function()
     local result = run({ "runtime_error" })

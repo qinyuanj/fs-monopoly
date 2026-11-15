@@ -66,7 +66,7 @@ compress_tap_collapses_all_pass_tap_to_single_passed_line()
 end
 
 -- 不再支持 busted_bin 单 token 覆写，命令
--- 前缀恒为 argv_prefix 默认值({ lua5.4, test_runner/runner.lua })。workers=1 强制单进程
+-- 前缀恒为 argv_prefix 默认值({ lua, test_runner/runner.lua })。workers=1 强制单进程
 -- 串行路径(分片判定要求 worker > 1 且 profile 文件数超过阈值)。
 local function
 run_defaults_to_explicit_real_busted_runner()
@@ -110,7 +110,9 @@ runner_spawn_carries_tool_discovery_env()
     check.is_nil(captured_options)
   else
     check.truthy(tostring(captured_options.env.LUA54_BIN):find("/", 1, true) ~= nil)
-    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks$") ~= nil)
+    -- 原生 Windows 上解析出的是 luarocks.exe,断言只认「指向 luarocks 可执行文件」,
+    -- 不认具体扩展名。
+    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks%.exe?$") ~= nil)
   end
 end
 
@@ -502,6 +504,80 @@ sharded_real_failure_excludes_unavailable_lane_from_counts()
     .. " failed=1 errors=0", result.stdout, 1, true)
 end
 
+-- 「起不来」不是测试失败:lane 启动失败 / owner 没发布完成状态时单独点名,
+-- 不并进 TAP 计数,也不冒充 not ok(ADR 0083 / #236)。
+local function
+sharded_lane_that_never_started_is_named_not_counted_as_failure()
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = { label = lane.label, ok = false, exit_code = nil,
+          reason = "launch_failed", message = "failed to start lane owner" }
+      end
+      return false, results
+    end,
+  })
+  -- #234 F6:无真实失败,只有「起不来」→ 环境问题,退 3(status=unavailable);
+  -- 不再与真实用例失败同码(旧口径退 1)。
+  check.equal(3, result.code)
+  check.equal("unavailable", result.status)
+  check.matches("lane 起不来 reason=launch_failed", result.stdout, 1, true)
+  check.is_nil(result.stdout:find("not ok", 1, true))
+  check.equal(0, result.failed)
+end
+
+-- #234 F6:超时单独点名(message 带 reason=timeout),不并进用例计数;
+-- 无真实失败时整体退 3(status=unavailable)。
+local function
+sharded_lane_timeout_is_named_and_reports_unavailable()
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = { label = lane.label, ok = false, exit_code = 124,
+          reason = "timeout", message = "Lane " .. lane.label .. " exceeded 5s" }
+      end
+      return false, results
+    end,
+  })
+  check.equal(3, result.code)
+  check.equal("unavailable", result.status)
+  check.matches("lane 超时 reason=timeout", result.stdout, 1, true)
+  check.is_nil(result.stdout:find("not ok", 1, true))
+  check.equal(0, result.failed)
+end
+
+-- 超时与真实失败并存时以真实失败为准(退 1),超时仍单独点名。
+local function
+sharded_timeout_with_real_failure_stays_failed()
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        if i == 1 then
+          results[i] = { label = lane.label, ok = false, exit_code = 124,
+            reason = "timeout", message = "Lane timed out" }
+        else
+          results[i] = { label = lane.label, ok = false, exit_code = 1,
+            output = "not ok 1 - broke\n1..1\n" }
+        end
+      end
+      return false, results
+    end,
+  })
+  check.equal(1, result.code)
+  check.is_nil(result.status)
+  check.matches("not ok 1 - broke", result.stdout, 1, true)
+  check.matches("lane 超时 reason=timeout", result.stdout, 1, true)
+end
+
 local function
 parse_args_reads_evidence_dir_and_recount()
   local opts = spec_lane.parse_args({ "--profile", "tooling", "--evidence-dir=tmp/evidence" })
@@ -606,8 +682,8 @@ discover_test_roots_adopts_both_layout_shapes()
   -- 目录即包时代:tools/packages/spec_lane.lua + 同包 test/
   check.is_true(index["tools/packages/spec_lane/test"],
     "package-as-dir root must be adopted")
-  -- 同名对时代:test/support/behavior_parallel.lua + behavior_parallel/test/
-  check.is_true(index["test/support/behavior_parallel/test"],
+  -- 同名对时代:test/support/harness.lua + harness/test/
+  check.is_true(index["test/support/harness/test"],
     "support same-name-pair root must be adopted")
   -- 目录即包时代:test/support/runner_infra/ 无同名 .lua,纯 <pkg>/test/ 形态
   check.is_true(index["test/support/runner_infra/test"],
@@ -660,6 +736,11 @@ describe("spec lane public contracts", function()
   it("verbose_still_reports_count_mismatch", verbose_still_reports_count_mismatch)
   it("sharded_real_failure_excludes_unavailable_lane_from_counts",
     sharded_real_failure_excludes_unavailable_lane_from_counts)
+  it("sharded_lane_that_never_started_is_named_not_counted_as_failure",
+    sharded_lane_that_never_started_is_named_not_counted_as_failure)
+  it("sharded_lane_timeout_is_named_and_reports_unavailable",
+    sharded_lane_timeout_is_named_and_reports_unavailable)
+  it("sharded_timeout_with_real_failure_stays_failed", sharded_timeout_with_real_failure_stays_failed)
   it("parse_args_reads_evidence_dir_and_recount", parse_args_reads_evidence_dir_and_recount)
   it("run_writes_recomputable_evidence", run_writes_recomputable_evidence)
   it("recount_reports_a_mismatch_as_a_real_failure", recount_reports_a_mismatch_as_a_real_failure)

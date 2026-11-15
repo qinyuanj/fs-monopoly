@@ -31,21 +31,20 @@ end
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua verify [--serial|--parallel|--tooling|--verbose] [--evidence-dir=<目录>]",
+    "用法: lua tools/cli.lua verify [--serial|--tooling|--verbose] [--evidence-dir=<目录>]",
     "",
     "质量门禁编排器:默认 slim 车道(contract + guards(含 arch_policy 层边界门禁)",
     "+ behavior 七层 + foundation + lint-src/lint-test/lint-tools + encoding),",
     "是迭代默认与 push 前唯一硬地板。",
     "",
     "flag 映射:",
-    "  --parallel     POSIX 后台并行(setsid 进程组 + 看门狗超时收容整组);",
-    "                 空输出按失败计(当前默认)",
-    "  --serial       所有车道及其测试子进程按序执行(复现/排查用,约慢 3~4 倍)",
-    "  (默认)         slim:七层 + foundation 行为 spec 全跑",
-    "  --tooling      正交叠加 tooling 并行 lane(改 tools/** 时)",
+    "  (默认)         逐车道串行(ADR 0083:并行车道已退场,无 --parallel);",
+    "                 slim:七层 + foundation 行为 spec 全跑",
+    "  --serial       与默认完全一致的串行执行(保留为同义开关,既有脚本不用改)",
+    "  --tooling      正交叠加 tooling lane(改 tools/** 时)",
     "  --verbose      展开各 lane 明细",
     "  --evidence-dir 测量证据落盘(#130):spec-lane 车道把原始 TAP/COUNTS 写到 <目录>/<lane>",
-    "                 (用 `lua5.4 tools/cli.lua spec-lane --recount <目录>/<lane>` 重算核对),",
+    "                 (用 `lua tools/cli.lua spec-lane --recount <目录>/<lane>` 重算核对),",
     "                 verify 另存每条 lane 完整输出 <lane>.out 与整体报告 summary.txt",
     "",
     "挑选提示:",
@@ -62,6 +61,8 @@ function M.usage()
     "pipeline 不包含(按需走插件工具):uml_crap / uml_mutate / uml_dry。",
     "真源:tools/packages/verify/(main.lua / lane_builders.lua / lanes.lua)。",
     "",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。",
+    "退出码: 0 成功 / 1 有真实失败 / 2 用法错误 / 3 有车道不可用且无真实失败",
   }, "\n") .. "\n"
 end
 

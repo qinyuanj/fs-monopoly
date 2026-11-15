@@ -1,4 +1,4 @@
--- verify 的车道规划:按 opts(tooling / serial)决定跑哪些车道、跳过哪些、
+-- verify 的车道规划:按 opts(tooling)决定跑哪些车道、跳过哪些、
 -- 给出哪些警告。
 --
 -- 纯函数:环境探测的结果由调用方通过 opts.env 注入(lua54_bin),
@@ -24,7 +24,7 @@ end
 function lanes_mod.resolve(opts)
   opts = opts or {}
   local env = opts.env or {}
-  local lanes, skipped = builders.default(env, opts.tooling == true, opts.serial == true, opts.evidence_dir)
+  local lanes, skipped = builders.default(env, opts.tooling == true, opts.evidence_dir)
   local warnings = {}
   if opts.untracked_tests ~= nil and #opts.untracked_tests > 0 then
     warnings[#warnings + 1] = _untracked_tests_warning(opts.untracked_tests)

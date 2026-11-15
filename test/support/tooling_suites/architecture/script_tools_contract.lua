@@ -54,7 +54,7 @@ local function _with_ascii_tmp(tag, fn)
 end
 
 local function _run_lua(args)
-  -- 工具入口统一 lua5.4(ADR 0073);本机 PATH 上的 `lua` 是 5.1。
+  -- 工具入口统一写 `lua`(ADR 0083),具体解释器由候选表按 `-v` 校验选出。
   local command = { require("foundation.lua54").lua54_bin() }
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
@@ -286,7 +286,7 @@ local function _test_cli_entry_rejects_non_lua54_interpreter()
   local dispatch_at = cli_source:find("pcall(require", 1, true)
   check.truthy(guard_at ~= nil, "tools/cli.lua must gate on the interpreter version")
   check.truthy(guard_at < dispatch_at, "version gate must run before subcommand dispatch")
-  _assert_contains(cli_source, "lua5.4 tools/cli.lua", "gate must print the supported entry")
+  _assert_contains(cli_source, "lua tools/cli.lua", "gate must print the supported entry")
 
   -- 动态契约:机器上有非 5.4 解释器时真跑一次,确认真被拦下且不退 0。
   for _, candidate in ipairs({ "lua5.1", "lua5.3", "lua5.2" }) do
@@ -301,7 +301,7 @@ local function _test_cli_entry_rejects_non_lua54_interpreter()
   end
 end
 
--- WSL 部署契约:文本检查与安全帮助入口;复制由 ops 隔离目录测试覆盖。
+-- 部署契约:文本检查与安全帮助入口;复制由 ops 隔离目录测试覆盖。
 local function _test_deploy_lua_matches_simplified_cli()
   local script_text = assert(fs_lib.read_file(path_lib.join_path(project_root, "tools/packages/ops/deploy.lua")))
 
@@ -342,18 +342,29 @@ local function _test_deploy_lua_matches_simplified_cli()
     "deploy.lua should centralize the LuaSource directory name construction"
   )
 
-  -- Windows 侧落点:~/Desktop/dev/eggy/LuaSource_大富翁(经 %USERPROFILE% + wslpath 换算)。
+  -- Windows 侧落点:~/Desktop/dev/eggy/LuaSource_大富翁(原生 %USERPROFILE% + robocopy,ADR 0083)。
   _assert_contains(
     script_text,
     'path_lib.join_path(home_dir, "Desktop", "dev", "eggy", M.join_lua_source_dir_name())',
     "deploy.lua should keep the Windows default deploy path semantics"
   )
-  _assert_contains(script_text, "wslpath", "deploy.lua should convert the Windows profile through wslpath")
+  _assert_contains(script_text, "robocopy", "deploy.lua should mirror the payload with native robocopy")
   _assert_contains(script_text, "%USERPROFILE%", "deploy.lua should resolve the Windows profile dynamically")
+  _assert_contains(script_text, 'getenv("USERPROFILE")', "deploy.lua should read the native USERPROFILE first")
   _assert_not_contains(script_text, "C:/Users/", "deploy.lua must not hardcode a Windows user name")
 
-  -- ADR 0073:原生 Windows 原语退场。
-  for _, retired in ipairs({ "cmd.exe /d /v:off /c", "chcp", "robocopy", "if exist", "if not exist", "rmdir", "del /f" }) do
+  -- ADR 0083:WSL 互操作面退场(部署面原生)。cmd.exe 只允许作为取不到 USERPROFILE 时的
+  -- 兜底(cmd /c echo %USERPROFILE%),不许再经它取家目录、不许经 wslpath 换算、不许落 /mnt/c。
+  for _, retired in ipairs({
+    "cmd.exe /d /v:off /c",
+    "chcp",
+    "wslpath",
+    "/mnt/c",
+    "if exist",
+    "if not exist",
+    "rmdir",
+    "del /f",
+  }) do
     _assert_not_contains(script_text, retired, "deploy should retire " .. retired)
   end
 
@@ -392,8 +403,14 @@ local function _test_deploy_comprehensive()
   -- 帮助在壳内结束,不会进入部署主流程或写入实际目标。
   local result = _run_lua({ "tools/cli.lua", "deploy", "--help" })
   check.is_true(result.ok == true, "deploy help should succeed")
-  _assert_contains(result.output, "WSL", "help should declare the WSL platform")
+  _assert_contains(result.output, "原生 Windows", "help should declare the native Windows platform")
+  _assert_contains(result.output, "robocopy", "help should name the native mirror tool")
+  _assert_contains(result.output, "%USERPROFILE%", "help should name the native home directory source")
   _assert_contains(result.output, "退 3", "help should explain the unavailable exit code")
+  -- 四态:0 / 1 / 2 / 3,且 3 明确是「缺 robocopy 或取不到家目录」。
+  _assert_contains(result.output, "退出码: 0", "help should state the success exit code")
+  _assert_contains(result.output, "退 3", "help should state the unavailable exit code")
+  _assert_not_contains(result.output, "WSL", "help must not declare the retired WSL platform")
 end
 
 local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()

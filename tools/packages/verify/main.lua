@@ -33,7 +33,6 @@ local function _main(opts)
 
   local plan = lanes_mod.resolve({
     tooling = opts.tooling,
-    serial = opts.serial,
     env = env,
     evidence_dir = opts.evidence_dir,
     untracked_tests = _untracked_tests(),
@@ -44,29 +43,22 @@ local function _main(opts)
   end
   io.flush()
 
-  -- #124:工具发现结果随车道命令导出(串行 proc / 并行 command.cmd 同一语义),
+  -- #124:工具发现结果随车道命令导出(车道子进程经 foundation.proc 起,同一语义),
   -- 车道及其测试子进程继承 LUA54_BIN / MONOPOLY_LUAROCKS_EXE,不再逐进程探测。
   -- 直跑(非经 cli.lua 转发)时这里自行解析一次;经转发时读到的就是导出值,
   -- 解析只是复核,几乎零成本。
   local spawn_env = require("foundation.bootstrap").tool_discovery_env()
 
-  local parallel_results, parallel_elapsed
-  if opts.serial then
-    parallel_results = {}
-    local lane_started = os.time()
-    for _, lane in ipairs(plan.lanes) do
-      parallel_results[#parallel_results + 1] = runner.run_step(lane.label, lane.cmd, { env = spawn_env })
-    end
-    parallel_elapsed = os.time() - lane_started
-  else
-    local all_ok
-    all_ok, parallel_results, parallel_elapsed = runner.run_parallel(plan.lanes, { env = spawn_env })
-    if all_ok == nil then error("verify runner returned no result") end
-  end
+  -- #237 / ADR 0083:并行车道退场(原生 Windows / MSYS 没有 setsid),verify 只剩
+  -- 一种执行形态——逐车道串行,复用 runner.run_step;--serial 与默认走同一条路径。
   local all_results = {}
-  for _, r in ipairs(parallel_results) do
-    r.elapsed = r.elapsed or parallel_elapsed
-    all_results[#all_results + 1] = r
+  local lanes_started = os.time()
+  for _, lane in ipairs(plan.lanes) do
+    all_results[#all_results + 1] = runner.run_step(lane.label, lane.cmd, { env = spawn_env })
+  end
+  local lanes_elapsed = os.time() - lanes_started
+  for _, r in ipairs(all_results) do
+    r.elapsed = r.elapsed or lanes_elapsed
   end
 
   local output = runner.build_output({
@@ -97,19 +89,22 @@ local function _main(opts)
   }
 end
 
--- argv -> opts。默认并行(#107 已为 spec-lane 恢复并行;#73 的串行默认是 Windows
--- 迁移期安全网):--serial 显式退回串行复现。用法错误返回 nil, 诊断文本。
+-- argv -> opts。#237 / ADR 0083:并行车道退场,默认即串行;--serial 保留为同义
+-- 开关(解析结果与默认逐字段一致),--parallel 按未知 flag 判用法错误(退 2)。
+-- 用法错误返回 nil, 诊断文本。
 -- while 而非数值 for:--evidence-dir 的空格形式要多吃一个 argv,数值 for 的循环
 -- 变量在循环体内改了也不影响迭代(#130 曾被 luacheck W311 点出这个写法)。
 local function _parse_args(argv)
-  local opts = { serial = false }
+  local opts = { serial = true }
   local i = 1
   while i <= #argv do
     local token = argv[i]
     if token == "--serial" then
+      -- 同义开关:默认就是串行,保留只为兼容既有脚本;不改变任何行为。
       opts.serial = true
     elseif token == "--parallel" then
-      opts.serial = false
+      -- #237:并行实现已退场(无 setsid 支撑),按未知 flag 处理并给出明确诊断。
+      return nil, "unknown flag: --parallel (并行车道已退场,verify 默认串行;--serial 与默认一致)"
     elseif token == "--tooling" then
       opts.tooling = true
     elseif token == "--verbose" then

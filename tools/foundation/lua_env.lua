@@ -74,10 +74,13 @@ local function _luarocks_exe(opts)
 end
 
 -- 默认子进程执行面刻意不 require foundation.proc:本模块会在 stock busted 的钉死
--- 环境里被 dofile,那时只有仓根与受控 tree 在 package.path 上,tools/ 还不可见。
--- io.popen 的 close 在失败时返回 nil, "exit", code,足够区分成功/失败。
--- POSIX 单引号:`$`、反引号与空白都按字面传递(与 foundation.shell 同口径,
--- 这里不 require 它,原因见上)。
+-- 环境里被 dofile,那时只有仓根与受控 tree 在 package.path 上,tools/ 还不可见,
+-- 所以 foundation.bash 只能惰性 require(见 _default_run)。
+-- POSIX 单引号:`$`、反引号与空白都按字面传递(与 foundation.shell 同口径)。
+-- 执行只走统一执行缝 foundation.bash.execute(capture = true):原生 Lua 的 io.popen 在
+-- Windows 上同样走 cmd.exe,而 `env -u ...` 与 POSIX 单引号在 cmd.exe 下都不成立
+-- (ADR 0083 / #235)。**不再有 io.popen 回落**——执行缝不可用就如实报「不可核对」,
+-- 绝不静默退回 POSIX 路径(#234 F1)。
 local function _quote(arg)
   local text = tostring(arg)
   if text:match("^[%w%-%._/:=]+$") ~= nil then
@@ -91,15 +94,42 @@ end
 -- 核对的是「机器 tree 里装了什么」,与调用方钉死的装载面无关。
 local _CLEARED_PATHS = "env -u LUA_PATH -u LUA_PATH_5_4 -u LUA_CPATH -u LUA_CPATH_5_4 "
 
+-- 加载统一执行缝实现 foundation.bash:优先 require;受限 package.path(lint 子进程、
+-- mutation worker 把装载面钉在受控 tree 上)里 tools/ 可能不在搜索面上,此时按**本文件
+-- 自身位置**加载同一份实现(按路径 dofile,仍是唯一实现,不回落 io.popen)。
+local _bash_cached
+local function _load_bash()
+  if _bash_cached ~= nil then return _bash_cached end
+  local ok_load, mod = pcall(require, "foundation.bash")
+  if ok_load and type(mod) == "table" and type(mod.execute) == "function" then
+    _bash_cached = mod
+    return mod
+  end
+  local source = tostring(debug.getinfo(1, "S").source or ""):gsub("^@", ""):gsub("\\", "/")
+  local dir = source:match("^(.*)/[^/]+$")
+  if dir == nil then return nil end
+  local chunk = loadfile(dir .. "/bash.lua")
+  if chunk == nil then return nil end
+  local ok2, mod2 = pcall(chunk)
+  if ok2 and type(mod2) == "table" and type(mod2.execute) == "function" then
+    _bash_cached = mod2
+    return mod2
+  end
+  return nil
+end
+
 local function _default_run(command)
   local parts = {}
   for _, arg in ipairs(command) do parts[#parts + 1] = _quote(arg) end
-  local handle = io.popen(_CLEARED_PATHS .. table.concat(parts, " ") .. " 2>&1")
-  if handle == nil then
-    return { ok = false, output = "io.popen failed" }
+  local line = _CLEARED_PATHS .. table.concat(parts, " ")
+  local bash_lib = _load_bash()
+  if bash_lib == nil then
+    return { ok = false, output = "受控 Lua 环境不可核对: 命令执行缝(foundation.bash)不可用" }
   end
-  local output = handle:read("*a") or ""
-  local ok, _, code = handle:close()
+  local output, ok, code = bash_lib.execute(line, { capture = true })
+  if output == nil then
+    return { ok = false, output = "受控 Lua 环境不可核对: bash 不可用(退出码 " .. tostring(code) .. ")" }
+  end
   return { ok = ok == true, code = code, output = output }
 end
 

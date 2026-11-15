@@ -5,11 +5,13 @@
 -- 但注意:本模块内部互调走 fs.xxx,替身穿不进来,别指望 stub fs.path_exists 能改掉
 -- fs.remove_path 的行为。
 --
--- WSL Ubuntu 单平台(ADR 0073):Lua 二进制 IO + POSIX 原语(mkdir -p / rm -rf /
--- cp -R)。存在性与目录判定是纯 Lua(不起子进程),只有真正改动文件系统的操作
--- 才走 shell。
+-- 原生 Windows 单平台(ADR 0083):Lua 二进制 IO + POSIX 原语(mkdir -p / rm -rf /
+-- cp -R,一律经 foundation.shell.execute 交 bash)。存在性与目录判定默认是纯 Lua、
+-- **无副作用**(不写探针文件,见 runtime_path_ops.probe_path);只有真正改动文件系统
+-- 的操作、以及 errno 不可判时的兜底仲裁,才走执行缝。
 local text_lib = require("foundation.text")
 local path_lib = require("foundation.path")
+local runtime_path_ops = require("foundation.runtime_path_ops")
 local shell_lib = require("foundation.shell")
 
 local fs = {}
@@ -54,7 +56,7 @@ function fs.ensure_dir(path)
   if fs.is_dir(normalized) then
     return true
   end
-  local ok, kind, code = os.execute("mkdir -p " .. shell_lib.shell_quote(normalized))
+  local ok, kind, code = shell_lib.execute("mkdir -p " .. shell_lib.shell_quote(normalized))
   local success = shell_lib.exit_status(ok, kind, code)
   if not success then
     return nil, text_lib.bilingual_with_suffix("创建目录失败: ", "Failed to create directory: ", path)
@@ -81,12 +83,18 @@ end
 
 -- path_exists / is_dir 只差一个判定谓词(存在 vs 是目录)。
 --
--- 必须显式收成一个布尔再 return:谓词就该只答"是/否",不能把 os.execute 的
--- (成功, 退出码) 一对值继续往上传。
+-- 判定统一来自 runtime_path_ops.probe_path(io.open 的 errno):纯 Lua、不起子进程、
+-- **不写任何文件**(#234 F7——旧实现会在目标目录建探针文件再删,deploy-diff 因此
+-- 在部署目录里写了东西,不可写目录还被判成不存在而误退 1)。
 --
--- 判定用纯 Lua 的 `path/.` 探测:io.open("dir/.") 对目录成功、对普通文件失败;
--- io.open(path) 对文件和目录都成功。这样既不起子进程,也不受 shell 引号与
--- 文件名特殊字符影响。
+-- 只有 errno 落在预期集合之外("unknown")时,才经统一执行缝 `test -e` / `test -d`
+-- 仲裁:执行缝仍是唯一的权威兜底,但不进写文件/判目录的热路径。
+local function _seam_probe(flag, path)
+  local command = "test " .. flag .. " " .. shell_lib.shell_quote(path)
+  local ok, kind, code = shell_lib.execute(command)
+  return shell_lib.exit_status(ok, kind, code) == true
+end
+
 function fs.is_readable(path)
   local handle = io.open(path, "rb")
   if handle == nil then
@@ -101,18 +109,34 @@ function fs.path_exists(path)
     return false
   end
   local normalized = path_lib.normalize_path(path)
-  if fs.is_readable(normalized) or fs.is_readable(normalized .. "/.") then
-    return true
+  local state = runtime_path_ops.probe_path(normalized)
+  if state == "missing" then
+    return false
   end
-  -- 不可读目录:rename 自身在无读权限时仍成立。
-  return os.rename(normalized, normalized) ~= nil
+  if state == "unknown" then
+    return _seam_probe("-e", normalized)
+  end
+  return true
 end
 
+-- 目录判定:同一条 probe_path;file / missing 直接否,dir 直接是,unknown 才问执行缝。
+-- 全程不写任何文件。
 function fs.is_dir(path)
   if path == nil or path == "" then
     return false
   end
-  return fs.is_readable(path_lib.normalize_path(path) .. "/.")
+  local normalized = path_lib.normalize_path(path):gsub("/+$", "")
+  if normalized == "" then
+    return false
+  end
+  local state = runtime_path_ops.probe_path(normalized)
+  if state == "dir" then
+    return true
+  end
+  if state == "unknown" then
+    return _seam_probe("-d", normalized)
+  end
+  return false
 end
 
 function fs.remove_path(path)
@@ -121,7 +145,7 @@ function fs.remove_path(path)
   end
 
   local normalized = path_lib.normalize_path(path)
-  local ok, kind, code = os.execute("rm -rf " .. shell_lib.shell_quote(normalized))
+  local ok, kind, code = shell_lib.execute("rm -rf " .. shell_lib.shell_quote(normalized))
   local success = shell_lib.exit_status(ok, kind, code)
   if not success then
     return nil, text_lib.bilingual_with_suffix("删除路径失败: ", "Failed to remove path: ", path)
@@ -160,7 +184,7 @@ function fs.copy_tree(source_path, target_path)
     .. shell_lib.shell_quote(normalized_source)
     .. " "
     .. shell_lib.shell_quote(normalized_target)
-  local exec_ok, kind, code = os.execute(command)
+  local exec_ok, kind, code = shell_lib.execute(command)
   local success, exit_code = shell_lib.exit_status(exec_ok, kind, code)
   if not success then
     return nil, text_lib.bilingual_with_suffix(

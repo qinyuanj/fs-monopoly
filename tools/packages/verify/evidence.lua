@@ -1,8 +1,8 @@
 -- verify 的测量证据(#130):每条车道的完整输出 + 整体报告一起落盘。
 -- spec-lane 车道另外经 --evidence-dir 拿到自己的原始 TAP / COUNTS(见
 -- lane_builders),可用 `spec-lane --recount <dir>/<profile>` 重算;这里保存的是
--- verify 视角的车道结果与汇总,lint / encoding / behavior_parallel 等非
--- spec-lane 车道也因此在证据目录里留下完整输出。
+-- verify 视角的车道结果与汇总,lint / encoding 等非 spec-lane 车道也因此
+-- 在证据目录里留下完整输出。
 local fs_lib = require("foundation.fs")
 
 local M = {}

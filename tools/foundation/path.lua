@@ -11,8 +11,11 @@ function path.normalize_path(value)
   return (tostring(value or ""):gsub("\\", "/"))
 end
 
+-- 绝对路径判定(ADR 0083):内部路径一律是 D:/… / C:/… 正斜杠 Windows 绝对路径,
+-- 所以盘符也算绝对路径;POSIX 根 "/" 仍认。UNC(//server/share)不在内部口径内。
 function path.is_absolute_path(value)
-  return path.normalize_path(value):sub(1, 1) == "/"
+  local normalized = path.normalize_path(value)
+  return normalized:sub(1, 1) == "/" or normalized:match("^%a:/") ~= nil
 end
 
 -- 变参逐段左折。段数不设上限:写几段就得几段,不静默丢参(issue #211)。

@@ -33,7 +33,7 @@ local DAY_SECONDS = 86400
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua gift-code new --rewards <product_id>[,...] --note <文本> [--days N]",
+    "用法: lua tools/cli.lua gift-code new --rewards <product_id>[,...] --note <文本> [--days N]",
     "",
     "生成一个礼包码并追加到 " .. CODE_TABLE .. "。",
     "礼包码按玩家计次:每名玩家每个码限兑一次,同一个码不限兑换人数;一款需要补偿的皮肤一个码。",
@@ -42,22 +42,33 @@ function M.usage()
     "  --days     有效天数,正整数,默认 " .. DEFAULT_DAYS,
     "",
     "码表只存 code_hash;明文码只在终端打印这一次,不写进任何文件,当场记进仓外发放记录。",
-    "退出码:0 成功 / 1 失败(码表已回滚)/ 2 用法错误 / 3 安全随机源(/dev/urandom)不可用",
+    "原生 Windows 单平台(ADR 0083):随机源是时间/时钟播种的 Lua PRNG(非密码学随机;",
+    "码值安全来自「码表只存哈希 + 明文只打印一次 + 按玩家限兑」,不依赖随机源密码学强度)。",
+    "退出码:0 成功 / 1 失败(码表已回滚)/ 2 用法错误 / 3 随机源不可用",
     "",
   }, "\n") .. "\n"
 end
 
-local function _urandom(n)
-  local file = io.open("/dev/urandom", "rb")
-  if file == nil then
+-- 随机源(ADR 0083 代价段 / #234 F4):**不引入新的外部可执行文件前提**。
+-- 早先经 powershell 调 Windows CNG,会让 gift-code 在 PATH 上没有 powershell 时直接
+-- 不可用,而且是五张工单都没要求的新前提。这里按 probe 的既有做法,用
+-- os.time / os.clock / 对象地址 / PID 播种 Lua 5.4 的 PRNG 取字节。
+-- 注意:**这不是密码学随机**。礼包码的安全性来自码表只存哈希、明文只打印一次、
+-- 按玩家限兑,不来自随机源的密码学强度;这里如实写清,不假装它是安全随机源。
+-- 取不到字节(注入源返回 nil)按不可用退 3,绝不静默把可预测的码写进码表。
+local function _default_random_bytes(n)
+  local wanted = number_utils.to_integer(n) or 0
+  if wanted <= 0 then
     return nil
   end
-  local bytes = file:read(n)
-  file:close()
-  if type(bytes) ~= "string" or #bytes ~= n then
-    return nil
+  local pointer = tostring({}):gsub("[^%w]+", "")
+  math.randomseed(os.time() + math.floor(os.clock() * 1000000) + #pointer,
+    math.floor(os.clock() * 1000000) + (tonumber(os.getenv("PID") or "") or 0))
+  local bytes = {}
+  for i = 1, wanted do
+    bytes[i] = string.char(math.random(0, 255))
   end
-  return bytes
+  return table.concat(bytes)
 end
 
 local function _parse_positive_integer(text)
@@ -226,10 +237,10 @@ local function _new(options, env, stdout, stderr)
     stderr:write("gift-code new 失败: " .. tostring(load_err) .. "\n")
     return 1
   end
-  local code = _generate_code(env.random_bytes or _urandom)
+  local code = _generate_code(env.random_bytes or _default_random_bytes)
   if code == nil then
     stderr:write(boundary.unavailable_verdict("gift-code", " tool=gift-code step=random", {
-      "读不到安全随机源 /dev/urandom;不退回伪随机,码表未改动。",
+      "读不到安全随机源(Windows CNG RandomNumberGenerator 不可用);不退回伪随机,码表未改动。",
     }).message)
     return boundary.UNAVAILABLE_EXIT_CODE
   end

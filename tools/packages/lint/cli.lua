@@ -18,11 +18,13 @@ local RUN_OPTS = {
 
 function M.usage()
   return table.concat({
-    "用法: lua5.4 tools/cli.lua lint [path ...]",
+    "用法: lua tools/cli.lua lint [path ...]",
     "",
     "luacheck 静态检查:默认扫 src / test / tools(见 .luacheckrc);路径经 args",
     "直通。详细语义见 packages/lint/runner.lua。",
     "",
+    "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。",
+    "退出码: 0 成功 / 1 有 lint 问题 / 2 用法错误 / 3 平台或工具不可用",
   }, "\n") .. "\n"
 end
 

@@ -3,10 +3,11 @@
 --
 -- 行为真源:本文件自身(deploy.lua)。历史来源 deploy.ps1(373 行)已随 #384 删除,
 -- 整体由本文件取代(ADR 0030)。
--- 运行在 WSL Ubuntu(ADR 0073),路径演算、文件系统与子进程原语一律取 foundation
--- (#222)。部署目标仍是 Windows 侧 Eggy 宿主目录:经 cmd.exe 取 %USERPROFILE%,
--- 再用 wslpath -u 换算成 /mnt/c/... 路径;盘符形态只在 resolve_windows_home_dir
--- 这一段出现,foundation 不认盘符。
+-- 运行在原生 Windows(ADR 0083),路径演算、文件系统与子进程原语一律取 foundation
+-- (#222)。部署目标是 Windows 侧 Eggy 宿主目录:家目录直接取原生 %USERPROFILE%
+-- (缺失再 `cmd /c echo %USERPROFILE%` 兜底),目录镜像走原生 robocopy;全程不经
+-- WSL 互操作面(不靠子进程展开家目录、不做挂载点路径换算)。部署面独立于 bash 的选择
+-- (ADR 0083 第 5 条)。
 --
 -- CLI 面:零参数、零开关、无 --help(继承被取代的 deploy.ps1 空 param(),#384);任何参数 → ERROR + exit 1。
 -- 子命令入口:lua5.4 tools/cli.lua deploy 经 tools/packages/ops/cli.lua 壳转发,仅 --help/-h 在壳内
@@ -27,6 +28,7 @@ local shell_lib = require("foundation.shell")
 local fs_lib = require("foundation.fs")
 local env_lib = require("foundation.env")
 local proc_lib = require("foundation.proc")
+local boundary = require("foundation.platform_boundary")
 
 local M = {}
 
@@ -39,22 +41,43 @@ local function _check(ok, err)
 end
 
 -- 默认命令执行:读回合并输出。外层子壳让命令自带的 2>/dev/null 先于 proc 追加的
--- `> out 2>&1` 生效(cmd.exe 的 UNC 警告不混进 %USERPROFILE% 输出)。
+-- `> out 2>&1` 生效(诊断噪音不混进 git porcelain 输出)。
 local function _run(command)
-  return proc_lib.run_command("(" .. command .. ")").output
+  local result = proc_lib.run_command("(" .. command .. ")")
+  return result and result.output or ""
 end
 
--- 一次性探测 WSL 的互操作面:cmd.exe(取 %USERPROFILE%)与 wslpath(路径换算)。
--- 两者都在才谈得上「在 WSL 里往 Windows 部署」;缺一个就整体不可用。
-function M.detect_interop()
+-- 原生工具探测:目录镜像要 robocopy,它是部署唯一的外部依赖。探测走 foundation.proc
+-- 的 command_exists(注入缝),缺一个就整体不可用(退 3)。
+function M.detect_native_tools(command_exists)
+  command_exists = command_exists or proc_lib.command_exists
   local missing = {}
-  if not proc_lib.command_exists("cmd.exe") then
-    missing[#missing + 1] = "cmd.exe"
-  end
-  if not proc_lib.command_exists("wslpath") then
-    missing[#missing + 1] = "wslpath"
+  if not command_exists("robocopy") then
+    missing[#missing + 1] = "robocopy"
   end
   return missing
+end
+
+-- 不可用判决的唯一出口:组装诊断、写 stderr、返回退出码(3)。deploy / deploy-diff /
+-- sync-data 共用同一份渲染,不各写一份格式。
+function M.emit_unavailable(tag, fields, lines, stderr)
+  local verdict = boundary.unavailable_verdict(tag, fields, lines)
+  local stream = stderr or io.stderr
+  stream:write(verdict.message)
+  if stream == io.stderr then
+    stream:flush()
+  end
+  return verdict.exit_code
+end
+
+-- 家目录不可用的诊断正文(deploy / deploy-diff / sync-data 共用同一份口径)。
+function M.home_unavailable_lines(detail)
+  return {
+    tostring(detail or "无法解析原生 Windows 家目录(%USERPROFILE%)。"),
+    "本次未改动任何部署目录;退出码 " .. tostring(boundary.UNAVAILABLE_EXIT_CODE)
+      .. " 表示环境不可用,不是部署失败。",
+    "处理: 在原生 Windows 上运行(非 WSL),确认 %USERPROFILE% 已设置(cmd /c echo %USERPROFILE% 有输出)。",
+  }
 end
 
 local function _script_dir()
@@ -80,32 +103,34 @@ local function _is_file(path)
   return fs_lib.path_exists(path) and not fs_lib.is_dir(path)
 end
 
--- Windows 侧家目录从 %USERPROFILE% 动态解析,不在代码里硬编码用户名:
--- 在 /mnt/c 下起 cmd.exe(UNC 工作目录会让 cmd 回落到 C:\Windows,所以先 cd
--- 到 /mnt/c),由 cmd.exe 自己展开 %USERPROFILE%;拿回的盘符路径只在这里经
--- wslpath -u 换算成 WSL 路径,之后一律按 POSIX 演算。任何一步失败都返回 "",由
--- 调用方按「不可用」处理。run 是命令执行注入缝(默认读回合并输出),供测试替身。
-function M.resolve_windows_home_dir(run)
+-- 家目录解析的唯一实现(ADR 0083 第 5 条;deploy / deploy-diff / sync-data / probe
+-- 都只走这一处,不出现第二份):直接读原生 %USERPROFILE%,不经互操作层、不做挂载点
+-- 路径换算;只有环境变量缺失时才用 `cmd /c echo %USERPROFILE%` 兜底。
+-- 拿回的盘符路径只做正斜杠归一(盘符开头的 Windows 绝对路径形态),不做路径换算;
+-- 不是盘符绝对路径(空、相对、UNC)一律返回 "",由调用方按「不可用」处理。
+-- run 是命令执行注入缝(默认读回合并输出),getenv 是环境读取注入缝(默认 os.getenv)。
+function M.resolve_windows_home_dir(run, getenv)
   run = run or _run
-  local profile = text_lib.trim(run("cd /mnt/c 2>/dev/null && cmd.exe /d /c 'echo %USERPROFILE%' 2>/dev/null"))
+  getenv = getenv or os.getenv
+  local profile = text_lib.trim(getenv("USERPROFILE") or "")
+  if profile == "" then
+    profile = text_lib.trim(run("cmd /c echo %USERPROFILE%"))
+  end
   if profile == "" or not profile:match("^%a:") then
     return ""
   end
-  local converted = text_lib.trim(run("wslpath -u " .. shell_lib.shell_quote(profile) .. " 2>/dev/null"))
-  if converted == "" or not path_lib.is_absolute_path(converted) then
-    return ""
-  end
-  return (path_lib.normalize_path(converted))
+  return (path_lib.normalize_path(profile):gsub("/+$", ""))
 end
 
--- 家目录:部署目标始终是 Windows 侧家目录;WSL 的 $HOME 只作为测试与沙箱的
--- 显式覆写面(环境变量 MONOPOLY_DEPLOY_HOME),不参与默认目标推导。
-function M.resolve_home_dir()
-  local override = os.getenv("MONOPOLY_DEPLOY_HOME")
+-- 家目录:部署目标始终是 Windows 侧家目录;MONOPOLY_DEPLOY_HOME 只作为测试与沙箱的
+-- 显式覆写面,不参与默认目标推导。
+function M.resolve_home_dir(getenv)
+  getenv = getenv or os.getenv
+  local override = getenv("MONOPOLY_DEPLOY_HOME")
   if text_lib.trim(override) ~= "" then
     return (path_lib.normalize_path(override))
   end
-  return M.resolve_windows_home_dir()
+  return M.resolve_windows_home_dir(nil, getenv)
 end
 
 -- 部署 payload(与 main 的拷贝清单一致)。部署按工作树原样拷贝,真机插桩靠的正是这一点,
@@ -159,25 +184,24 @@ function M.resolve_normalized_path(path_text)
   if candidate:sub(1, 2) == "~/" or candidate:sub(1, 2) == "~\\" then
     candidate = path_lib.join_path(M.resolve_home_dir(), candidate:sub(3))
   end
+  if path_lib.is_absolute_path(candidate) then
+    return (path_lib.simplify_path(candidate):gsub("/+$", ""))
+  end
   local full = path_lib.resolve_path(env_lib.current_dir(), candidate)
   return (full:gsub("/+$", ""))
 end
 
--- 平台名:部署目标恒为 Windows 宿主;运行面必须是能起 cmd.exe + wslpath 的 WSL。
+-- 平台名:部署目标恒为 Windows 宿主;运行面必须是能起原生 robocopy 的原生 Windows。
 -- 不可用时退 3(环境问题),不打印 ERROR(那不是部署失败)。
 function M.resolve_platform_name()
-  local missing = M.detect_interop()
+  local missing = M.detect_native_tools()
   if #missing > 0 then
-    local boundary = require("foundation.platform_boundary")
-    local verdict = boundary.unavailable_verdict("deploy", " step=interop", {
-      "部署需要 WSL 互操作面:缺 " .. table.concat(missing, ", ") .. "。",
-      "本次未改动任何部署目录;退出码 " .. boundary.UNAVAILABLE_EXIT_CODE
+    os.exit(M.emit_unavailable("deploy", " step=native-tools", {
+      "部署需要原生 Windows 工具:缺 " .. table.concat(missing, ", ") .. "。",
+      "本次未改动任何部署目录;退出码 " .. tostring(boundary.UNAVAILABLE_EXIT_CODE)
         .. " 表示环境不可用,不是部署失败。",
-      "处理: 在 WSL Ubuntu 中运行,并确认 /mnt/c 已挂载(cmd.exe 与 wslpath 可见)。",
-    })
-    io.stderr:write(verdict.message)
-    io.stderr:flush()
-    os.exit(verdict.exit_code)
+      "处理: 在原生 Windows 上运行(非 WSL),确认 robocopy 在 PATH 上(C:/Windows/System32/Robocopy.exe)。",
+    }))
   end
   return "win"
 end
@@ -193,10 +217,12 @@ function M.target_path_for_home(home_dir)
   )
 end
 
-function M.resolve_default_target_path()
-  local home_dir = M.resolve_home_dir()
+-- 默认目标:<home>/Desktop/dev/eggy/LuaSource_大富翁。家目录取不到是不可用(退 3),
+-- 不是部署失败(退 1),所以这里返回 (nil, 原因),由调用方按不可用判决处理。
+function M.resolve_default_target_path(getenv)
+  local home_dir = M.resolve_home_dir(getenv)
   if text_lib.trim(home_dir) == "" then
-    M.exit_with_error("Cannot resolve the Windows home directory (%USERPROFILE%) for the default deploy target.")
+    return nil, "无法解析原生 Windows 家目录(%USERPROFILE%)。"
   end
   return M.target_path_for_home(home_dir)
 end
@@ -235,15 +261,53 @@ local function _collect_lua_files(path)
   return files
 end
 
--- 目录镜像:先删目标再整体拷贝,可观察结果与历史镜像语义一致(目标侧陈旧文件
--- 消失,源侧隐藏项与空目录保留,字节原样)。源缺失时先报错,目标保持不动。
--- 与 #222 前的逐文件实现不同:fs.copy_tree(cp -R)复制符号链接本身而非其指向内容;
--- payload 不含符号链接,结果不变。
+-- robocopy 的退出码不是 0/非 0:0..7 都是成功(0 无变化 / 1 有拷贝 / 2 有额外项被清 /
+-- 3 两者都有 …),>=8 才是失败(8 部分失败,16 致命错误)。照搬 0/非 0 会把正常部署判成失败。
+local _ROBOCOPY_SUCCESS_MAX = 7
+
+-- MSYS 系 bash(Git Bash / MSYS2)会把 /MIR 一类开关当成 POSIX 路径改写成
+-- C:/Program Files/Git/MIR(实测),用这两个变量关掉参数转换;MSYS bash 本身不改写,
+-- 多设一个变量无副作用。部署面因此不依赖某个特定 bash 的改写策略(ADR 0083 第 5 条)。
+local _ROBOCOPY_ENV = "MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 "
+local _ROBOCOPY_FLAGS = { "/MIR", "/NFL", "/NDL", "/NJH", "/NJS", "/NP" }
+
+-- 镜像拷贝的唯一命令构造:/MIR 的可观察结果与历史实现一致——目标侧陈旧文件与目录
+-- 消失,源侧隐藏项与空目录保留,字节原样;/NFL /NDL /NJH /NJS /NP 只压输出噪音。
+function M.robocopy_command(source_dir, target_dir)
+  local source = path_lib.normalize_path(source_dir):gsub("/+$", "")
+  local target = path_lib.normalize_path(target_dir):gsub("/+$", "")
+  local parts = {
+    _ROBOCOPY_ENV .. "robocopy",
+    shell_lib.shell_quote(source),
+    shell_lib.shell_quote(target),
+  }
+  for _, flag in ipairs(_ROBOCOPY_FLAGS) do
+    parts[#parts + 1] = flag
+  end
+  return table.concat(parts, " ")
+end
+
+function M.robocopy_succeeded(code)
+  return type(code) == "number" and code >= 0 and code <= _ROBOCOPY_SUCCESS_MAX
+end
+
+-- robocopy 执行缝:返回退出码。测试注入桩,不真跑 robocopy。
+function M.run_robocopy(command)
+  local result = proc_lib.run_command(command)
+  return result and result.code or 1
+end
+
+-- 目录镜像:交给原生 robocopy /MIR。源缺失时先报错,目标保持不动。
 function M.copy_directory_tree(source_dir, target_dir)
   if not fs_lib.is_dir(source_dir) then
     error("Source directory does not exist: " .. tostring(source_dir))
   end
-  _check(fs_lib.copy_tree(source_dir, target_dir))
+  local command = M.robocopy_command(source_dir, target_dir)
+  local code = M.run_robocopy(command)
+  if not M.robocopy_succeeded(code) then
+    error("robocopy failed with exit code " .. tostring(code) .. ": " .. command)
+  end
+  return true
 end
 
 function M.copy_file_with_parent_dir(source_path, target_path)
@@ -342,7 +406,10 @@ end
 local function main()
   local project_root = M.resolve_project_root()
   local resolved_platform = M.resolve_platform_name()
-  local target_source = M.resolve_default_target_path()
+  local target_source, home_err = M.resolve_default_target_path()
+  if target_source == nil then
+    os.exit(M.emit_unavailable("deploy", " step=home", M.home_unavailable_lines(home_err)))
+  end
   local target_path = M.resolve_normalized_path(target_source)
 
   _check(fs_lib.ensure_dir(target_path))
@@ -352,7 +419,7 @@ local function main()
   M.write_info("======================================")
   M.write_info("Project root: " .. tostring(project_root))
   M.write_info("Target path: " .. tostring(target_path))
-  M.write_info("Target platform: " .. tostring(resolved_platform) .. " (written from WSL via /mnt/c)")
+  M.write_info("Target platform: " .. tostring(resolved_platform) .. " (native Windows via robocopy)")
   M.write_info("")
   M.write_info("--------------------------------------")
   M.write_info("Deploy target: " .. tostring(target_path))

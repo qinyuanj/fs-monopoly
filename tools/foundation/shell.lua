@@ -1,12 +1,17 @@
--- 纯命令行演算:拼 shell 命令串、把 os.execute 的返回收成 (成功, 退出码)。
--- 不起子进程、不碰文件系统——起进程的是 proc,落盘的是 fs。
+-- 命令行演算 + 全仓唯一执行缝:拼 shell 命令串、把执行结果收成 (成功, 退出码)、
+-- 以及把命令真正交给 bash 跑。
 --
--- 这条边界的意义是:命令拼装与退出码判定可以脱离进程单测,不需要真跑一条命令。
+-- 分工:命令**拼装**(shell_quote / build_command / build_env_lines / wrap_command_with_cwd)
+-- 仍是纯演算,可以脱离进程单测;命令**执行**收在 shell.execute 一处,实现在
+-- foundation/bash.lua(只依赖 os/io,故不与 env/fs 形成环)。
 --
--- WSL Ubuntu 单平台(ADR 0073):引号按 POSIX sh 口径(单引号包裹,内部单引号
--- 写成 '\'');环境变量按 `NAME=value cmd` 前缀导出。
+-- 原生 Windows 单平台(ADR 0083):引号按 POSIX sh 口径(单引号包裹,内部单引号
+-- 写成 '\'');环境变量按 `NAME=value cmd` 前缀导出。原生 Lua 的 os.execute 在
+-- Windows 走 cmd.exe,所以执行必须经 shell.execute,不得在别处直接 os.execute。
 local number_utils = require("src.foundation.number")
 local path_lib = require("foundation.path")
+local bash_lib = require("foundation.bash")
+local boundary = require("foundation.platform_boundary")
 
 local shell = {}
 
@@ -65,6 +70,27 @@ function shell.wrap_command_with_cwd(command, cwd)
     return tostring(command or "")
   end
   return "cd " .. shell.shell_quote(cwd_path) .. " && " .. tostring(command or "")
+end
+
+-- 执行缝的公开入口(ADR 0083):全仓唯一的命令执行入口,内部一律经 bash
+-- (实现在 foundation/bash.lua,执行 + 读回输出只有那一份实现)。
+--   默认返回 os.execute 形态 → (ok, "exit", code);找不到 bash 时 (nil, "unavailable", 3)。
+--   options.capture = true 时返回 (output, ok, code),把 stdout+stderr 读回——需要读
+--   子进程输出的调用方用它,不再各自拼 io.popen。找不到 bash 时 (nil, nil, 3)。
+-- options.bash 可钉定解释器(测试用)。
+function shell.execute(command, options)
+  return bash_lib.execute(command, options)
+end
+
+-- bash 缺失时的不可用诊断(可机读状态词 + 安装指引),交各入口原样写 stderr 并退 3。
+function shell.bash_unavailable_message(reason)
+  local detail = reason or bash_lib.last_unavailable() or "no usable bash found"
+  return boundary.unavailable_verdict("shell", " tool=bash step=discover", {
+    "detail: " .. tostring(detail),
+    "本仓工具链经 bash 执行命令(ADR 0083)。",
+    "安装 Git for Windows 并把 bash 放进 PATH,或用 MONOPOLY_BASH 指向可执行的 bash:",
+    "  https://gitforwindows.org/  (默认 C:/Program Files/Git/bin/bash.exe)",
+  }).message
 end
 
 return shell

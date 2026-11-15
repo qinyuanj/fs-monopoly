@@ -1,9 +1,23 @@
--- WSL Ubuntu 并行车道(ADR 0073):每条 lane 在自己的会话/进程组里跑,父进程
--- 用一次阻塞等待收全部结果;超时按进程组收容,不只杀直接子进程。
+-- 原生 Windows 并行车道(ADR 0083):每条 lane 在自己的 launcher 脚本里跑,父进程
+-- 等一次收全部结果。
+--
+-- 进程组收容已退场:原生 Windows 与 Git Bash 都没有 setsid。超时按「尽力收容」
+-- 处理——看门狗到点先发布 124 timeout,再对直接子进程发一次 SIGKILL;lane 内自己
+-- 派出的后台写手可能存活。原生进程树收容(cmd /c start + taskkill /T /F)与它的
+-- 取证记为后续项,不在 #236 落地(ADR 0083)。
+--
+-- 为什么是「一个 supervisor 起全部 lane」而不是「逐 lane 起一次」:MSYS 的 bash
+-- 在退出前会等完自己的后台作业(实测 bash -c 'sleep 5 &' 要等满 5 秒才返回),
+-- 所以逐 lane 起一次 bash 会把 lane 串行化——后一条 lane 要等前一条收场才开工,
+-- 分片并行就退化成了串行。把所有 lane 的启动放进同一个 bash 脚本(各自 & 起来)
+-- 再等它们发布完成状态,并行才真正成立。
 --
 -- 与串行路径的契约逐字节一致:同一条命令串在串行里经 foundation.proc 执行,
 -- 在这里经 lane 脚本里的 `sh` 执行;argv 表两处都由 shell.build_command 拼装,
--- 因此子进程看到的 arg[0] 与串行相同(不再需要 Windows 时代的 where.exe 解析)。
+-- 因此子进程看到的 arg[0] 与串行相同。
+--
+-- lane 经统一执行缝(foundation.shell.execute,内部 bash)起,不直接 os.execute:
+-- 原生 Lua 的 os.execute 走 cmd.exe,既起不了 `sh ... &`,也读不懂 POSIX 引号。
 local boundary = require("foundation.platform_boundary")
 local env = require("foundation.env")
 local fs = require("foundation.fs")
@@ -21,48 +35,31 @@ local function _status(entry)
   return tonumber(code), reason
 end
 
--- 父进程一次性阻塞等待全部 lane 发布完成(#107 的 POSIX 形态):一个等待脚本
--- 轮询完成文件直到截止时间,不逐 lane 起进程、不依赖文件监视 API。
-local function _wait_all(pending, seconds)
-  if #pending == 0 then return true end
-  local list = env.make_temp_path("parallel_wait", ".txt")
-  local ok, write_err = fs.write_file(list, table.concat(pending, "\n") .. "\n")
-  if not ok then return nil, write_err end
-  local waiter = env.make_temp_path("parallel_wait", ".sh")
-  fs.write_file(waiter, table.concat({
-    "#!/bin/sh",
-    "deadline=$(( $(date +%s) + " .. tostring(math.max(0, math.floor(seconds))) .. " ))",
-    "while read -r status; do",
-    "  [ -n \"$status\" ] || continue",
-    "  while [ ! -e \"$status\" ]; do",
-    "    [ \"$(date +%s)\" -lt \"$deadline\" ] || exit 124",
-    "    sleep 0.05",
-    "  done",
-    "done < \"$1\"",
-    "exit 0",
-    "",
-  }, "\n"))
-  local result = proc.run_command({ "sh", waiter, list })
-  fs.remove_path(list)
-  fs.remove_path(waiter)
-  return result.code == 0, result.code
-end
-
--- 进程组收容:launcher 起在自己的进程组里,组 id 就是它自己的 pid。Linux 用
--- setsid 起新会话;macOS 没有 setsid 命令,改由 `set -m` 的作业控制给后台作业
--- 单独建组(组 id 同样是 launcher 的 pid)。
--- 收容只按组发一次 SIGKILL:launcher 自己也在组里,于是不会出现「收容后父进程
--- 继续写完成状态」的竞态;未发布完成状态即意味着整棵 lane 树被停掉。
-local function _kill_group(pid_file)
+-- 尽力收容:按 status.pid 记的 pid 逐个 SIGKILL,失败就放过。
+-- 不再有 `kill -- -<pgid>`:没有 setsid 就没有可复用的进程组,硬按组发信号会
+-- 波及父进程自己所在的组。原生 Windows 上 MSYS 的 kill 只能停 MSYS 进程,
+-- 直接子进程派出的原生进程可能存活——这正是「尽力」的含义。
+local function _stop_lane(pid_file)
   local identity = fs.read_raw(pid_file)
-  local group = identity and identity:match("(%d+)")
-  if group == nil then return end
-  proc.run_command("kill -s KILL -- -" .. group .. " 2>/dev/null")
+  if identity == nil then return end
+  for pid in tostring(identity):gmatch("%d+") do
+    proc.run_command("kill -s KILL " .. pid .. " 2>/dev/null")
+  end
 end
 
--- 计时由 lane 自己的看门狗执行(与命令同一进程组),父进程只阻塞等待完成状态:
--- 两处不各算一份超时,也就不会出现「父进程先到点、lane 却已正常发布」的分叉。
-local function _launch(entry, timeout)
+-- 执行缝只返回 os.execute 的 Lua 5.4 形态 (ok, "exit"|"unavailable", code)。
+-- 判定一律折到 shell.exit_status,不在本模块另造一套。
+-- 返回 nil 表示「执行缝不可用」(bash 起不来),false 表示命令没成功。
+local function _started_ok(ok, kind, code)
+  if kind == "unavailable" then
+    return nil
+  end
+  return shell.exit_status(ok, kind, code)
+end
+
+-- 写一条 lane 的两个脚本:command.sh 是真正要跑的串,launcher.sh 是它的看门狗
+-- 与完成状态发布者。不在这里启动——启动统一由 supervisor 脚本一次做完。
+local function _write_lane_scripts(entry, timeout)
   local env_prefix = entry.env_lines ~= "" and (entry.env_lines .. " ") or ""
   local command_text = type(entry.cmd) == "table" and shell.build_command(entry.cmd) or tostring(entry.cmd)
   local command_ok, command_err = fs.write_file(entry.dir .. "/command.sh", table.concat({
@@ -72,43 +69,73 @@ local function _launch(entry, timeout)
     "",
   }, "\n"))
   if not command_ok then return nil, command_err end
+
   -- 完成状态用「写临时文件再 mv」发布:等待方看到 status 文件即看到完整结论。
   -- status.pid 同时记 lane 所有者与真正命令进程的 pid(串行路径只暴露一个)。
-  -- 看门狗到点按组发 SIGKILL 并直接发布 124 timeout——kill 之后同一脚本不再有
-  -- 机会被调度,所以结论必须由看门狗自己写。
+  --
+  -- 看门狗到点先发布 124 timeout、再 kill 直接子进程;launcher 在 wait 返回后
+  -- 发现 status 已存在就不再覆盖——顺序是确定的,不会把 timeout 改写成 exit。
+  local status = shell.shell_quote(entry.status)
+  local status_done = shell.shell_quote(entry.status .. ".done")
   local launcher_ok, launcher_err = fs.write_file(entry.dir .. "/launcher.sh", table.concat({
     "#!/bin/sh",
-    "(" .. "sleep " .. tostring(math.max(1, math.floor(timeout))) .. "; "
-      .. "printf '%s %s\\n' 124 timeout > " .. shell.shell_quote(entry.status .. ".done") .. "; "
-      .. "mv " .. shell.shell_quote(entry.status .. ".done") .. " " .. shell.shell_quote(entry.status) .. "; "
-      .. "kill -s KILL -- -$$" .. ") >/dev/null 2>&1 &",
-    "watchdog=$!",
-    "sh " .. shell.shell_quote(entry.dir .. "/command.sh") .. " > " .. shell.shell_quote(entry.output) .. " 2>&1 &",
+    "sh " .. shell.shell_quote(entry.dir .. "/command.sh")
+      .. " > " .. shell.shell_quote(entry.output) .. " 2>&1 &",
     "child=$!",
     "echo \"$$ $child\" > " .. shell.shell_quote(entry.status .. ".pid"),
+    "(" .. "sleep " .. tostring(math.max(1, math.floor(timeout))) .. "; "
+      .. "printf '%s %s\\n' 124 timeout > " .. status_done .. "; "
+      .. "mv " .. status_done .. " " .. status .. "; "
+      .. "kill -s KILL \"$child\" 2>/dev/null" .. ") >/dev/null 2>&1 &",
+    "watchdog=$!",
     "wait \"$child\"",
     "code=$?",
     "kill -KILL \"$watchdog\" 2>/dev/null",
+    "[ -e " .. status .. " ] && exit 0",
     "reason=exit",
     "[ \"$code\" -eq 127 ] && reason=launch_failed",
     "[ \"$code\" -eq 137 ] && reason=timeout",
-    "printf '%s %s\\n' \"$code\" \"$reason\" > " .. shell.shell_quote(entry.status .. ".done"),
-    "mv " .. shell.shell_quote(entry.status .. ".done") .. " " .. shell.shell_quote(entry.status),
+    "printf '%s %s\\n' \"$code\" \"$reason\" > " .. status_done,
+    "mv " .. status_done .. " " .. status,
     "",
   }, "\n"))
   if not launcher_ok then return nil, launcher_err end
-  local launcher = shell.shell_quote(entry.dir .. "/launcher.sh")
-  local owner_log = shell.shell_quote(entry.dir .. "/owner.log")
-  local start_command
-  if boundary.host_platform() == boundary.MACOS then
-    start_command = "sh -c " .. shell.shell_quote("set -m; sh \"$1\" > \"$2\" 2>&1 &")
-      .. " sh " .. launcher .. " " .. owner_log
-  else
-    start_command = "setsid sh " .. launcher .. " > " .. owner_log .. " 2>&1 &"
-  end
-  local started = os.execute(start_command)
-  if not shell.exit_status(started) then return nil, "failed to start lane owner" end
   return true
+end
+
+-- supervisor:一次 bash 会话里把全部 lane 起起来(各自 &),再等它们发布完成状态。
+--
+-- 等待预算用「轮询次数」而不是墙钟:原生 Windows 上 `date +%s` 会解析到 Windows
+-- 的 date.exe 并弹出「输入新日期」的交互提示(把无头运行挂死),所以脚本里不出现
+-- date。每轮 0.05s,limit = 秒数 × 20。
+local function _write_supervisor(entries, budget_seconds)
+  local lines = { "#!/bin/sh" }
+  for _, entry in ipairs(entries) do
+    lines[#lines + 1] = "sh " .. shell.shell_quote(entry.dir .. "/launcher.sh")
+      .. " > " .. shell.shell_quote(entry.dir .. "/owner.log") .. " 2>&1 &"
+  end
+  lines[#lines + 1] = "limit=" .. tostring(math.max(1, math.floor(budget_seconds)) * 20)
+  lines[#lines + 1] = "i=0"
+  lines[#lines + 1] = "set --"
+  for _, entry in ipairs(entries) do
+    lines[#lines + 1] = "set -- \"$@\" " .. shell.shell_quote(entry.status)
+  end
+  lines[#lines + 1] = "while [ $# -gt 0 ]; do"
+  lines[#lines + 1] = "  ready=1"
+  lines[#lines + 1] = "  for s in \"$@\"; do"
+  lines[#lines + 1] = "    [ -e \"$s\" ] || { ready=0; break; }"
+  lines[#lines + 1] = "  done"
+  lines[#lines + 1] = "  [ \"$ready\" -eq 1 ] && exit 0"
+  lines[#lines + 1] = "  i=$((i + 1))"
+  lines[#lines + 1] = "  [ \"$i\" -lt \"$limit\" ] || exit 124"
+  lines[#lines + 1] = "  sleep 0.05"
+  lines[#lines + 1] = "done"
+  lines[#lines + 1] = "exit 0"
+  lines[#lines + 1] = ""
+  local supervisor = env.make_temp_path("parallel_supervisor", ".sh")
+  local ok, err = fs.write_file(supervisor, table.concat(lines, "\n"))
+  if not ok then return nil, err end
+  return supervisor
 end
 
 function M.run(lanes, opts)
@@ -117,7 +144,6 @@ function M.run(lanes, opts)
   local env_lines = shell.build_env_lines(opts.env)
   local cwd = env.current_dir()
   local entries = {}
-  local started = os.time()
   for _, lane in ipairs(lanes or {}) do
     local unique = env.make_temp_path("parallel_lane", "")
     local dir = opts.lane_dir and path.join_path(opts.lane_dir, unique:match("[^/]+$")) or unique
@@ -126,21 +152,42 @@ function M.run(lanes, opts)
     entries[#entries + 1] = entry
     local prepared, prepare_err = fs.ensure_dir(dir)
     if prepared then
-      local launched, launch_err = _launch(entry, timeout)
-      if not launched then entry.launch_error = tostring(launch_err) end
+      local written, write_err = _write_lane_scripts(entry, timeout)
+      if not written then entry.launch_error = tostring(write_err) end
     else
       entry.launch_error = tostring(prepare_err)
     end
   end
-  local pending = {}
+
+  -- 起得了的 lane 集合:准备失败的 lane 不进 supervisor(它没有 launcher 可起)。
+  local runnable = {}
   for _, entry in ipairs(entries) do
-    if not entry.launch_error and _status(entry) == nil then pending[#pending + 1] = entry.status end
+    if entry.launch_error == nil then runnable[#runnable + 1] = entry end
   end
-  local deadline_expired = false
-  if #pending > 0 then
-    local waited, wait_code = _wait_all(pending, started + timeout + 30 - os.time())
-    deadline_expired = waited ~= true and wait_code == 124
+
+  local unavailable
+  if #runnable > 0 then
+    local supervisor, supervisor_err = _write_supervisor(runnable, timeout + 30)
+    if supervisor == nil then
+      unavailable = "failed to write lane supervisor: " .. tostring(supervisor_err)
+    else
+      local ok, kind, code = shell.execute("sh " .. shell.shell_quote(supervisor))
+      fs.remove_path(supervisor)
+      local started_ok = _started_ok(ok, kind, code)
+      if started_ok == nil then
+        unavailable = shell.bash_unavailable_message()
+      elseif not started_ok then
+        -- supervisor 自己没跑起来:不是 lane 的测试结论,是启动问题。
+        unavailable = "failed to start lane supervisor (exit " .. tostring(code) .. ")"
+      end
+    end
   end
+
+  local deadline_expired = unavailable == nil
+  for _, entry in ipairs(runnable) do
+    if _status(entry) == nil then deadline_expired = true end
+  end
+
   local all_ok, results = #entries > 0, {}
   for _, entry in ipairs(entries) do
     local code, reason = _status(entry)
@@ -148,10 +195,15 @@ function M.run(lanes, opts)
     local identity = fs.read_raw(entry.status .. ".pid") or ""
     result.owner_pid, result.child_pid = identity:match("(%d+)%s+(%d+)")
     if code == nil then
-      -- 未发布完成状态:按组收容整棵 lane 进程树,再落结论。
-      _kill_group(entry.status .. ".pid")
+      -- 未发布完成状态:尽力收容,再落结论。
+      _stop_lane(entry.status .. ".pid")
     end
-    if entry.launch_error then
+    if unavailable ~= nil then
+      -- 执行缝不可用 / supervisor 起不来:环境不可用(退 3),不是测试失败。
+      result.reason, result.message = "unavailable", unavailable
+      result.exit_code = boundary.UNAVAILABLE_EXIT_CODE
+      result.output = unavailable
+    elseif entry.launch_error then
       result.reason, result.message = "launch_failed", entry.launch_error
     elseif code == nil and deadline_expired then
       result.reason, result.message = "timeout", "Lane " .. tostring(entry.label) .. " exceeded " .. timeout .. "s"
@@ -182,7 +234,8 @@ function M.run(lanes, opts)
     end
     if not result.ok then
       all_ok = false
-      if result.message and (result.output == "" or result.reason ~= "exit") then
+      if result.reason ~= "unavailable" and result.message
+          and (result.output == "" or result.reason ~= "exit") then
         result.output = result.output .. (result.output == "" and "" or "\n") .. result.message .. "\n"
       end
     end

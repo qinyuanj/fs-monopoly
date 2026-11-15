@@ -25,46 +25,101 @@ function runtime_path_ops.dirname(path)
   return normalized:match("^(.*)/[^/]+$") or "."
 end
 
--- 当前目录以 `pwd -L` 为准,PWD 只在起不了子进程时兜底。
+-- MSYS 形态 /d/dev/... → D:/dev/...(内部口径只认正斜杠 Windows 绝对路径)。
+-- 盘符形态与已是相对的形态原样返回。
+local function _normalize_msys_path(value)
+  local normalized = runtime_path_ops.normalize(value)
+  local drive, rest = normalized:match("^/(%a)/(.*)$")
+  if drive ~= nil then
+    return drive:upper() .. ":/" .. rest
+  end
+  return normalized
+end
+
+-- 当前目录真源是 `cygpath -a -m .`(ADR 0083):它把 cwd 直接给出 D:/… 形态。
+-- 本机实测的两个坑:`cygpath -m .` 返回相对形式 ".",`pwd -W` 在 MSYS bash 下
+-- 不支持,所以只用 -a -m。PWD 只在起不了子进程时兜底,且要先把 MSYS 形态归一。
 -- 不能直接信 PWD:Python subprocess(cwd=...) 起子进程时只改真实 cwd,不更新
 -- 继承来的 PWD(mutator 就是这样起 worker 的),照抄 PWD 会把父进程目录当 cwd。
--- `pwd -L` 保留逻辑路径(不解析符号链接),且 shell 会核对 PWD 是否仍指向当前
--- 目录,失配时按真实 cwd 输出。
+-- 本文件被 bootstrap 在 package.path 装好之前 dofile,所以只能用本文件内的纯 Lua
+-- 原语:io.popen 起 bash 要显式给解释器,不能 require foundation.bash。
 function runtime_path_ops.current_dir()
-  local process = io.popen("pwd -L 2>/dev/null")
-  if process ~= nil then
-    local output = process:read("*a") or ""
-    process:close()
-    local normalized = runtime_path_ops.normalize(output):gsub("%s+$", "")
-    if normalized ~= "" then
-      return normalized
+  local bash_lib = _G.__monopoly_runtime_bash
+  if bash_lib == nil then
+    local ok, loaded = pcall(require, "foundation.bash")
+    if ok then
+      bash_lib = loaded
+      _G.__monopoly_runtime_bash = loaded
+    end
+  end
+
+  if bash_lib ~= nil then
+    -- 经执行缝跑 cygpath:io.popen 在原生 Windows 上走 cmd.exe,单引号与
+    -- `2>/dev/null` 都不成立,拿到的不是 cygpath 的输出而是 cmd 的报错。
+    -- capture 形态返回 (output, ok, code);必须核对退出码:cygpath 缺席时 stderr
+    -- 会被 2>&1 合流读回,把报错文本当 cwd 会让仓根定位漂到子进程目录以外(#234 F8)。
+    local output, ok, code = bash_lib.execute("cygpath -a -m .", { capture = true })
+    if output ~= nil and ok == true and (code == nil or code == 0) then
+      local normalized = runtime_path_ops.normalize(output):gsub("%s+$", "")
+      if normalized ~= "" then
+        return _normalize_msys_path(normalized)
+      end
     end
   end
 
   local env_cwd = os.getenv("PWD")
   if env_cwd ~= nil and env_cwd ~= "" then
-    return runtime_path_ops.normalize(env_cwd)
+    return _normalize_msys_path(env_cwd)
   end
   return "."
 end
 
--- 存在性判定纯 Lua:io.open 对目录同样返回句柄;打不开时用 os.rename(p, p)
--- 兜底(无权限读的目录仍可 rename 成功)。不起子进程。
-function runtime_path_ops.path_exists(path)
+-- 存在性 / 目录判定:**只读、无副作用**(ADR 0083 / #234 F7)。
+--
+-- 判据来自 io.open 的 errno,不写探针文件、不起子进程:
+--   * 打开成功                       → 普通(可读)文件;
+--   * errno == ENOENT(2)             → 不存在;
+--   * errno == EACCES(13)/EPERM(1)/EISDIR(21) → 是目录(原生 Windows 对目录一律
+--     ERROR_ACCESS_DENIED,与目录 ACL 是否可写无关——旧「建探针文件」法正因如此
+--     把不可写目录误判成不存在,并真的在部署目录里写字);
+--   * 其他 errno                     → "unknown",由调用方(foundation.fs)经统一执行缝
+--     `test -d` / `test -e` 仲裁。
+-- 返回 "file" | "dir" | "missing" | "unknown" 之一。
+local _ENOENT, _EPERM, _EACCES, _EISDIR = 2, 1, 13, 21
+
+function runtime_path_ops.probe_path(path)
   if path == nil or path == "" then
-    return false
+    return "missing"
   end
-  local file = io.open(path, "rb")
-  if file ~= nil then
-    file:close()
-    return true
+  local handle, _, errno = io.open(path, "rb")
+  if handle ~= nil then
+    handle:close()
+    return "file"
   end
-  return os.rename(path, path) ~= nil
+  if errno == _ENOENT then
+    return "missing"
+  end
+  if errno == _EACCES or errno == _EPERM or errno == _EISDIR then
+    return "dir"
+  end
+  return "unknown"
 end
 
--- 只认 POSIX 根 "/"(ADR 0073):盘符不是绝对路径的特例。
+-- bootstrap 在 package.path 装好前用它,所以只走纯 Lua probe_path(不 require、不起进程)。
+-- "unknown" 按存在处理:让后续真实 IO 自己报错,不在这里静默判缺失。
+function runtime_path_ops.path_exists(path)
+  return runtime_path_ops.probe_path(path) ~= "missing"
+end
+
+function runtime_path_ops.is_dir(path)
+  return runtime_path_ops.probe_path(path) == "dir"
+end
+
+-- 绝对路径判定(ADR 0083):盘符形态 D:/… / C:/… 与 POSIX 根 "/" 都算绝对。
+-- /c/… 与 /d/… 的 MSYS 形态虽然也以 / 开头,但它不是内部口径——归一由调用方负责。
 function runtime_path_ops.is_absolute(path)
-  return runtime_path_ops.normalize(path):sub(1, 1) == "/"
+  local normalized = runtime_path_ops.normalize(path)
+  return normalized:sub(1, 1) == "/" or normalized:match("^%a:/") ~= nil
 end
 
 function runtime_path_ops.resolve_source_path(source_path, cwd)
