@@ -2,7 +2,7 @@
 if arg then rawset(arg, 0, "tools/packages/ops/test/test_deploy_diff.lua") end
 require("test.bootstrap").install_package_paths()
 
--- deploy-diff 的聚焦单测:判定走假 fs 与注入的互操作探测,不访问 /mnt/c;
+-- deploy-diff 的聚焦单测:判定走假 fs 与注入的家目录,不碰真实部署目录;
 -- 只有与 deploy.copy_payload 的往返用例落真实沙箱,目录都在系统临时区。
 local check = require("luassert")
 local env_lib = require("foundation.env")
@@ -11,8 +11,8 @@ local proc_lib = require("foundation.proc")
 local deploy = require("packages.ops.deploy")
 local deploy_diff = require("packages.ops.deploy_diff")
 
-local _WORK = "/work"
-local _HOME = "/fake/home"
+local _WORK = "C:/work"
+local _HOME = "C:/Users/tester"
 local _TARGET = _HOME .. "/Desktop/dev/eggy/LuaSource_大富翁"
 
 local function _sink()
@@ -86,9 +86,6 @@ end
 local function _run(files, overrides)
   local stdout, stderr = _sink(), _sink()
   local env = {
-    detect_interop = function()
-      return {}
-    end,
     resolve_home = function()
       return _HOME
     end,
@@ -196,38 +193,31 @@ it("nothing to compare is a failure, not a clean result", function()
   check.truthy(stderr:find("nothing was compared", 1, true), stderr)
 end)
 
-it("missing interop exits 3 with status=unavailable before touching the file system", function()
+it("an unresolved home exits 3 with status=unavailable before touching the file system", function()
   local code, stdout, stderr = _run({}, {
-    detect_interop = function()
-      return { "cmd.exe", "wslpath" }
-    end,
-    resolve_home = function()
-      error("must not resolve home without interop")
-    end,
-    fs = {},
-  })
-  check.equal(3, code)
-  check.equal("", stdout)
-  check.truthy(stderr:find("status=unavailable tool=deploy-diff step=interop", 1, true), stderr)
-  check.truthy(stderr:find("cmd.exe, wslpath", 1, true), stderr)
-end)
-
-it("an unresolved home exits 3 with status=unavailable", function()
-  local code, _, stderr = _run({}, {
     resolve_home = function()
       return ""
     end,
     fs = {},
   })
   check.equal(3, code)
+  check.equal("", stdout)
   check.truthy(stderr:find("status=unavailable tool=deploy-diff step=home", 1, true), stderr)
+  check.truthy(stderr:find("%USERPROFILE%", 1, true), stderr)
+  check.truthy(stderr:find("不是漂移", 1, true), stderr)
+end)
+
+-- 只读比对不需要 robocopy:缺它也不该退 3(那是 deploy 的依赖,不是比对的前提)。
+it("read-only comparison does not require robocopy", function()
+  local code = _run(_merged(_payload(_WORK), _payload(_TARGET)))
+  check.equal(0, code)
 end)
 
 it("extra arguments are a usage error, distinct from drift", function()
   local stderr = _sink()
   local code = deploy_diff.main({ "src" }, {
     stderr = stderr,
-    detect_interop = function()
+    resolve_home = function()
       error("must not run the check")
     end,
   })
@@ -280,15 +270,23 @@ it("the CLI routes deploy-diff to the read-only module", function()
   check.truthy(result.output:find("只读", 1, true), result.output)
 end)
 
-it("help states the target rule", function()
+it("help states the target rule and the native premise", function()
   local usage = deploy_diff.usage()
   check.truthy(usage:find("Desktop/dev/eggy/LuaSource_大富翁", 1, true), usage)
   check.truthy(usage:find("%USERPROFILE%", 1, true), usage)
   check.truthy(usage:find("MONOPOLY_DEPLOY_HOME", 1, true), usage)
+  check.truthy(usage:find("原生", 1, true), usage)
+  -- 退出码四态:0 / 1 / 2 / 3,且 3 只表示取不到家目录。
+  check.truthy(usage:find("退出码: 0", 1, true), usage)
+  check.truthy(usage:find("3 取不到", 1, true), usage)
+  -- 旧 WSL 互操作口径必须退场(不再说「经 cmd.exe 取家目录」「wslpath 换算」)。
+  check.is_nil(usage:find("cmd.exe 取值", 1, true), "help 不得再说经 cmd.exe 取家目录")
+  check.is_nil(usage:find("wslpath -u", 1, true), "help 不得再说 wslpath 换算")
+  check.is_nil(usage:find("WSL Ubuntu", 1, true), "help 不得再要求 WSL Ubuntu")
 end)
 
--- 探测函数桩成抛错:help 一旦碰 cmd.exe 或 wslpath,子进程非零退出。
-it("help does not probe cmd.exe or wslpath", function()
+-- 家目录解析桩成抛错:help 一旦解析家目录(或起 cmd 兜底),子进程非零退出。
+it("help does not resolve the home directory", function()
   local root = env_lib.make_temp_path("deploy_diff_help_spec", "")
   fs_lib.remove_path(root)
   check.is_true(fs_lib.ensure_dir(root))
@@ -297,8 +295,9 @@ it("help does not probe cmd.exe or wslpath", function()
   check.is_true(fs_lib.write_file(driver, table.concat({
     "package.path = " .. string.format("%q", repo .. "/?.lua;" .. repo .. "/tools/?.lua;") .. " .. package.path",
     "local deploy = require('packages.ops.deploy')",
-    "deploy.detect_interop = function() error('help probed interop') end",
     "deploy.resolve_home_dir = function() error('help resolved home') end",
+    "deploy.resolve_windows_home_dir = function() error('help resolved the windows profile') end",
+    "deploy.detect_native_tools = function() error('help probed native tools') end",
     "os.exit(require('packages.ops.deploy_diff').main({ '--help' }))",
     "",
   }, "\n")))

@@ -4,15 +4,15 @@
 --   M.main(args, env) -> 退出码(0 有命中 / 1 失败或超时无命中 / 2 用法错误 / 3 editor-cli 不可用)
 --   M.usage()         -> 完整 usage 文本(包内单一真源)
 --
--- 流程:解析 editor-cli.exe(经 cmd.exe 取 %USERPROFILE% 再 wslpath 换算,与 deploy 同一
--- 解析函数)→ status 确认 in_game_runtime True → 在用户脚本前注入 probe(...) 并包进
+-- 流程:解析 editor-cli.exe(原生 %USERPROFILE%/.eggitor/cli/editor-cli.exe,家目录解析
+-- 复用 deploy 那一份,不做互操作换算)→ status 确认 in_game_runtime True → 在用户脚本前注入 probe(...) 并包进
 -- EditorAPI.game_execute([==[ ... ]==]),写临时文件经 `exec --file` 执行(多行脚本不过
 -- shell 引号)→ 轮询 `log grep <标记>` 直到命中或超时,命中行打到 stdout。
 -- 不调用 play start / stop。
 --
 -- env 注入面(测试用;缺省即真实环境):
 --   run(argv|string, { cwd = ... }) -> { ok, code, output }   子进程执行器
---   command_exists(name) -> bool、resolve_home() -> Windows 家目录的 WSL 路径或 ""
+--   resolve_home() -> 原生 Windows 家目录(盘符开头的绝对路径形态)或 ""
 --   file_exists(path)、read_file(path) -> string|nil、write_file(path, text) -> bool、remove_file(path)
 --   now() -> 秒(标记用)、clock() -> 秒(超时用)、sleep(秒)、random_hex() -> string
 --   stdout / stderr(带 :write 的对象)
@@ -40,7 +40,8 @@ function M.usage()
     "  只把命中行(去掉行号前缀)打印到 stdout。",
     "  --timeout  等待命中的秒数,正数,默认 " .. DEFAULT_TIMEOUT,
     "",
-    "editor-cli 路径: %USERPROFILE%/" .. CLI_SUBDIR .. "/" .. EXE_NAME .. "(经 cmd.exe + wslpath 解析)。",
+    "editor-cli 路径: %USERPROFILE%/" .. CLI_SUBDIR .. "/" .. EXE_NAME
+      .. "(原生 Windows 直接解析,复用 deploy 的同一份家目录解析)。",
     "不会开启或结束试玩;不在试玩态时退 1,请先在编辑器里开启试玩。",
     "退出码:0 有命中 / 1 失败或超时无命中 / 2 用法错误 / 3 editor-cli 不可用(status=unavailable tool=editor-cli step=<步>)",
     "",
@@ -51,10 +52,6 @@ end
 
 local function _default_run(command, options)
   return require("foundation.proc").run_command(command, options)
-end
-
-local function _default_command_exists(name)
-  return require("foundation.proc").command_exists(name)
 end
 
 local function _default_file_exists(path)
@@ -80,7 +77,8 @@ local function _default_remove_file(path)
 end
 
 local function _default_sleep(seconds)
-  os.execute("sleep " .. string.format("%.3f", seconds))
+  -- 经 foundation 的执行缝跑 sleep:原生 Windows 的 os.execute 走 cmd.exe,不认 POSIX 写法。
+  require("foundation.proc").run_command({ "sleep", string.format("%.3f", seconds) })
 end
 
 local function _default_clock()
@@ -88,27 +86,22 @@ local function _default_clock()
   return os.time()
 end
 
+-- 标记里的随机段只用于「同一次 probe 的命中唯一」,不是安全随机源。原生 Windows 上
+-- 没有 /dev/urandom(那是 POSIX 路径,ADR 0083 已退场),这里按时间 + 时钟 + 对象地址
+-- 播种 Lua 的 PRNG 取 8 位十六进制;标记碰撞由轮询与日志内容兜底,不值得引入平台原语。
 local function _default_random_hex()
-  local handle = io.open("/dev/urandom", "rb")
-  local bytes = handle and handle:read(4) or nil
-  if handle then
-    handle:close()
-  end
-  if type(bytes) ~= "string" or #bytes ~= 4 then
-    math.randomseed(os.time(), os.clock() * 1000000)
-    return string.format("%08x", math.random(0, 0x7fffffff))
-  end
-  return (bytes:gsub(".", function(c)
-    return string.format("%02x", c:byte())
-  end))
+  local pointer = tostring({}):gsub("[^%w]+", "")
+  math.randomseed(os.time() + os.clock() * 1000000 + #pointer,
+    os.clock() * 1000000 + #tostring(os.getenv("PID") or ""))
+  return string.format("%08x", math.random(0, 0x7fffffff))
 end
 
--- 外层子壳:deploy 的命令自带 2>/dev/null,proc 在末尾追加 `> out 2>&1` 会覆盖它;
--- 包一层 ( ... ) 让内部重定向先生效,cmd.exe 的 UNC 警告不混进 %USERPROFILE% 输出。
+-- 家目录解析复用 deploy 的唯一实现:原生读 %USERPROFILE%,缺失时才经 run 跑
+-- `cmd /c echo %USERPROFILE%` 兜底(不经 /mnt/c)。
 local function _resolve_home_with(run)
   local deploy = require("packages.ops.deploy")
   return deploy.resolve_windows_home_dir(function(command)
-    local result = run("(" .. command .. ")")
+    local result = run(command)
     return result and result.output or ""
   end)
 end
@@ -118,7 +111,6 @@ local function _deps(env)
   local run = env.run or _default_run
   return {
     run = run,
-    command_exists = env.command_exists or _default_command_exists,
     resolve_home = env.resolve_home or function()
       return _resolve_home_with(run)
     end,
@@ -186,25 +178,13 @@ local function _fail(deps, message, detail)
   return 1
 end
 
--- 返回 (editor-cli 所在目录, nil) 或 (nil, 退出码)。
+-- 返回 (editor-cli 所在目录, nil) 或 (nil, 退出码)。原生定位,不做互操作探测。
 local function _locate_cli(deps)
-  local missing = {}
-  for _, name in ipairs({ "cmd.exe", "wslpath" }) do
-    if not deps.command_exists(name) then
-      missing[#missing + 1] = name
-    end
-  end
-  if #missing > 0 then
-    return nil, _unavailable(deps, "interop", {
-      "定位 editor-cli 需要 WSL 互操作面:缺 " .. table.concat(missing, ", ") .. "。",
-      "处理: 在 WSL Ubuntu 中运行,并确认 /mnt/c 已挂载(cmd.exe 与 wslpath 可见)。",
-    })
-  end
   local home = deps.resolve_home()
   if home == nil or home == "" then
     return nil, _unavailable(deps, "userprofile", {
-      "无法经 cmd.exe 解析 Windows %USERPROFILE%。",
-      "处理: 确认 /mnt/c 已挂载且 cmd.exe 可正常执行,再重跑。",
+      "无法解析原生 Windows 家目录(%USERPROFILE%)。",
+      "处理: 在原生 Windows 上运行(非 WSL),确认 %USERPROFILE% 已设置后重跑。",
     })
   end
   local dir = home:gsub("/+$", "") .. "/" .. CLI_SUBDIR

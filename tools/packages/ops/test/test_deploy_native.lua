@@ -26,6 +26,22 @@ it("missing source preserves existing target", function()
   end)
 end)
 
+-- robocopy /MIR 的命令形态:源/目标都是正斜杠 Windows 绝对路径,开关不被 MSYS 改写。
+it("robocopy command is the native mirror form", function()
+  local command = deploy.robocopy_command("C:/repo/src", "C:/Users/x/Desktop/dev/eggy/LuaSource_大富翁/src")
+  check.truthy(command:find("robocopy", 1, true), command)
+  check.truthy(command:find("'C:/repo/src'", 1, true), command)
+  check.truthy(command:find("'C:/Users/x/Desktop/dev/eggy/LuaSource_大富翁/src'", 1, true), command)
+  check.truthy(command:find("/MIR", 1, true), command)
+  -- 开关保持裸形:经 MSYS 系 bash 时 /MIR 会被改写成 C:/Program Files/Git/MIR,
+  -- 命令前置这两个变量关掉参数转换。
+  check.truthy(command:find("MSYS2_ARG_CONV_EXCL", 1, true), command)
+  check.truthy(command:find("MSYS_NO_PATHCONV", 1, true), command)
+  check.is_nil(command:find("wslpath", 1, true), command)
+  check.is_nil(command:find("/mnt/c", 1, true), command)
+end)
+
+-- 真跑一次 robocopy:钉住「目标侧陈旧项消失、源侧隐藏项与空目录保留、字节原样」。
 it("real mirror preserves bytes and removes stale files", function()
   sandbox(function(root)
     assert(fs.write_file(root .. "/source/子 目录/中文.lua", "return '中文'\n"))
@@ -37,12 +53,13 @@ it("real mirror preserves bytes and removes stale files", function()
     check.same("\0binary\255", fs.read_raw(root .. "/target/.hidden"))
     check.is_true(fs.is_dir(root .. "/target/空目录"))
     check.is_false(fs.path_exists(root .. "/target/stale.txt"))
+    -- 第二次跑:无变化时 robocopy 退 0,不得被判成失败。
     deploy.copy_directory_tree(root .. "/source", root .. "/target")
     check.same("\0binary\255", fs.read_raw(root .. "/target/.hidden"))
   end)
 end)
 
--- 二进制逐块复制:CRLF 与 NUL 必须原样落盘(按行读会改写它们)。
+-- 二进制逐字节复制:CRLF 与 NUL 必须原样落盘。
 it("binary bytes survive the copy", function()
   sandbox(function(root)
     local payload = "line\r\nline\r\n\0\1\2\255"
@@ -56,14 +73,25 @@ it("project root resolves current repository", function()
   check.same(env.current_dir(), deploy.resolve_project_root())
 end)
 
--- 家目录桩成固定值:真实解析要起 cmd.exe,macOS 上没有 WSL 互操作面(ADR 0073 增补)。
+-- 家目录桩成固定值:真实解析读本机 %USERPROFILE%,落点随机器变(ADR 0083)。
 it("default target retains the Windows deploy location", function()
   local original = deploy.resolve_home_dir
-  deploy.resolve_home_dir = function() return "/mnt/c/Users/玩家/" end
+  deploy.resolve_home_dir = function() return "C:/Users/玩家/" end
   local ok, target = pcall(deploy.resolve_default_target_path)
   deploy.resolve_home_dir = original
   check.is_true(ok, target)
-  check.same("/mnt/c/Users/玩家/Desktop/dev/eggy/LuaSource_大富翁", target)
+  check.same("C:/Users/玩家/Desktop/dev/eggy/LuaSource_大富翁", target)
+end)
+
+-- 取不到家目录是不可用(退 3),不是部署失败:这里钉 (nil, 原因) 的返回形态。
+it("default target reports an unresolvable home instead of failing the deploy", function()
+  local original = deploy.resolve_home_dir
+  deploy.resolve_home_dir = function() return "" end
+  local ok, target, reason = pcall(deploy.resolve_default_target_path)
+  deploy.resolve_home_dir = original
+  check.is_true(ok, target)
+  check.is_nil(target)
+  check.truthy(tostring(reason):find("USERPROFILE", 1, true), tostring(reason))
 end)
 
 it("project root resolves from other working directory", function()
