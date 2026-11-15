@@ -276,6 +276,7 @@ describe("probe cli", function()
     check.truthy(out:find("--timeout", 1, true), out)
     check.truthy(out:find("原生", 1, true), out)
     check.is_nil(out:find("经 cmd.exe + wslpath 解析", 1, true), "usage 不得再说经 cmd.exe + wslpath 解析")
+    check.truthy(out:find("复用 deploy 的同一份家目录解析", 1, true), out)
   end)
 
   it("treats malformed arguments as usage errors", function()

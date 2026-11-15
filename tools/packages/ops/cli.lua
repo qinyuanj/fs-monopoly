@@ -25,7 +25,7 @@ function M.usage()
     "在原生 Windows 上运行(ADR 0083):家目录直接取 %USERPROFILE%,目录镜像走原生 robocopy;",
     "不经互操作层取家目录、不做挂载点路径换算,也不依赖 bash 的选择。",
     "退出码: 0 成功 / 1 部署失败(拷贝或读写出错;多余参数按历史口径也退 1) /",
-    "3 不可用:缺 robocopy 或取不到 %USERPROFILE%(status=unavailable,未改动部署目录;",
+    "退 3 不可用:缺 robocopy 或取不到 %USERPROFILE%(status=unavailable,未改动部署目录;",
     "这是环境问题,不是部署失败)。本子命令不用 2。",
     "目标路径: <家目录>/Desktop/dev/eggy/LuaSource_大富翁;家目录即 %USERPROFILE%,",
     "设了 MONOPOLY_DEPLOY_HOME 时以它为准(测试与沙箱用)。",

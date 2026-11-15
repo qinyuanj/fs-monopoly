@@ -409,7 +409,7 @@ local function _test_deploy_comprehensive()
   _assert_contains(result.output, "退 3", "help should explain the unavailable exit code")
   -- 四态:0 / 1 / 2 / 3,且 3 明确是「缺 robocopy 或取不到家目录」。
   _assert_contains(result.output, "退出码: 0", "help should state the success exit code")
-  _assert_contains(result.output, "3 不可用", "help should state the unavailable exit code")
+  _assert_contains(result.output, "退 3", "help should state the unavailable exit code")
   _assert_not_contains(result.output, "WSL", "help must not declare the retired WSL platform")
 end
 

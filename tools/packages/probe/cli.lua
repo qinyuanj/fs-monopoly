@@ -5,14 +5,14 @@
 --   M.usage()         -> 完整 usage 文本(包内单一真源)
 --
 -- 流程:解析 editor-cli.exe(原生 %USERPROFILE%/.eggitor/cli/editor-cli.exe,家目录解析
--- 复用 deploy 那一份,不经 cmd.exe / wslpath / /mnt/c)→ status 确认 in_game_runtime True → 在用户脚本前注入 probe(...) 并包进
+-- 复用 deploy 那一份,不做互操作换算)→ status 确认 in_game_runtime True → 在用户脚本前注入 probe(...) 并包进
 -- EditorAPI.game_execute([==[ ... ]==]),写临时文件经 `exec --file` 执行(多行脚本不过
 -- shell 引号)→ 轮询 `log grep <标记>` 直到命中或超时,命中行打到 stdout。
 -- 不调用 play start / stop。
 --
 -- env 注入面(测试用;缺省即真实环境):
 --   run(argv|string, { cwd = ... }) -> { ok, code, output }   子进程执行器
---   resolve_home() -> 原生 Windows 家目录(C:/Users/... 形态)或 ""
+--   resolve_home() -> 原生 Windows 家目录(盘符开头的绝对路径形态)或 ""
 --   file_exists(path)、read_file(path) -> string|nil、write_file(path, text) -> bool、remove_file(path)
 --   now() -> 秒(标记用)、clock() -> 秒(超时用)、sleep(秒)、random_hex() -> string
 --   stdout / stderr(带 :write 的对象)

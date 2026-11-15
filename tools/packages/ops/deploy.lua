@@ -113,8 +113,8 @@ end
 -- 家目录解析的唯一实现(ADR 0083 第 5 条;deploy / deploy-diff / sync-data / probe
 -- 都只走这一处,不出现第二份):直接读原生 %USERPROFILE%,不经互操作层、不做挂载点
 -- 路径换算;只有环境变量缺失时才用 `cmd /c echo %USERPROFILE%` 兜底。
--- 拿回的盘符路径只做正斜杠归一(C:/Users/... 形态),不做路径换算;不是盘符绝对路径
--- (空、相对、UNC)一律返回 "",由调用方按「不可用」处理。
+-- 拿回的盘符路径只做正斜杠归一(盘符开头的 Windows 绝对路径形态),不做路径换算;
+-- 不是盘符绝对路径(空、相对、UNC)一律返回 "",由调用方按「不可用」处理。
 -- run 是命令执行注入缝(默认读回合并输出),getenv 是环境读取注入缝(默认 os.getenv)。
 function M.resolve_windows_home_dir(run, getenv)
   run = run or _run
