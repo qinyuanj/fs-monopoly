@@ -1,10 +1,12 @@
--- WSL Ubuntu 并行车道(ADR 0073):每条 lane 在自己的会话/进程组里跑,父进程
--- 用一次阻塞等待收全部结果;超时按进程组收容,不只杀直接子进程。
+-- 原生 Windows 并行车道(ADR 0083 第 6 条):每条 lane 在自己的 owner 脚本里跑,
+-- 父进程用一次阻塞等待收全部结果。
 --
 -- 与串行路径的契约逐字节一致:同一条命令串在串行里经 foundation.proc 执行,
 -- 在这里经 lane 脚本里的 `sh` 执行;argv 表两处都由 shell.build_command 拼装,
--- 因此子进程看到的 arg[0] 与串行相同(不再需要 Windows 时代的 where.exe 解析)。
-local boundary = require("foundation.platform_boundary")
+-- 因此子进程看到的 arg[0] 与串行相同。
+--
+-- 并行退场的前置条件已满足:setsid 在原生 Windows / MSYS 都没有,所以这里不建进程组,
+-- 超时按 pid 停直接子进程(原生进程树收容记为后续取证项)。
 local env = require("foundation.env")
 local fs = require("foundation.fs")
 local path = require("foundation.path")
@@ -21,22 +23,28 @@ local function _status(entry)
   return tonumber(code), reason
 end
 
--- 父进程一次性阻塞等待全部 lane 发布完成(#107 的 POSIX 形态):一个等待脚本
+-- 父进程一次性阻塞等待全部 lane 发布完成(#107 的形态):一个等待脚本
 -- 轮询完成文件直到截止时间,不逐 lane 起进程、不依赖文件监视 API。
+--
+-- 截止时间不靠 `date +%s`:在原生 Windows 上 date 可能命中系统改日期交互命令
+-- (会弹窗并阻塞),所以改用 sleep 逐次倒计时——等待脚本只需要"最多等多久"。
 local function _wait_all(pending, seconds)
   if #pending == 0 then return true end
   local list = env.make_temp_path("parallel_wait", ".txt")
   local ok, write_err = fs.write_file(list, table.concat(pending, "\n") .. "\n")
   if not ok then return nil, write_err end
   local waiter = env.make_temp_path("parallel_wait", ".sh")
+  local budget = math.max(0, math.floor(seconds))
   fs.write_file(waiter, table.concat({
     "#!/bin/sh",
-    "deadline=$(( $(date +%s) + " .. tostring(math.max(0, math.floor(seconds))) .. " ))",
+    -- 每个待收 lane 最多等 budget 秒:一次 sleep 记一格,超时退 124。
+    "remaining=" .. tostring(budget),
     "while read -r status; do",
     "  [ -n \"$status\" ] || continue",
     "  while [ ! -e \"$status\" ]; do",
-    "    [ \"$(date +%s)\" -lt \"$deadline\" ] || exit 124",
-    "    sleep 0.05",
+    "    [ \"$remaining\" -gt 0 ] || exit 124",
+    "    remaining=$(( remaining - 1 ))",
+    "    sleep 1",
     "  done",
     "done < \"$1\"",
     "exit 0",
@@ -48,16 +56,17 @@ local function _wait_all(pending, seconds)
   return result.code == 0, result.code
 end
 
--- 进程组收容:launcher 起在自己的进程组里,组 id 就是它自己的 pid。Linux 用
--- setsid 起新会话;macOS 没有 setsid 命令,改由 `set -m` 的作业控制给后台作业
--- 单独建组(组 id 同样是 launcher 的 pid)。
--- 收容只按组发一次 SIGKILL:launcher 自己也在组里,于是不会出现「收容后父进程
--- 继续写完成状态」的竞态;未发布完成状态即意味着整棵 lane 树被停掉。
-local function _kill_group(pid_file)
+-- 收容:按 lane 自己的命令进程 pid 停它,不发信号给整棵进程组。
+--
+-- ADR 0083 第 6 条:原生 Windows / MSYS 都没有 setsid,进程组收容在保证面内不存在
+-- (原生进程树收容 cmd /c start + taskkill /T /F /PID 记为后续取证项,不在本次落地)。
+-- 所以 lane 的 owner 与命令进程同组,按组发信号会连父进程一起带走——改为按 pid 停
+-- 直接子进程。status.pid 记着 "owner_pid child_pid",后者才是要停的那个。
+local function _kill_lane(pid_file)
   local identity = fs.read_raw(pid_file)
-  local group = identity and identity:match("(%d+)")
-  if group == nil then return end
-  proc.run_command("kill -s KILL -- -" .. group .. " 2>/dev/null")
+  local child = identity and identity:match("%d+%s+(%d+)")
+  if child == nil then return end
+  proc.run_command("kill -s KILL " .. child .. " 2>/dev/null")
 end
 
 -- 计时由 lane 自己的看门狗执行(与命令同一进程组),父进程只阻塞等待完成状态:
@@ -78,35 +87,41 @@ local function _launch(entry, timeout)
   -- 机会被调度,所以结论必须由看门狗自己写。
   local launcher_ok, launcher_err = fs.write_file(entry.dir .. "/launcher.sh", table.concat({
     "#!/bin/sh",
-    "(" .. "sleep " .. tostring(math.max(1, math.floor(timeout))) .. "; "
-      .. "printf '%s %s\\n' 124 timeout > " .. shell.shell_quote(entry.status .. ".done") .. "; "
-      .. "mv " .. shell.shell_quote(entry.status .. ".done") .. " " .. shell.shell_quote(entry.status) .. "; "
-      .. "kill -s KILL -- -$$" .. ") >/dev/null 2>&1 &",
-    "watchdog=$!",
-    "sh " .. shell.shell_quote(entry.dir .. "/command.sh") .. " > " .. shell.shell_quote(entry.output) .. " 2>&1 &",
+    -- 命令先起,拿到 pid;看门狗再起,超时按 pid 停它(ADR 0083 第 6 条:无进程组收容)。
+    -- 子 shell 用 exec 把命令换成自己:记下的 pid 就是命令进程本身,超时才真停得住。
+    "( cd " .. shell.shell_quote(entry.cwd or ".") .. " || exit 1; "
+      .. (env_prefix ~= "" and ("export " .. env_prefix .. "; ") or "")
+      .. "exec " .. command_text
+      .. " ) > " .. shell.shell_quote(entry.output) .. " 2>&1 &",
     "child=$!",
     "echo \"$$ $child\" > " .. shell.shell_quote(entry.status .. ".pid"),
+    -- 看门狗:先停命令,再发布超时结论。顺序不能反——先发布会让父进程在命令
+    -- 还活着时就收走 lane,被停掉的命令仍可能完成它的迟到写入。
+    "(" .. "sleep " .. tostring(math.max(1, math.floor(timeout))) .. "; "
+      .. "kill -s KILL " .. "$child" .. " 2>/dev/null; "
+      .. "printf '%s %s\\n' 124 timeout > " .. shell.shell_quote(entry.status .. ".done") .. "; "
+      .. "mv " .. shell.shell_quote(entry.status .. ".done") .. " " .. shell.shell_quote(entry.status) .. ") >/dev/null 2>&1 &",
+    "watchdog=$!",
     "wait \"$child\"",
     "code=$?",
     "kill -KILL \"$watchdog\" 2>/dev/null",
     "reason=exit",
     "[ \"$code\" -eq 127 ] && reason=launch_failed",
     "[ \"$code\" -eq 137 ] && reason=timeout",
-    "printf '%s %s\\n' \"$code\" \"$reason\" > " .. shell.shell_quote(entry.status .. ".done"),
-    "mv " .. shell.shell_quote(entry.status .. ".done") .. " " .. shell.shell_quote(entry.status),
+    -- 看门狗已发布超时结论时不再覆盖它:发布者只有一个,结论不因谁先写而分叉。
+    "if [ ! -e " .. shell.shell_quote(entry.status) .. " ]; then",
+    "  printf '%s %s\\n' \"$code\" \"$reason\" > " .. shell.shell_quote(entry.status .. ".done"),
+    "  mv " .. shell.shell_quote(entry.status .. ".done") .. " " .. shell.shell_quote(entry.status),
+    "fi",
     "",
   }, "\n"))
   if not launcher_ok then return nil, launcher_err end
   local launcher = shell.shell_quote(entry.dir .. "/launcher.sh")
   local owner_log = shell.shell_quote(entry.dir .. "/owner.log")
-  local start_command
-  if boundary.host_platform() == boundary.MACOS then
-    start_command = "sh -c " .. shell.shell_quote("set -m; sh \"$1\" > \"$2\" 2>&1 &")
-      .. " sh " .. launcher .. " " .. owner_log
-  else
-    start_command = "setsid sh " .. launcher .. " > " .. owner_log .. " 2>&1 &"
-  end
-  local started = os.execute(start_command)
+  -- 不再 setsid(ADR 0083 第 6 条:原生 Windows / MSYS 都没有它):owner 直接后台起。
+  -- 收容按 pid 停直接子进程,不做进程组收容。
+  local start_command = "sh " .. launcher .. " > " .. owner_log .. " 2>&1 &"
+  local started = shell.execute(start_command)
   if not shell.exit_status(started) then return nil, "failed to start lane owner" end
   return true
 end
@@ -148,8 +163,8 @@ function M.run(lanes, opts)
     local identity = fs.read_raw(entry.status .. ".pid") or ""
     result.owner_pid, result.child_pid = identity:match("(%d+)%s+(%d+)")
     if code == nil then
-      -- 未发布完成状态:按组收容整棵 lane 进程树,再落结论。
-      _kill_group(entry.status .. ".pid")
+      -- 未发布完成状态:停掉 lane 的直接子进程,再落结论。
+      _kill_lane(entry.status .. ".pid")
     end
     if entry.launch_error then
       result.reason, result.message = "launch_failed", entry.launch_error
