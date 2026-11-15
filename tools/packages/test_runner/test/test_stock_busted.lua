@@ -26,11 +26,16 @@ local function _paths(prefix, extra)
   return table.concat(paths, ";")
 end
 
+-- 二进制扩展名按平台取:原生 Windows 的 Lua 5.4 用 .dll,POSIX 用 .so(ADR 0083)。
+local function _binary_extension()
+  return package.config:sub(1, 1) == "\\" and ".dll" or ".so"
+end
+
 local function _cpaths()
   local paths = {}
   for _, tree in ipairs(controlled) do
     local base = tree:gsub("\\", "/"):gsub("/+$", "")
-    paths[#paths + 1] = base .. "/lib/lua/5.4/?.so"
+    paths[#paths + 1] = base .. "/lib/lua/5.4/?" .. _binary_extension()
   end
   return table.concat(paths, ";")
 end
