@@ -66,7 +66,7 @@ compress_tap_collapses_all_pass_tap_to_single_passed_line()
 end
 
 -- 不再支持 busted_bin 单 token 覆写，命令
--- 前缀恒为 argv_prefix 默认值({ lua5.4, test_runner/runner.lua })。workers=1 强制单进程
+-- 前缀恒为 argv_prefix 默认值({ lua, test_runner/runner.lua })。workers=1 强制单进程
 -- 串行路径(分片判定要求 worker > 1 且 profile 文件数超过阈值)。
 local function
 run_defaults_to_explicit_real_busted_runner()
@@ -110,7 +110,9 @@ runner_spawn_carries_tool_discovery_env()
     check.is_nil(captured_options)
   else
     check.truthy(tostring(captured_options.env.LUA54_BIN):find("/", 1, true) ~= nil)
-    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks$") ~= nil)
+    -- 原生 Windows 上解析出的是 luarocks.exe,断言只认「指向 luarocks 可执行文件」,
+    -- 不认具体扩展名。
+    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks%.exe?$") ~= nil)
   end
 end
 
@@ -502,6 +504,29 @@ sharded_real_failure_excludes_unavailable_lane_from_counts()
     .. " failed=1 errors=0", result.stdout, 1, true)
 end
 
+-- 「起不来」不是测试失败:lane 启动失败 / owner 没发布完成状态时单独点名,
+-- 不并进 TAP 计数,也不冒充 not ok(ADR 0083 / #236)。
+local function
+sharded_lane_that_never_started_is_named_not_counted_as_failure()
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = { label = lane.label, ok = false, exit_code = nil,
+          reason = "launch_failed", message = "failed to start lane owner" }
+      end
+      return false, results
+    end,
+  })
+  check.equal(1, result.code)
+  check.is_nil(result.status)
+  check.matches("lane 起不来 reason=launch_failed", result.stdout, 1, true)
+  check.is_nil(result.stdout:find("not ok", 1, true))
+  check.equal(0, result.failed)
+end
+
 local function
 parse_args_reads_evidence_dir_and_recount()
   local opts = spec_lane.parse_args({ "--profile", "tooling", "--evidence-dir=tmp/evidence" })
@@ -660,6 +685,8 @@ describe("spec lane public contracts", function()
   it("verbose_still_reports_count_mismatch", verbose_still_reports_count_mismatch)
   it("sharded_real_failure_excludes_unavailable_lane_from_counts",
     sharded_real_failure_excludes_unavailable_lane_from_counts)
+  it("sharded_lane_that_never_started_is_named_not_counted_as_failure",
+    sharded_lane_that_never_started_is_named_not_counted_as_failure)
   it("parse_args_reads_evidence_dir_and_recount", parse_args_reads_evidence_dir_and_recount)
   it("run_writes_recomputable_evidence", run_writes_recomputable_evidence)
   it("recount_reports_a_mismatch_as_a_real_failure", recount_reports_a_mismatch_as_a_real_failure)
