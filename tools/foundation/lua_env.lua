@@ -94,13 +94,36 @@ end
 -- 核对的是「机器 tree 里装了什么」,与调用方钉死的装载面无关。
 local _CLEARED_PATHS = "env -u LUA_PATH -u LUA_PATH_5_4 -u LUA_CPATH -u LUA_CPATH_5_4 "
 
+-- 加载统一执行缝实现 foundation.bash:优先 require;受限 package.path(lint 子进程、
+-- mutation worker 把装载面钉在受控 tree 上)里 tools/ 可能不在搜索面上,此时按**本文件
+-- 自身位置**加载同一份实现(按路径 dofile,仍是唯一实现,不回落 io.popen)。
+local _bash_cached
+local function _load_bash()
+  if _bash_cached ~= nil then return _bash_cached end
+  local ok_load, mod = pcall(require, "foundation.bash")
+  if ok_load and type(mod) == "table" and type(mod.execute) == "function" then
+    _bash_cached = mod
+    return mod
+  end
+  local source = tostring(debug.getinfo(1, "S").source or ""):gsub("^@", ""):gsub("\\", "/")
+  local dir = source:match("^(.*)/[^/]+$")
+  if dir == nil then return nil end
+  local chunk = loadfile(dir .. "/bash.lua")
+  if chunk == nil then return nil end
+  local ok2, mod2 = pcall(chunk)
+  if ok2 and type(mod2) == "table" and type(mod2.execute) == "function" then
+    _bash_cached = mod2
+    return mod2
+  end
+  return nil
+end
+
 local function _default_run(command)
   local parts = {}
   for _, arg in ipairs(command) do parts[#parts + 1] = _quote(arg) end
   local line = _CLEARED_PATHS .. table.concat(parts, " ")
-  -- 惰性 require:本模块可能在 tools/ 还不在 package.path 上时被 dofile。
-  local ok_load, bash_lib = pcall(require, "foundation.bash")
-  if not (ok_load and type(bash_lib) == "table" and type(bash_lib.execute) == "function") then
+  local bash_lib = _load_bash()
+  if bash_lib == nil then
     return { ok = false, output = "受控 Lua 环境不可核对: 命令执行缝(foundation.bash)不可用" }
   end
   local output, ok, code = bash_lib.execute(line, { capture = true })
