@@ -132,4 +132,31 @@ it("tool discovery env exports resolved interpreter path and luarocks exe", func
   end)
 end)
 
+-- #236 风险①:导出的工具路径会交给**原生 Windows** 子进程(并非每次都经 bash),
+-- MSYS 形态 /c/Users/... 会让 CreateProcess 报「The system cannot find the path
+-- specified」。统一换成原生 C:/... 形态;这里用 MSYS 形态的 command -v 输出钉住。
+it("tool discovery env exports native drive paths instead of MSYS /c form", function()
+  _with_stubs({
+    { target = proc_lib, key = "command_exists", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      if type(command) == "string" and command:find("command -v", 1, true) then
+        if command:find("luarocks", 1, true) then
+          return { ok = true, output = "/c/Users/x/AppData/Local/Programs/LuaRocks/bin/luarocks.exe\n" }
+        end
+        return { ok = true, output = "/c/Users/x/AppData/Local/Programs/Lua/bin/lua.exe\n" }
+      end
+      if type(command) == "table" and command[2] == "-v" then
+        return { ok = true, output = "Lua 5.4.6" }
+      end
+    end },
+    { target = fs_lib, key = "path_exists", value = function() return false end },
+  }, function()
+    local exported = bootstrap.tool_discovery_env()
+    check.is_not_nil(exported)
+    check.equal("C:/Users/x/AppData/Local/Programs/Lua/bin/lua.exe", exported.LUA54_BIN)
+    check.equal("C:/Users/x/AppData/Local/Programs/LuaRocks/bin/luarocks.exe",
+      exported.MONOPOLY_LUAROCKS_EXE)
+    check.is_nil(tostring(exported.LUA54_BIN):find("^/c/"))
+  end)
+end)
 end)

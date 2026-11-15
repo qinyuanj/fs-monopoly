@@ -32,13 +32,6 @@ local boundary = require("foundation.platform_boundary")
 
 local M = {}
 
--- 盘符绝对路径(C:/... / D:/...)是原生 Windows 的内部路径形态(ADR 0083 第 4 条),
--- 不能被当成相对路径拼到当前目录上;foundation.path 的绝对路径判定只认 POSIX 根,
--- 这里按部署面的口径先答掉,不把盘符路径当相对路径。
-local function _is_drive_absolute(value)
-  return path_lib.normalize_path(value):match("^%a:/") ~= nil
-end
-
 -- foundation 以 (nil, err) 报错;部署流程以 error 终止,由 run_cli 统一打印 ERROR。
 local function _check(ok, err)
   if not ok then
@@ -89,7 +82,7 @@ end
 
 local function _script_dir()
   local source = path_lib.normalize_path((tostring(debug.getinfo(1, "S").source or ""):gsub("^@", "")))
-  if not path_lib.is_absolute_path(source) and not _is_drive_absolute(source) then
+  if not path_lib.is_absolute_path(source) then
     source = path_lib.join_path(env_lib.current_dir(), source)
   end
   return path_lib.parent_dir(source) or env_lib.current_dir()
@@ -191,7 +184,7 @@ function M.resolve_normalized_path(path_text)
   if candidate:sub(1, 2) == "~/" or candidate:sub(1, 2) == "~\\" then
     candidate = path_lib.join_path(M.resolve_home_dir(), candidate:sub(3))
   end
-  if _is_drive_absolute(candidate) then
+  if path_lib.is_absolute_path(candidate) then
     return (path_lib.simplify_path(candidate):gsub("/+$", ""))
   end
   local full = path_lib.resolve_path(env_lib.current_dir(), candidate)

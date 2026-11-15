@@ -56,6 +56,9 @@ function builders.default(env, include_tooling, evidence_dir)
   lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract", evidence_dir, env.lua54_bin) }
   lanes[#lanes + 1] = { label = "guards", cmd = _spec_lane_cmd("guards", evidence_dir, env.lua54_bin) }
   lanes[#lanes + 1] = { label = "behavior", cmd = _spec_lane_cmd("behavior", evidence_dir, env.lua54_bin) }
+  -- #237 / #234 F5:slim 车道按验收原文包含 foundation(七层之外的工具底座),
+  -- 不再只挂在 --tooling 下。profile 走目录点跑(tools/foundation 下的 test/**)。
+  lanes[#lanes + 1] = { label = "foundation", cmd = _spec_lane_cmd("tools/foundation", evidence_dir, env.lua54_bin) }
   _add_lint_or_skip(lanes, skipped, env)
   lanes[#lanes + 1] = { label = "encoding",
     cmd = shell_lib.build_command({ env.lua54_bin or "lua", "tools/packages/encoding/encoding.lua", "check" }) }

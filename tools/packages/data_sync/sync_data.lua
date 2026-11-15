@@ -170,7 +170,7 @@ function M.main(args)
 
   local deploy_dir, home_err = deploy.resolve_default_target_path()
   if deploy_dir == nil then
-    return deploy.emit_unavailable("deploy", " step=home", deploy.home_unavailable_lines(home_err))
+    return deploy.emit_unavailable("sync-data", " tool=sync-data step=home", deploy.home_unavailable_lines(home_err))
   end
   local repo_root = deploy.resolve_project_root()
 

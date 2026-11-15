@@ -44,4 +44,33 @@ describe("platform boundary", function()
   it("reports this machine as native Windows", function()
     check.same("windows", boundary.host_platform())
   end)
+
+  -- #234 F2:平台判决必须真的接到入口——非 Windows 时跑 `lua tools/cli.lua <子命令>`
+  -- 要打 status=unavailable 并退 3,而不是照跑子命令后以 1 收场。测试用 dofile 驱动
+  -- + 注入平台判定,不真换操作系统。
+  it("cli entry exits 3 with status=unavailable on a non-Windows platform", function()
+    local env_lib = require("foundation.env")
+    local fs = require("foundation.fs")
+    local proc = require("foundation.proc")
+    local lua54 = require("foundation.lua54")
+    local root = env_lib.make_temp_path("cli_platform_gate", "")
+    local ok, err = xpcall(function()
+      check.truthy(fs.ensure_dir(root))
+      local driver = root .. "/driver.lua"
+      check.truthy(fs.write_file(driver, table.concat({
+        'package.path = package.path .. ";./tools/?.lua;./tools/?/init.lua"',
+        'local boundary = require("foundation.platform_boundary")',
+        'boundary.host_platform = function() return "linux" end',
+        'arg = { "lint" }',
+        'dofile("tools/cli.lua")',
+        "",
+      }, "\n")))
+      local result = proc.run_command({ lua54.lua54_bin(), driver }, { cwd = env_lib.current_dir() })
+      check.equal(3, result.code, result.output)
+      check.truthy(tostring(result.output):find("[cli] status=unavailable", 1, true), result.output)
+      check.truthy(tostring(result.output):find("platform=linux", 1, true), result.output)
+    end, debug.traceback)
+    fs.remove_path(root)
+    check.is_true(ok, err)
+  end)
 end)

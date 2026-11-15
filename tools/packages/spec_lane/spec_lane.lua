@@ -226,7 +226,8 @@ local function _run_sharded(options, profile, files, spawn_env)
   -- 诊断只转一份。混有真实失败仍退 1(#131)。
   local raw_parts = {}
   local entries = {}
-  local lane_start_errors = {}
+  local lane_env_errors = {}
+  local env_problem = false
   local code = 0
   local diagnostic
   for i, r in ipairs(results) do
@@ -234,11 +235,18 @@ local function _run_sharded(options, profile, files, spawn_env)
     local lane_diagnostic = tool_availability.child_diagnostic(r.exit_code, r.output)
     if lane_diagnostic ~= nil then
       diagnostic = diagnostic or lane_diagnostic
+    elseif r.reason == "timeout" then
+      -- 超时单独点名(#234 F6):lane 没跑完是环境/时长问题,不能冒充「用例失败」。
+      -- 不并进 TAP 计数与证据汇总;无真实失败时整体退 3(status=unavailable)。
+      env_problem = true
+      lane_env_errors[#lane_env_errors + 1] = string.format(
+        "[spec-lane] lane 超时 reason=timeout lane=%s: %s(环境问题:无真实失败时整体退 3)",
+        tostring(label), tostring(r.message or ""))
     elseif r.reason == "launch_failed" or r.reason == "output_incomplete" then
       -- lane 起不来(启动失败 / owner 没发布完成状态)既不是通过、也不是测试失败:
       -- 单独点名,不并进 TAP 计数与证据汇总,免得被读成「测试红了」(ADR 0083)。
-      code = 1
-      lane_start_errors[#lane_start_errors + 1] = string.format(
+      env_problem = true
+      lane_env_errors[#lane_env_errors + 1] = string.format(
         "[spec-lane] lane 起不来 reason=%s lane=%s: %s",
         tostring(r.reason), tostring(label), tostring(r.message or ""))
     else
@@ -261,11 +269,17 @@ local function _run_sharded(options, profile, files, spawn_env)
   if failed > 0 and code == 0 then
     code = 1
   end
-  if #lane_start_errors > 0 then
-    compressed = compressed .. table.concat(lane_start_errors, "\n") .. "\n"
+  if #lane_env_errors > 0 then
+    compressed = compressed .. table.concat(lane_env_errors, "\n") .. "\n"
   end
   if diagnostic ~= nil and code == 0 then
     return _unavailable_result(diagnostic)
+  end
+  -- 只有「lane 起不来 / 超时」而没有任何真实用例失败 → 环境问题,退 3(status=unavailable),
+  -- 与真实失败(退 1)区分开(#234 F6)。混有真实失败时仍以 1 收场。
+  if env_problem and code == 0 then
+    return { stdout = compressed .. _count_diagnostics(aggregated, true), code = 3,
+      status = "unavailable", passed = passed, failed = failed }
   end
   if code ~= 0 then
     compressed = compressed .. _lane_listing(lane_specs)

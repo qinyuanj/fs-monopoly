@@ -188,6 +188,39 @@ it("an unavailable random source exits 3 without touching the code table", funct
   check.equal("", out)
 end)
 
+-- #234 F4/F17:默认随机源是时间/时钟播种的 Lua PRNG,不依赖 powershell 等外部可执行文件。
+-- 钉住它能产出合法码、两次独立运行不重复、且码表照常只落哈希。
+it("default random source yields valid distinct codes without external tools", function()
+  local function run_default()
+    local path = env_lib.make_temp_path("gift_code_default_src", ".lua")
+    check.is_true(fs_lib.write_file(path, FIXTURE))
+    local stdout, stderr = _sink(), _sink()
+    local code = gift_code_cli.main({ "new", "--rewards", "5005", "--note", "#203" }, {
+      repo_root = ".",
+      code_table_path = path,
+      now = function() return NOW end,
+      stdout = stdout,
+      stderr = stderr,
+    })
+    local content = fs_lib.read_raw(path)
+    fs_lib.remove_path(path)
+    return code, stdout.text(), stderr.text(), content
+  end
+  local c1, o1, e1, ct1 = run_default()
+  -- 让 os.clock 前进,确保两次播种不同(种子含时钟微秒)。
+  local deadline = os.clock() + 0.02
+  while os.clock() < deadline do end
+  local c2, o2, e2 = run_default()
+  check.equal(0, c1, e1)
+  check.equal(0, c2, e2)
+  local first = o1:match("码: (%S+)")
+  local second = o2:match("码: (%S+)")
+  check.truthy(first and first:match("^%w%w%w%w%-%w%w%w%w$"), "first code: " .. tostring(first))
+  check.truthy(second and second:match("^%w%w%w%w%-%w%w%w%w$"), "second code: " .. tostring(second))
+  check.is_not.equal(first, second, "independent PRNG-seeded runs should differ")
+  check.truthy(ct1:find("code_hash", 1, true), "code table must still store only hashes")
+end)
+
 it("missing or malformed arguments are usage errors that touch nothing", function()
   local cases = {
     {},

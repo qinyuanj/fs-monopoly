@@ -46,7 +46,7 @@ end)
 -- runtime ports / 付费网关 / 分享面板 port 应仍处于共享基线的已配置态。谁的
 -- teardown 拆到未配置态
 -- 不装回,当场记为泄漏——先装回基线止住同进程扩散,再落 `# BASELINE LEAK` 行点名
--- (behavior_parallel 按此行聚合失败明细),收尾把计数打进 errors 让车道硬失败,
+-- (spec-lane 按此行聚合失败明细),收尾把计数打进 errors 让车道硬失败,
 -- 不再靠 suite 顺序侥幸掩盖(mutate 车道的窄 suite 子集就是这么翻车的)。
 local baseline_leak_count = 0
 events.subscribe({ "project", "case", "end" }, function(element)
