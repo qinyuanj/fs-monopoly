@@ -41,6 +41,11 @@ local function late_writer(start_line)
     .. 'local f = assert(io.open(arg[1], "wb")); f:write("LATE"); f:close()\n'
 end
 
+-- lane 目录名:结果里不带目录信息,这里按 lane_dir 约定还原它。
+local function entry_dir_of(result)
+  return result.lane_dir or ""
+end
+
 -- 放行迟到写手并给它留出写入窗口;之后 marker 仍不存在才说明它已被收容。
 local function release_and_settle(release)
   assert(fs.write_file(release, "go"))

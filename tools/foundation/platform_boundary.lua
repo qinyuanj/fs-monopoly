@@ -1,6 +1,7 @@
--- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0073)。
+-- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0083)。
 --
--- 当前开发与工具链保证面是 WSL Ubuntu 与 macOS(ADR 0073)。
+-- 当前开发与工具链保证面是**原生 Windows 单平台**(ADR 0083,取代 ADR 0073)。
+-- WSL 与 macOS 已退出保证面。
 -- 只保留保证面判定与不可用判决,工具不可用诊断也复用同一渲染器。
 --
 -- 两态必须互相可辨:不可用 / 真实失败。
@@ -29,9 +30,10 @@ boundary.UNAVAILABLE = "unavailable"
 -- 必须是新码,否则调用方分不清「工具没跑」与「工具跑了但失败」。
 boundary.UNAVAILABLE_EXIT_CODE = 3
 
--- 保证面:Linux(WSL Ubuntu 开发机)与 macOS(ADR 0073)。
--- 原生 Windows 只是部署目标。
-local _SUPPORTED = { [boundary.LINUX] = true, [boundary.MACOS] = true }
+-- 保证面:原生 Windows 单平台(ADR 0083)。
+-- host_platform 仍识别 linux / macos / posix,但那只用于给出可诊断的不可用判决,
+-- 不是第二套受支持平台——非 Windows 一律退 3,不静默通过。
+local _SUPPORTED = { [boundary.WINDOWS] = true }
 
 local function _readable(file)
   local handle = io.open(file, "r")
@@ -58,7 +60,7 @@ function boundary.host_platform()
   return boundary.POSIX
 end
 
--- 保证面判定:当前宿主是否在 ADR 0073 的保证面内。
+-- 保证面判定:当前宿主是否在 ADR 0083 的保证面内(只有原生 Windows 是)。
 function boundary.supported_platform(platform)
   return _SUPPORTED[platform or boundary.host_platform()] == true
 end
@@ -84,6 +86,20 @@ function boundary.unavailable_verdict(tag, fields, lines)
     stream = "stderr",
     message = _unavailable_text(tag, fields, lines),
   }
+end
+
+-- 平台判决:保证面内返回 nil(交给真实工具自己的输出与退出码),非保证面返回
+-- 不可用判决(status=unavailable + 退 3)。platform 缺省取宿主平台。
+function boundary.platform_verdict(tag, platform)
+  local actual = platform or boundary.host_platform()
+  if boundary.supported_platform(actual) then
+    return nil
+  end
+  return boundary.unavailable_verdict(tag, " platform=" .. tostring(actual) .. " step=platform", {
+    "本仓的开发与工具链保证面只有原生 Windows(ADR 0083)。",
+    "WSL / macOS / 其他 POSIX 平台已退出保证面,不再提供实现与测试。",
+    "请在原生 Windows 上运行;判为不可用(退 3),不是测试失败。",
+  })
 end
 
 -- 写诊断。stream 由判决给定,调用点不再各自挑输出流。

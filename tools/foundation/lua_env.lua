@@ -74,10 +74,12 @@ local function _luarocks_exe(opts)
 end
 
 -- 默认子进程执行面刻意不 require foundation.proc:本模块会在 stock busted 的钉死
--- 环境里被 dofile,那时只有仓根与受控 tree 在 package.path 上,tools/ 还不可见。
+-- 环境里被 dofile,那时只有仓根与受控 tree 在 package.path 上,tools/ 还不可见,
+-- 所以 foundation.bash 只能惰性 require(见 _default_run)。
 -- io.popen 的 close 在失败时返回 nil, "exit", code,足够区分成功/失败。
--- POSIX 单引号:`$`、反引号与空白都按字面传递(与 foundation.shell 同口径,
--- 这里不 require 它,原因见上)。
+-- POSIX 单引号:`$`、反引号与空白都按字面传递(与 foundation.shell 同口径)。
+-- 执行经 foundation.bash.capture:原生 Lua 的 io.popen 在 Windows 上同样走 cmd.exe,
+-- 而 `env -u ...` 与 POSIX 单引号在 cmd.exe 下都不成立(ADR 0083 / #235)。
 local function _quote(arg)
   local text = tostring(arg)
   if text:match("^[%w%-%._/:=]+$") ~= nil then
@@ -94,7 +96,17 @@ local _CLEARED_PATHS = "env -u LUA_PATH -u LUA_PATH_5_4 -u LUA_CPATH -u LUA_CPAT
 local function _default_run(command)
   local parts = {}
   for _, arg in ipairs(command) do parts[#parts + 1] = _quote(arg) end
-  local handle = io.popen(_CLEARED_PATHS .. table.concat(parts, " ") .. " 2>&1")
+  local line = _CLEARED_PATHS .. table.concat(parts, " ")
+  -- 惰性 require:本模块可能在 tools/ 还不在 package.path 上时被 dofile。
+  local ok_load, bash_lib = pcall(require, "foundation.bash")
+  if ok_load and type(bash_lib) == "table" and bash_lib.capture ~= nil then
+    local output, ok, code = bash_lib.capture(line)
+    if output == nil then
+      return { ok = false, output = "bash unavailable: " .. tostring(code) }
+    end
+    return { ok = ok == true, code = code, output = output }
+  end
+  local handle = io.popen(line .. " 2>&1")
   if handle == nil then
     return { ok = false, output = "io.popen failed" }
   end
