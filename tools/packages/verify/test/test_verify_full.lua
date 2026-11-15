@@ -138,24 +138,6 @@ serial_step_exit_3_surfaces_as_unavailable()
   check.truthy(out.stdout:find("unavailable=1", 1, true), out.stdout)
 end
 
--- 并行 verify(默认路径)经 parallel_lanes 起子进程:真实退 3 的车道同样
--- 是 UNAVAILABLE,整体退出码绝不能是 0。
-local function
-parallel_lane_exit_3_surfaces_as_unavailable()
-  local lua54 = require("foundation.lua54").lua54_bin()
-  local shell_lib = require("foundation.shell")
-  local all_ok, results = require("packages.verify.runner").run_parallel({
-    { label = "lint-src", cmd = shell_lib.build_command({ lua54, "-e", "os.exit(3)" }) },
-    -- 退 0 但空输出在 parallel_lanes 里算 output_incomplete,通过车道须有输出。
-    { label = "encoding", cmd = shell_lib.build_command({ lua54, "-e", "print('encoding ok')" }) },
-  })
-  local out = verify_full.build_output({ results = results, skipped = {}, total_elapsed = 1 })
-  check.is_false(all_ok)
-  check.equal(3, out.exit_code)
-  check.truthy(out.stdout:find("[verify] UNAVAILABLE lint-src", 1, true), out.stdout)
-  check.truthy(out.stdout:find("[verify] UNAVAILABLE  passed=1 failed=0 unavailable=1", 1, true), out.stdout)
-end
-
 -- Verbose output contracts.
 
 local function
@@ -246,7 +228,6 @@ evidence_dir_is_forwarded_to_spec_lane_lanes()
   local plan = verify_full._resolve_lanes({
     env = { lua54_bin = "lua5.4" },
     tooling = true,
-    serial = true,
     evidence_dir = "tmp/evidence",
   })
   local seen = {}
@@ -258,7 +239,7 @@ evidence_dir_is_forwarded_to_spec_lane_lanes()
   end
   check.is_nil(seen["encoding"]:find("evidence%-dir"))
 
-  local plain = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" }, serial = true })
+  local plain = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" } })
   for _, lane in ipairs(plain.lanes) do
     check.is_nil(lane.cmd:find("evidence%-dir"), "no flag without --evidence-dir: " .. lane.cmd)
   end
@@ -287,18 +268,61 @@ evidence_write_preserves_lane_output_and_report()
   if not ok then error(err) end
 end
 
--- 默认并行(#107 已为 spec-lane 恢复并行;#73 的串行安全网是 Windows 迁移期产物):
--- 不带 flag 即并行,--serial 显式退回串行复现。
+-- #237 / ADR 0083:并行车道退场(原生 Windows / MSYS 没有 setsid)。默认即串行,
+-- --serial 是同义开关(解析结果与默认逐字段一致),--parallel 不再被接受。
 local function
-default_is_parallel_and_serial_is_explicit()
-  check.is_false(verify_full.parse_args({}).serial)
+default_is_serial_and_serial_flag_is_a_no_op()
+  check.is_true(verify_full.parse_args({}).serial, "默认必须是串行")
   check.is_true(verify_full.parse_args({ "--serial" }).serial)
-  check.is_false(verify_full.parse_args({ "--parallel" }).serial)
+  check.same(verify_full.parse_args({}), verify_full.parse_args({ "--serial" }),
+    "默认与 --serial 必须解析成同一份 opts")
   check.equal("tmp/ev", verify_full.parse_args({ "--evidence-dir", "tmp/ev", "--tooling" }).evidence_dir)
 end
 
+-- --parallel 退场后与其它未知 flag 同一口径:没有 opts、诊断以 "unknown flag: " 开头
+-- (入口按用法错误退 2)。
+local function
+parallel_flag_is_rejected_as_unknown_flag()
+  local opts, err = verify_full.parse_args({ "--parallel" })
+  check.is_nil(opts, "--parallel 不得再被接受")
+  check.truthy(tostring(err):find("--parallel", 1, true), tostring(err))
+  local _, other_err = verify_full.parse_args({ "--ticket73-unknown" })
+  check.equal("unknown flag: ", tostring(err):sub(1, #"unknown flag: "), tostring(err))
+  check.equal("unknown flag: ", tostring(other_err):sub(1, #"unknown flag: "))
+end
+
+-- 默认路径与 --serial 必须造出同一张车道表(没有第二种行为);且车道命令里
+-- 不再出现任何并行开关。
+local function
+default_and_serial_resolve_the_same_lane_plan()
+  local plain = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" } })
+  local serial = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" }, serial = true })
+  check.same(plain.lanes, serial.lanes)
+  check.same(plain.skipped, serial.skipped)
+  for _, lane in ipairs(plain.lanes) do
+    check.is_nil(lane.cmd:find("parallel", 1, true), "车道命令不得再走并行: " .. lane.cmd)
+  end
+end
+
+-- spec-lane 车道显式带 --serial(verify 只剩串行一种形态,分片并行不再发生)。
+local function
+spec_lane_lanes_are_explicitly_serial()
+  local plan = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" }, tooling = true })
+  local seen = {}
+  for _, lane in ipairs(plan.lanes) do
+    seen[lane.label] = lane.cmd
+  end
+  for _, label in ipairs({ "contract", "guards", "behavior", "tooling" }) do
+    check.truthy(seen[label]:find("'--serial'", 1, true), label .. " 必须串行: " .. seen[label])
+  end
+  check.is_nil(seen["encoding"]:find("serial", 1, true), "encoding 车道不该带 serial: " .. seen["encoding"])
+end
+
 describe("verify public output and lane plan", function()
-  it("default_is_parallel_and_serial_is_explicit", default_is_parallel_and_serial_is_explicit)
+  it("default_is_serial_and_serial_flag_is_a_no_op", default_is_serial_and_serial_flag_is_a_no_op)
+  it("parallel_flag_is_rejected_as_unknown_flag", parallel_flag_is_rejected_as_unknown_flag)
+  it("default_and_serial_resolve_the_same_lane_plan", default_and_serial_resolve_the_same_lane_plan)
+  it("spec_lane_lanes_are_explicitly_serial", spec_lane_lanes_are_explicitly_serial)
   it("happy_path_emits_at_most_3_lines", happy_path_emits_at_most_3_lines)
   it("happy_path_includes_aggregate_summary_with_passed_failed_skipped_counts", happy_path_includes_aggregate_summary_with_passed_failed_skipped_counts)
   it("happy_path_suppresses_per_lane_stdout", happy_path_suppresses_per_lane_stdout)
@@ -308,7 +332,6 @@ describe("verify public output and lane plan", function()
   it("unavailable_lane_is_reported_and_never_passes", unavailable_lane_is_reported_and_never_passes)
   it("real_failure_outranks_unavailable_lane", real_failure_outranks_unavailable_lane)
   it("serial_step_exit_3_surfaces_as_unavailable", serial_step_exit_3_surfaces_as_unavailable)
-  it("parallel_lane_exit_3_surfaces_as_unavailable", parallel_lane_exit_3_surfaces_as_unavailable)
   it("verbose_preserves_all_lane_stdout_on_success", verbose_preserves_all_lane_stdout_on_success)
   it("verbose_preserves_all_lane_stdout_on_failure", verbose_preserves_all_lane_stdout_on_failure)
   it("verbose_includes_per_step_pass_fail_trace_lines", verbose_includes_per_step_pass_fail_trace_lines)
