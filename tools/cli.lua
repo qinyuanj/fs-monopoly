@@ -76,6 +76,16 @@ if _VERSION ~= "Lua 5.4" then
 end
 
 local tool_cli = require("foundation.tool_cli")
+local boundary = require("foundation.platform_boundary")
+
+-- 平台保证面(ADR 0083 / #234 F2):非 Windows 一律退 3,不进入任何子命令。
+-- 判决渲染统一走 platform_boundary.unavailable_verdict(首行 `[cli] status=unavailable`),
+-- 不在这里另写一套诊断格式。platform_verdict 用宿主平台;测试可注入平台判定经
+-- dofile 驱动本文件而不必真换操作系统。
+local platform_verdict = boundary.platform_verdict("cli")
+if platform_verdict ~= nil then
+  os.exit(boundary.emit(platform_verdict))
+end
 
 local raw_args = arg or {}
 local name = raw_args[1]

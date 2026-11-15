@@ -47,11 +47,11 @@ local function _stop_lane(pid_file)
   end
 end
 
--- 执行缝的返回形态兼容两种:os.execute 形态 (ok, "exit"|"unavailable", code) 与
--- (ok, code) 形态。判定一律折到 shell.exit_status,不在本模块另造一套。
+-- 执行缝只返回 os.execute 的 Lua 5.4 形态 (ok, "exit"|"unavailable", code)。
+-- 判定一律折到 shell.exit_status,不在本模块另造一套。
 -- 返回 nil 表示「执行缝不可用」(bash 起不来),false 表示命令没成功。
 local function _started_ok(ok, kind, code)
-  if kind == "unavailable" or (type(kind) == "number" and kind == boundary.UNAVAILABLE_EXIT_CODE) then
+  if kind == "unavailable" then
     return nil
   end
   return shell.exit_status(ok, kind, code)

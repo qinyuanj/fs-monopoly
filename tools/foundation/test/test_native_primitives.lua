@@ -88,6 +88,33 @@ it("ensure_dir on an existing directory spawns no shell; a file path still fails
   check.is_true(ok, err)
 end)
 
+-- #234 F7:is_dir / path_exists 只读、无副作用——旧实现会在目标目录里建探针文件再删,
+-- deploy-diff 因此在实际部署目录里写了东西。这里钉住:多次判定后目录内容逐项不变。
+it("is_dir and path_exists leave the directory unchanged", function()
+  local root = env.make_temp_path("fs_probe_no_side_effect", "")
+  local ok, err = xpcall(function()
+    check.truthy(fs.ensure_dir(root .. "/inner"))
+    check.truthy(fs.write_file(root .. "/inner/a.lua", "x"))
+    local before = proc.collect_files(root .. "/inner")
+
+    check.is_true(fs.is_dir(root .. "/inner"))
+    check.is_true(fs.path_exists(root .. "/inner"))
+    check.is_true(fs.path_exists(root .. "/inner/a.lua"))
+    check.is_false(fs.is_dir(root .. "/inner/a.lua"))
+    check.is_false(fs.is_dir(root .. "/inner/nope"))
+    check.is_false(fs.path_exists(root .. "/inner/nope"))
+    -- 与 fs 同源、bootstrap 用的 runtime_path_ops 判定同样不写文件。
+    check.same("dir", runtime.probe_path(root .. "/inner"))
+    check.same("file", runtime.probe_path(root .. "/inner/a.lua"))
+    check.same("missing", runtime.probe_path(root .. "/inner/nope"))
+
+    check.same(before, proc.collect_files(root .. "/inner"),
+      "probing must not create or delete any file inside the directory")
+  end, debug.traceback)
+  check.truthy(fs.remove_path(root))
+  check.is_true(ok, err)
+end)
+
 it("run_command env option exports variables to the child", function()
   local result = proc.run_command(
     { lua54.lua54_bin(), "-e", 'io.write(os.getenv("MONOPOLY_TEST_ENV_124") or "missing")' },

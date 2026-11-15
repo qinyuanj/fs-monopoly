@@ -56,8 +56,10 @@ function runtime_path_ops.current_dir()
   if bash_lib ~= nil then
     -- 经执行缝跑 cygpath:io.popen 在原生 Windows 上走 cmd.exe,单引号与
     -- `2>/dev/null` 都不成立,拿到的不是 cygpath 的输出而是 cmd 的报错。
-    local output = bash_lib.capture("cygpath -a -m .")
-    if output ~= nil then
+    -- capture 形态返回 (output, ok, code);必须核对退出码:cygpath 缺席时 stderr
+    -- 会被 2>&1 合流读回,把报错文本当 cwd 会让仓根定位漂到子进程目录以外(#234 F8)。
+    local output, ok, code = bash_lib.execute("cygpath -a -m .", { capture = true })
+    if output ~= nil and ok == true and (code == nil or code == 0) then
       local normalized = runtime_path_ops.normalize(output):gsub("%s+$", "")
       if normalized ~= "" then
         return _normalize_msys_path(normalized)
@@ -72,32 +74,45 @@ function runtime_path_ops.current_dir()
   return "."
 end
 
--- 存在性判定纯 Lua:io.open 可读 → 存在;打不开时用 os.rename(p, p) 兜底(无权限读的
--- 目录仍可 rename 成功)。不起子进程。
+-- 存在性 / 目录判定:**只读、无副作用**(ADR 0083 / #234 F7)。
 --
--- 目录判定(ADR 0083):原生 Windows 上 io.open 对**目录**返回 nil、对普通文件返回句柄,
--- 所以「打不开 + rename 成立」= 是目录。旧口径 io.open(p.."/.") 在这里把谓词反了。
-function runtime_path_ops.path_exists(path)
+-- 判据来自 io.open 的 errno,不写探针文件、不起子进程:
+--   * 打开成功                       → 普通(可读)文件;
+--   * errno == ENOENT(2)             → 不存在;
+--   * errno == EACCES(13)/EPERM(1)/EISDIR(21) → 是目录(原生 Windows 对目录一律
+--     ERROR_ACCESS_DENIED,与目录 ACL 是否可写无关——旧「建探针文件」法正因如此
+--     把不可写目录误判成不存在,并真的在部署目录里写字);
+--   * 其他 errno                     → "unknown",由调用方(foundation.fs)经统一执行缝
+--     `test -d` / `test -e` 仲裁。
+-- 返回 "file" | "dir" | "missing" | "unknown" 之一。
+local _ENOENT, _EPERM, _EACCES, _EISDIR = 2, 1, 13, 21
+
+function runtime_path_ops.probe_path(path)
   if path == nil or path == "" then
-    return false
+    return "missing"
   end
-  local file = io.open(path, "rb")
-  if file ~= nil then
-    file:close()
-    return true
+  local handle, _, errno = io.open(path, "rb")
+  if handle ~= nil then
+    handle:close()
+    return "file"
   end
-  -- 目录打不开(原生 Windows 上 io.open 对目录返回 nil)。
-  -- 判据:在 <path>/ 下真建一个临时文件——目录建得出来,普通文件与缺失路径都
-  -- 建不出来。不用 os.rename(p, p):它对目录间歇性失败(实测 100 次里失败 13 次),
-  -- 拿它当唯一判据会让仓根定位时好时坏。
-  local probe = path .. "/.__monopoly_exists_probe_" .. tostring({}):gsub("[^%w]+", "")
-  local handle = io.open(probe, "wb")
-  if handle == nil then
-    return false
+  if errno == _ENOENT then
+    return "missing"
   end
-  handle:close()
-  os.remove(probe)
-  return true
+  if errno == _EACCES or errno == _EPERM or errno == _EISDIR then
+    return "dir"
+  end
+  return "unknown"
+end
+
+-- bootstrap 在 package.path 装好前用它,所以只走纯 Lua probe_path(不 require、不起进程)。
+-- "unknown" 按存在处理:让后续真实 IO 自己报错,不在这里静默判缺失。
+function runtime_path_ops.path_exists(path)
+  return runtime_path_ops.probe_path(path) ~= "missing"
+end
+
+function runtime_path_ops.is_dir(path)
+  return runtime_path_ops.probe_path(path) == "dir"
 end
 
 -- 绝对路径判定(ADR 0083):盘符形态 D:/… / C:/… 与 POSIX 根 "/" 都算绝对。

@@ -72,9 +72,12 @@ function shell.wrap_command_with_cwd(command, cwd)
   return "cd " .. shell.shell_quote(cwd_path) .. " && " .. tostring(command or "")
 end
 
--- 执行缝(ADR 0083):全仓唯一的命令执行入口,内部一律经 bash(实现见 foundation/bash.lua)。
--- 返回形态与 os.execute 的 Lua 5.4 一致 → (ok, "exit", code);找不到 bash 时
--- 返回 (nil, "unavailable", 3)。options.bash 可钉定解释器(测试用)。
+-- 执行缝的公开入口(ADR 0083):全仓唯一的命令执行入口,内部一律经 bash
+-- (实现在 foundation/bash.lua,执行 + 读回输出只有那一份实现)。
+--   默认返回 os.execute 形态 → (ok, "exit", code);找不到 bash 时 (nil, "unavailable", 3)。
+--   options.capture = true 时返回 (output, ok, code),把 stdout+stderr 读回——需要读
+--   子进程输出的调用方用它,不再各自拼 io.popen。找不到 bash 时 (nil, nil, 3)。
+-- options.bash 可钉定解释器(测试用)。
 function shell.execute(command, options)
   return bash_lib.execute(command, options)
 end

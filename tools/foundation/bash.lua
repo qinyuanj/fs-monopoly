@@ -208,14 +208,26 @@ function bash.last_unavailable()
   return _last_unavailable
 end
 
--- 唯一执行入口:命令文本写进临时脚本,交 bash 执行;退出码原样返回。
--- 返回 (ok, "exit", code),与 os.execute 的 Lua 5.4 形态一致,调用方判定逻辑不变。
--- 找不到 bash 时返回 (nil, "unavailable", 3) 并记下原因。
+-- 唯一执行实现:命令文本写进临时脚本,交 bash 执行。执行 + 读回输出只有这一处,
+-- 不再有第二个执行面(bash.capture 这个名字已删,#234 F1)。
+--
+-- 两种读回形态共用同一份脚本文件缝,由 options.capture 选:
+--   * 默认:(ok, "exit"|"unavailable", code),与 os.execute 的 Lua 5.4 形态一致;
+--   * options.capture = true:(output, ok, code),经 io.popen 把 stdout+stderr 读回。
+-- 找不到 bash / 写不出脚本:默认 (nil, "unavailable", 3);capture (nil, nil, 3),
+-- 两种情况都记下具体原因。
+--
+-- 对外公开入口是 foundation.shell.execute(转发到这里);本函数是实现层,只有必须在
+-- package.path 装好前运行的基础模块(lua_env 的受控环境核对、runtime_path_ops 的
+-- cygpath 探测)才直接调用它,且同样只走这一份实现。
 function bash.execute(command, options)
   options = options or {}
   local executable, reason = bash.discover(options.bash)
   if executable == nil then
     _last_unavailable = reason
+    if options.capture then
+      return nil, nil, bash.UNAVAILABLE_EXIT_CODE
+    end
     return nil, "unavailable", bash.UNAVAILABLE_EXIT_CODE
   end
 
@@ -223,6 +235,9 @@ function bash.execute(command, options)
   local handle = io.open(script, "wb")
   if handle == nil then
     _last_unavailable = "cannot write command script under " .. bash.system_tmp_dir()
+    if options.capture then
+      return nil, nil, bash.UNAVAILABLE_EXIT_CODE
+    end
     return nil, "unavailable", bash.UNAVAILABLE_EXIT_CODE
   end
   local body = tostring(command or "")
@@ -231,47 +246,24 @@ function bash.execute(command, options)
     handle:write("\n")
   end
   handle:close()
+
+  if options.capture then
+    local pipe = io.popen(_command_line(executable, script) .. " 2>&1")
+    if pipe == nil then
+      os.remove(script)
+      _last_unavailable = "cannot start bash for output capture"
+      return nil, nil, bash.UNAVAILABLE_EXIT_CODE
+    end
+    local output = pipe:read("*a") or ""
+    local ok, _, code = pipe:close()
+    -- 脚本必须在子进程读完(close 等到收场)之后再删:popen 返回时子进程可能还没打开它。
+    os.remove(script)
+    return output, ok, code
+  end
 
   local ok, kind, code = os.execute(_command_line(executable, script))
   os.remove(script)
   return ok, kind, code
-end
-
--- 带输出捕获的执行:同一脚本文件缝,改走 io.popen 把 stdout 读回来。
--- 返回 (output, ok, code);bash 缺失返回 (nil, nil, "unavailable")。
--- 需要读子进程输出的调用方(lua_env 的 luarocks 探测)用它,不再各自拼 popen。
-function bash.capture(command, options)
-  options = options or {}
-  local executable, reason = bash.discover(options.bash)
-  if executable == nil then
-    _last_unavailable = reason
-    return nil, nil, "unavailable"
-  end
-
-  local script = _temp_script_path()
-  local handle = io.open(script, "wb")
-  if handle == nil then
-    _last_unavailable = "cannot write command script under " .. bash.system_tmp_dir()
-    return nil, nil, "unavailable"
-  end
-  local body = tostring(command or "")
-  handle:write(body)
-  if body:sub(-1) ~= "\n" then
-    handle:write("\n")
-  end
-  handle:close()
-
-  local pipe = io.popen(_command_line(executable, script) .. " 2>&1")
-  if pipe == nil then
-    os.remove(script)
-    _last_unavailable = "cannot start bash for output capture"
-    return nil, nil, "unavailable"
-  end
-  local output = pipe:read("*a") or ""
-  local ok, _, code = pipe:close()
-  -- 脚本必须在子进程读完(close 等到收场)之后再删:popen 返回时子进程可能还没打开它。
-  os.remove(script)
-  return output, ok, code
 end
 
 return bash

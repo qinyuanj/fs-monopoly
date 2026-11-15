@@ -66,7 +66,25 @@ describe("shell execute seam", function()
     check.matches("Git for Windows", message, 1, true)
   end)
 
-  it("shell.execute is the only documented process entry", function()
-    check.equal("function", type(shell.execute))
+  -- #234 F1/F15:执行缝只剩一个实现。capture 形态由同一个 shell.execute 提供,
+  -- foundation.bash 上不再有第二个对外执行名(bash.capture)。
+  it("capture mode reads back output through the same seam", function()
+    local output, ok, code = shell.execute("printf 'cap-ok'", { capture = true })
+    check.is_true(ok == true)
+    check.same(0, code)
+    check.same("cap-ok", output)
+
+    local missing, mok, mcode = shell.execute("exit 0",
+      { capture = true, bash = "C:/no such place/bash.exe" })
+    check.is_nil(missing)
+    check.is_nil(mok)
+    check.same(3, mcode)
+  end)
+
+  it("foundation.bash exposes no second capture entry", function()
+    local bash_lib = require("foundation.bash")
+    check.equal("function", type(bash_lib.execute))
+    check.is_nil(bash_lib.capture,
+      "bash.capture must be gone: shell.execute({capture=true}) is the only seam")
   end)
 end)

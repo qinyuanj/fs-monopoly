@@ -218,7 +218,7 @@ slim_plan_has_exactly_the_retained_lanes()
   for _, lane in ipairs(plan.lanes) do
     labels[#labels + 1] = lane.label
   end
-  check.same({ "contract", "guards", "behavior", "lint-src", "lint-test", "lint-tools", "encoding" }, labels)
+  check.same({ "contract", "guards", "behavior", "foundation", "lint-src", "lint-test", "lint-tools", "encoding" }, labels)
   check.same({}, plan.skipped)
 end
 

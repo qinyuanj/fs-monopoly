@@ -331,27 +331,19 @@ it("reset directory clears and recreates", function()
   end)
 end)
 
--- 目录镜像交给原生 robocopy /MIR:镜像语义(目标侧陈旧项消失、源侧隐藏项与空目录
--- 保留)由 robocopy 保证,这里钉命令形态与退出码判定,不真跑 robocopy(测试注入桩)。
-it("copy tree delegates the mirror to native robocopy", function()
+-- 目录镜像的外部行为(#234 F16):落点真的出现在目标目录、字节一致、目标侧陈旧文件
+-- 被镜像清掉。不再断言命令行文本(/MIR、引号、MSYS 变量都是内部实现)。
+it("copy tree mirrors source into the target and clears stale entries", function()
   _with_sandbox(function(root)
     local proj = _make_project(root)
     local target = root .. "/target/src"
-    local commands = {}
-    _with_stubbed("run_robocopy", function(command)
-      commands[#commands + 1] = command
-      return 1
-    end, function()
-      check.is_true(deploy.copy_directory_tree(proj .. "/src", target))
-    end)
-    check.same(1, #commands)
-    local command = commands[1]
-    check.truthy(command:find("robocopy", 1, true), command)
-    check.truthy(command:find("/MIR", 1, true), command)
-    check.truthy(command:find("'" .. proj .. "/src'", 1, true), command)
-    check.truthy(command:find("'" .. target .. "'", 1, true), command)
-    check.is_nil(command:find("cp -R", 1, true), "不得回落到 cp -R")
-    check.is_nil(command:find("wslpath", 1, true), command)
+    fs_lib.ensure_dir(target)
+    _write_file(target .. "/stale.lua", "-- stale\n")
+    check.is_true(deploy.copy_directory_tree(proj .. "/src", target))
+    check.is_true(fs_lib.is_dir(target))
+    check.equal(fs_lib.read_raw(proj .. "/src/a.lua"), fs_lib.read_raw(target .. "/a.lua"))
+    check.truthy(fs_lib.path_exists(target .. "/.hidden.lua"), "hidden file must be mirrored")
+    check.is_false(fs_lib.path_exists(target .. "/stale.lua"), "mirror must clear stale entries")
   end)
 end)
 

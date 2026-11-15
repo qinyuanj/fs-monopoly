@@ -41,19 +41,31 @@ local function _selected_interpreter()
   return require("foundation.lua54").lua54_bin()
 end
 
+-- MSYS 形态 /c/Users/... → 原生 C:/Users/...。tool_discovery_env 导出的路径会交给
+-- **原生 Windows** 子进程(并非每次都经 bash),必须用原生盘符形态,否则 CreateProcess
+-- 报「The system cannot find the path specified」(#236 风险①)。
+local function _to_native_path(value)
+  local normalized = path_ops.normalize(value)
+  local drive, rest = normalized:match("^/(%a)/(.*)$")
+  if drive ~= nil then
+    return drive:upper() .. ":/" .. rest
+  end
+  return normalized
+end
+
 -- 裸命令名解析成完整可执行路径(`command -v` 首个命中);已是路径形态原样返回。
 -- 只供 tool_discovery_env 导出使用,不改变 detect_lua54 自身的候选语义。
 local function _interpreter_path(selected)
   local normalized = path_ops.normalize(selected)
   if normalized:find("/") ~= nil then
-    return normalized
+    return _to_native_path(normalized)
   end
   local shell_lib = require("foundation.shell")
   local found = require("foundation.proc").run_command("command -v " .. shell_lib.shell_quote(selected))
   if found.ok == true then
     local line = tostring(found.output or ""):match("[^\r\n]+")
     if line ~= nil and line ~= "" then
-      return path_ops.normalize(line)
+      return _to_native_path(line)
     end
   end
   return selected
@@ -66,14 +78,14 @@ local function _luarocks_exe()
   local fs_lib = require("foundation.fs")
   local override = os.getenv("MONOPOLY_LUAROCKS_EXE")
   if override ~= nil and override ~= "" then
-    override = path_ops.normalize(override)
+    override = _to_native_path(override)
     if fs_lib.path_exists(override) then
       return override
     end
   end
   local shell_lib = require("foundation.shell")
   local found = require("foundation.proc").run_command("command -v " .. shell_lib.shell_quote("luarocks"))
-  local rocks = found.ok and path_ops.normalize(tostring(found.output):match("[^\r\n]+") or "") or nil
+  local rocks = found.ok and _to_native_path(tostring(found.output):match("[^\r\n]+") or "") or nil
   if rocks == "" then rocks = nil end
   assert(rocks ~= nil, "luarocks executable missing on PATH (install luarocks with Lua 5.4)")
   return rocks

@@ -15,8 +15,11 @@ function spec_lane_args.usage()
     "--recount 只凭该目录重算 COUNTS 与 TAP 计数并核对汇总值,一致退 0、不一致退 1。",
     "--busted-bin / BUSTED_BIN 已删除，PATH 无 busted。",
     "",
+    "lane 起不来 / 超时:单独点名 reason=launch_failed|output_incomplete|timeout,不并进用例计数;",
+    "  无任何真实用例失败时整体退 3(status=unavailable),混有真实失败时退 1——",
+    "  「起不来 / 超时」是环境问题,不冒充「测试红了」。",
     "原生 Windows 单平台(ADR 0083);非 Windows 或缺少 bash 判不可用,退 3。",
-    "退出码: 0 全部通过 / 1 有失败 / 2 用法错误 / 3 平台或工具不可用",
+    "退出码: 0 全部通过 / 1 有真实失败 / 2 用法错误 / 3 平台、工具或 lane 起不来/超时(无真实失败)",
   }, "\n") .. "\n"
 end
 
