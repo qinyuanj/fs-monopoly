@@ -1,9 +1,15 @@
 local M = {}
 
+local proc_lib = require("foundation.proc")
+local shell_lib = require("foundation.shell")
+
 -- 递归枚举 root 下的 .lua 文件。`find -print0` 保证空格/中文/换行文件名原样读回;
 -- 目录缺失时 find 非零,由调用方报 "no lua files found"。
+--
+-- 枚举经 foundation.proc 的统一执行缝(内部 bash):原生 Lua 的 io.popen 在 Windows
+-- 上走 cmd.exe,不认 POSIX 单引号,find 会直接失败(ADR 0083)。
 local function _build_list_command(root)
-  return "find " .. ("'" .. tostring(root):gsub("'", "'\\''") .. "'")
+  return "find " .. shell_lib.shell_quote(tostring(root))
     .. " -type f -name '*.lua' -print0 2>/dev/null"
 end
 
@@ -39,22 +45,17 @@ function M.collect_lua_files(root)
     return nil, "no lua files found under root: " .. tostring(root)
   end
 
-  local process = io.popen(_build_list_command(root))
-  if not process then
-    return nil, "cannot run list command for root: " .. tostring(root)
+  local result = proc_lib.run_command(_build_list_command(root))
+  if result.ok ~= true then
+    return nil, "list command failed for root: " .. tostring(root)
   end
 
   local files = {}
-  local raw = process:read("*a") or ""
+  local raw = tostring(result.output or "")
   for line in (raw .. "\0"):gmatch("(.-)\0") do
     if line ~= "" then
       files[#files + 1] = M.normalize_path(line)
     end
-  end
-
-  local ok = process:close()
-  if ok == nil or ok == false then
-    return nil, "list command failed for root: " .. tostring(root)
   end
 
   if #files == 0 then
