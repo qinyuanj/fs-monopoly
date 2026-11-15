@@ -76,10 +76,10 @@ it("blank path returns empty", function()
 end)
 
 it("keeps absolute path and trims trailing slashes", function()
-  check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice/"))
-  check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice"))
-  -- Windows 盘符绝对路径经 wslpath 换算后是 /mnt/c/...;这里只钉「已换算形态」的归一。
-  check.equal("/mnt/c/Users/foo", deploy.resolve_normalized_path("/mnt/c/Users/foo/"))
+  -- 内部路径口径是原生 Windows 正斜杠绝对路径(ADR 0083):C:/Users/... 不再换算成 /mnt/c/...
+  check.equal("C:/Users/foo", deploy.resolve_normalized_path("C:/Users/foo/"))
+  check.equal("C:/Users/foo", deploy.resolve_normalized_path("C:/Users/foo"))
+  check.equal("C:/Users/foo", deploy.resolve_normalized_path("C:\\Users\\foo\\"))
 end)
 
 it("relative path is joined to cwd", function()
@@ -89,25 +89,24 @@ end)
 
 it("tilde expands against home", function()
   _with_stubbed("resolve_home_dir", function()
-    return "/home/alice"
+    return "C:/Users/alice"
   end, function()
-    check.equal("/home/alice/Desktop", deploy.resolve_normalized_path("~/Desktop"))
+    check.equal("C:/Users/alice/Desktop", deploy.resolve_normalized_path("~/Desktop"))
   end)
 end)
 
 it("folds dot and dotdot segments", function()
-  check.equal("/home/alice/bob", deploy.resolve_normalized_path("/home/alice/sub/../bob"))
-  check.equal("/home/alice/sub/bob", deploy.resolve_normalized_path("/home/alice/sub/./bob"))
-  check.equal("/bob", deploy.resolve_normalized_path("/home/alice/../../bob"))
+  check.equal("C:/Users/alice/bob", deploy.resolve_normalized_path("C:/Users/alice/sub/../bob"))
+  check.equal("C:/Users/alice/sub/bob", deploy.resolve_normalized_path("C:/Users/alice/sub/./bob"))
 end)
 
--- %USERPROFILE% 只在 cmd.exe 内展开;Lua 侧路径里的 %NAME% 是普通字符(#222)。
+-- %USERPROFILE% 只在 cmd 内展开;Lua 侧路径里的 %NAME% 是普通字符(#222)。
 it("keeps percent text literal", function()
-  check.equal("/mnt/c/Users/a%HOME%b/x", deploy.resolve_normalized_path("/mnt/c/Users/a%HOME%b/x/"))
+  check.equal("C:/Users/a%HOME%b/x", deploy.resolve_normalized_path("C:/Users/a%HOME%b/x/"))
 end)
 
-it("platform name returns win when the WSL interop surface is present", function()
-  _with_stubbed("detect_interop", function()
+it("platform name returns win when robocopy is present", function()
+  _with_stubbed("detect_native_tools", function()
     return {}
   end, function()
     check.equal("win", deploy.resolve_platform_name())
@@ -116,8 +115,8 @@ end)
 
 -- 不可用退 3:环境问题不能被当成部署失败。resolve_platform_name 直接 os.exit,
 -- 所以用例在子进程里跑,只断言退出码与 stderr 状态词。
-it("platform name exits 3 with status=unavailable without WSL interop", function()
-  local root = env_lib.make_temp_path("deploy_interop_spec", "")
+it("platform name exits 3 with status=unavailable without robocopy", function()
+  local root = env_lib.make_temp_path("deploy_native_tools_spec", "")
   fs_lib.remove_path(root)
   check.is_true(fs_lib.ensure_dir(root))
   local driver = root .. "/driver.lua"
@@ -125,7 +124,7 @@ it("platform name exits 3 with status=unavailable without WSL interop", function
     "package.path = " .. string.format("%q", env_lib.current_dir() .. "/?.lua;" .. env_lib.current_dir() .. "/tools/?.lua;")
       .. " .. package.path",
     "local deploy = require('tools.packages.ops.deploy')",
-    "deploy.detect_interop = function() return { 'cmd.exe', 'wslpath' } end",
+    "deploy.detect_native_tools = function() return { 'robocopy' } end",
     "deploy.resolve_platform_name()",
     "",
   }, "\n")))
@@ -133,35 +132,55 @@ it("platform name exits 3 with status=unavailable without WSL interop", function
   fs_lib.remove_path(root)
   check.same(3, result.code, result.output)
   check.truthy(result.output:find("status=unavailable", 1, true), result.output)
-  check.truthy(result.output:find("cmd.exe", 1, true), result.output)
+  check.truthy(result.output:find("robocopy", 1, true), result.output)
 end)
 
--- %USERPROFILE% 与 wslpath 经注入缝替身验证,不依赖本机互操作面(#191 测试决策)。
-it("home directory resolves the Windows profile through wslpath", function()
+-- 家目录解析只读原生环境变量与一条 cmd 兜底,不经 wslpath、不经 /mnt/c(ADR 0083 第 5 条)。
+it("home directory comes from the native USERPROFILE", function()
   local commands = {}
   local home = deploy.resolve_windows_home_dir(function(command)
     commands[#commands + 1] = command
-    if command:find("cmd.exe", 1, true) then return "C:\\Users\\测试 user\r\n" end
-    return "/mnt/c/Users/测试 user\n"
+    return "C:\\Users\\测试 user\r\n"
+  end, function(name)
+    return name == "USERPROFILE" and "C:\\Users\\测试 user" or nil
   end)
-  check.same("/mnt/c/Users/测试 user", home)
-  check.truthy(commands[1]:find("%USERPROFILE%", 1, true), commands[1])
-  check.truthy(commands[2]:find("wslpath -u 'C:\\Users\\测试 user'", 1, true), commands[2])
+  check.same("C:/Users/测试 user", home)
+  check.same(0, #commands, "USERPROFILE 存在时不得起任何子进程")
 end)
 
-it("home directory normalizes backslashes in the converted path", function()
-  check.same("/mnt/c/Users/foo", deploy.resolve_windows_home_dir(function(command)
-    if command:find("cmd.exe", 1, true) then return "C:\\Users\\foo\n" end
-    return "/mnt/c/Users\\foo\n"
+it("home directory normalizes backslashes and trailing separators", function()
+  check.same("C:/Users/foo", deploy.resolve_windows_home_dir(nil, function()
+    return "C:\\Users\\foo\\"
   end))
+end)
+
+it("home directory falls back to cmd when USERPROFILE is missing", function()
+  local commands = {}
+  local home = deploy.resolve_windows_home_dir(function(command)
+    commands[#commands + 1] = command
+    return "C:\\Users\\fallback\r\n"
+  end, function()
+    return nil
+  end)
+  check.same("C:/Users/fallback", home)
+  check.same(1, #commands)
+  check.same("cmd /c echo %USERPROFILE%", commands[1])
+  check.is_nil(commands[1]:find("/mnt/c", 1, true), "兜底不得经 /mnt/c")
+  check.is_nil(commands[1]:find("wslpath", 1, true), "兜底不得经 wslpath")
 end)
 
 it("home directory is empty when the profile cannot be resolved", function()
-  check.same("", deploy.resolve_windows_home_dir(function() return "" end))
-  check.same("", deploy.resolve_windows_home_dir(function(command)
-    if command:find("cmd.exe", 1, true) then return "C:\\Users\\x\n" end
-    return "wslpath: error\n"
-  end))
+  check.same("", deploy.resolve_windows_home_dir(function() return "" end, function() return nil end))
+  check.same("", deploy.resolve_windows_home_dir(function() return "not a drive path\n" end, function() return nil end))
+end)
+
+-- MONOPOLY_DEPLOY_HOME 是保留的覆写面:设了就不读 USERPROFILE、不起 cmd。
+it("home directory honours the explicit override", function()
+  local home = deploy.resolve_home_dir(function(name)
+    if name == "MONOPOLY_DEPLOY_HOME" then return "D:\\sandbox\\home" end
+    error("override must win over USERPROFILE")
+  end)
+  check.same("D:/sandbox/home", home)
 end)
 
 -- 部署按工作树原样拷贝(插桩通道依赖这一点),所以只提示 payload 里未提交的文件。
@@ -312,17 +331,52 @@ it("reset directory clears and recreates", function()
   end)
 end)
 
-it("copy tree mirrors hidden and non Lua files", function()
+-- 目录镜像交给原生 robocopy /MIR:镜像语义(目标侧陈旧项消失、源侧隐藏项与空目录
+-- 保留)由 robocopy 保证,这里钉命令形态与退出码判定,不真跑 robocopy(测试注入桩)。
+it("copy tree delegates the mirror to native robocopy", function()
   _with_sandbox(function(root)
     local proj = _make_project(root)
     local target = root .. "/target/src"
-    deploy.copy_directory_tree(proj .. "/src", target)
-    for _, relative in ipairs({
-      "a.lua", "sub/b.lua", ".hidden.lua", ".hiddendir/x.lua", "notes.txt", ".keep",
-    }) do
-      check.equal(fs_lib.read_raw(proj .. "/src/" .. relative), fs_lib.read_raw(target .. "/" .. relative),
-        "mirror must include " .. relative)
-    end
+    local commands = {}
+    _with_stubbed("run_robocopy", function(command)
+      commands[#commands + 1] = command
+      return 1
+    end, function()
+      check.is_true(deploy.copy_directory_tree(proj .. "/src", target))
+    end)
+    check.same(1, #commands)
+    local command = commands[1]
+    check.truthy(command:find("robocopy", 1, true), command)
+    check.truthy(command:find("/MIR", 1, true), command)
+    check.truthy(command:find("'" .. proj .. "/src'", 1, true), command)
+    check.truthy(command:find("'" .. target .. "'", 1, true), command)
+    check.is_nil(command:find("cp -R", 1, true), "不得回落到 cp -R")
+    check.is_nil(command:find("wslpath", 1, true), command)
+  end)
+end)
+
+-- robocopy 的 0..7 都是成功(0 无变化 / 1 有拷贝 / 2 有额外项被清 / 3 两者都有);
+-- 8 起才是失败。按 0/非 0 判定会把正常部署读成失败。
+it("robocopy exit codes 0..7 are success and 8+ are failures", function()
+  for code = 0, 7 do
+    check.is_true(deploy.robocopy_succeeded(code), "exit " .. code .. " must be success")
+  end
+  for _, code in ipairs({ 8, 9, 16, 17 }) do
+    check.is_false(deploy.robocopy_succeeded(code), "exit " .. code .. " must be failure")
+  end
+  check.is_false(deploy.robocopy_succeeded(nil))
+end)
+
+it("copy tree errors when robocopy reports a fatal exit code", function()
+  _with_sandbox(function(root)
+    local proj = _make_project(root)
+    _with_stubbed("run_robocopy", function()
+      return 16
+    end, function()
+      check.has_error(function()
+        deploy.copy_directory_tree(proj .. "/src", root .. "/target/src")
+      end)
+    end)
   end)
 end)
 
