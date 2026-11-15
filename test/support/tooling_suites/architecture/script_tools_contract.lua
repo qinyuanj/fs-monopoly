@@ -342,18 +342,29 @@ local function _test_deploy_lua_matches_simplified_cli()
     "deploy.lua should centralize the LuaSource directory name construction"
   )
 
-  -- Windows 侧落点:~/Desktop/dev/eggy/LuaSource_大富翁(经 %USERPROFILE% + wslpath 换算)。
+  -- Windows 侧落点:~/Desktop/dev/eggy/LuaSource_大富翁(原生 %USERPROFILE% + robocopy,ADR 0083)。
   _assert_contains(
     script_text,
     'path_lib.join_path(home_dir, "Desktop", "dev", "eggy", M.join_lua_source_dir_name())',
     "deploy.lua should keep the Windows default deploy path semantics"
   )
-  _assert_contains(script_text, "wslpath", "deploy.lua should convert the Windows profile through wslpath")
+  _assert_contains(script_text, "robocopy", "deploy.lua should mirror the payload with native robocopy")
   _assert_contains(script_text, "%USERPROFILE%", "deploy.lua should resolve the Windows profile dynamically")
+  _assert_contains(script_text, 'getenv("USERPROFILE")', "deploy.lua should read the native USERPROFILE first")
   _assert_not_contains(script_text, "C:/Users/", "deploy.lua must not hardcode a Windows user name")
 
-  -- ADR 0073:原生 Windows 原语退场。
-  for _, retired in ipairs({ "cmd.exe /d /v:off /c", "chcp", "robocopy", "if exist", "if not exist", "rmdir", "del /f" }) do
+  -- ADR 0083:WSL 互操作面退场(部署面原生)。cmd.exe 只允许作为取不到 USERPROFILE 时的
+  -- 兜底(cmd /c echo %USERPROFILE%),不许再经它取家目录、不许经 wslpath 换算、不许落 /mnt/c。
+  for _, retired in ipairs({
+    "cmd.exe /d /v:off /c",
+    "chcp",
+    "wslpath",
+    "/mnt/c",
+    "if exist",
+    "if not exist",
+    "rmdir",
+    "del /f",
+  }) do
     _assert_not_contains(script_text, retired, "deploy should retire " .. retired)
   end
 
@@ -392,8 +403,14 @@ local function _test_deploy_comprehensive()
   -- 帮助在壳内结束,不会进入部署主流程或写入实际目标。
   local result = _run_lua({ "tools/cli.lua", "deploy", "--help" })
   check.is_true(result.ok == true, "deploy help should succeed")
-  _assert_contains(result.output, "WSL", "help should declare the WSL platform")
+  _assert_contains(result.output, "原生 Windows", "help should declare the native Windows platform")
+  _assert_contains(result.output, "robocopy", "help should name the native mirror tool")
+  _assert_contains(result.output, "%USERPROFILE%", "help should name the native home directory source")
   _assert_contains(result.output, "退 3", "help should explain the unavailable exit code")
+  -- 四态:0 / 1 / 2 / 3,且 3 明确是「缺 robocopy 或取不到家目录」。
+  _assert_contains(result.output, "退出码: 0", "help should state the success exit code")
+  _assert_contains(result.output, "3 不可用", "help should state the unavailable exit code")
+  _assert_not_contains(result.output, "WSL", "help must not declare the retired WSL platform")
 end
 
 local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()

@@ -35,11 +35,12 @@ function M.usage()
     "只读比对部署目录与工作区的 payload(与 deploy 同一张清单:src/、main.lua、",
     "Data/UIManagerNodes.lua、Data/Prefab.lua),不写入任何文件。真机验收后、提交前跑。",
     "逐字节比对;src/ 下部署目录多出的文件也算漂移,payload 之外的文件不看。",
-    "目标路径: <家目录>/Desktop/dev/eggy/LuaSource_大富翁;家目录即 %USERPROFILE%",
-    "(cmd.exe 取值、wslpath -u 换算),设了 MONOPOLY_DEPLOY_HOME 时以它为准。",
-    "实际路径在运行输出的 Deploy target 行;--help 本身不起 cmd.exe。",
+    "目标路径: <家目录>/Desktop/dev/eggy/LuaSource_大富翁;家目录即原生 %USERPROFILE%",
+    "(直接读环境变量,复用 deploy 的同一份解析),设了 MONOPOLY_DEPLOY_HOME 时以它为准。",
+    "实际路径在运行输出的 Deploy target 行;--help 本身不解析家目录、不起任何子进程。",
+    "本命令只读,不需要 robocopy;缺它不影响比对。",
     "退出码: 0 一致 / 1 有漂移(列出文件)或比对失败 / 2 多余参数 /",
-    "3 缺 cmd.exe、wslpath 或取不到家目录(status=unavailable,未比对)。",
+    "3 取不到 %USERPROFILE%(status=unavailable,未比对;环境问题不是漂移)。",
     "行为真源见 tools/packages/ops/deploy_diff.lua。",
     "",
   }, "\n") .. "\n"
@@ -106,8 +107,9 @@ end
 local function _unavailable(stderr, step, reason)
   local verdict = boundary.unavailable_verdict("deploy-diff", " tool=deploy-diff step=" .. step, {
     reason,
-    "未做任何比对;退出码 " .. boundary.UNAVAILABLE_EXIT_CODE .. " 表示环境不可用,不是漂移。",
-    "处理: 在 WSL Ubuntu 中运行,并确认 /mnt/c 已挂载(cmd.exe 与 wslpath 可见)。",
+    "未做任何比对;退出码 " .. tostring(boundary.UNAVAILABLE_EXIT_CODE)
+      .. " 表示环境不可用,不是漂移。",
+    "处理: 在原生 Windows 上运行(非 WSL),确认 %USERPROFILE% 已设置。",
   })
   stderr:write(verdict.message)
   return verdict.exit_code
@@ -138,7 +140,8 @@ local function _report(drift, stdout)
   return 1
 end
 
--- env 是测试注入缝:detect_interop、resolve_home、project_root、fs、stdout、stderr。
+-- env 是测试注入缝:resolve_home、project_root、fs、stdout、stderr。家目录解析只有
+-- deploy 一份实现,这里不重复;本命令只读,不需要 robocopy,所以没有工具探测步骤。
 function M.main(args, env)
   local help = tool_cli.help_exit(args, M.usage)
   if help ~= nil then
@@ -153,13 +156,9 @@ function M.main(args, env)
     return 2
   end
 
-  local missing = (env.detect_interop or deploy.detect_interop)()
-  if #missing > 0 then
-    return _unavailable(stderr, "interop", "比对需要 WSL 互操作面:缺 " .. table.concat(missing, ", ") .. "。")
-  end
   local home_dir = (env.resolve_home or deploy.resolve_home_dir)()
   if text_lib.trim(home_dir) == "" then
-    return _unavailable(stderr, "home", "cmd.exe 与 wslpath 都在,但取不到 %USERPROFILE%。")
+    return _unavailable(stderr, "home", "取不到原生 Windows 家目录(%USERPROFILE%)。")
   end
 
   local fs = env.fs or _REAL_FS

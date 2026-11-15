@@ -3,13 +3,13 @@ if arg then rawset(arg, 0, "tools/packages/probe/test/test_probe_cli.lua") end
 
 require("test.bootstrap").install_package_paths()
 
--- probe 子命令:从 main 入口驱动,子进程执行器、互操作探测、文件读写与时钟全部注入;
+-- probe 子命令:从 main 入口驱动,子进程执行器、家目录解析、文件读写与时钟全部注入;
 -- 只观察退出码、stdout/stderr 与交给 editor-cli exec 的代码文本。
 local check = require("luassert")
 local probe_cli = require("packages.probe.cli")
 local script = require("packages.probe.script")
 
-local HOME = "/mnt/c/Users/tester"
+local HOME = "C:/Users/tester"
 local CLI_DIR = HOME .. "/.eggitor/cli"
 local MARKER = "DEBUG-PROBE-1700000000-abcd1234"
 
@@ -64,9 +64,6 @@ local function _harness(overrides)
   local stdout, stderr = _sink(), _sink()
 
   local env = {
-    command_exists = function(name)
-      return not (overrides.missing or {})[name]
-    end,
     resolve_home = function()
       return overrides.home or HOME
     end,
@@ -225,28 +222,32 @@ describe("probe cli", function()
     check.truthy(err:find("EXEC_INPUT_ERROR boom", 1, true), err)
   end)
 
-  it("reports missing interop as unavailable with exit 3", function()
-    local code, out, err, state = _run({ "probe.lua" }, { missing = { ["wslpath"] = true } })
+  -- 原生定位:家目录来自 %USERPROFILE%,不经 cmd.exe / wslpath / /mnt/c 探测。
+  it("locates editor-cli under the native user profile without interop probes", function()
+    local code, _, err, state = _run({ "probe.lua" })
 
-    check.equal(3, code)
-    check.equal("", out)
-    check.truthy(err:find("status=unavailable tool=editor-cli step=interop", 1, true), err)
-    check.truthy(err:find("wslpath", 1, true), err)
-    check.is_false(state.exec_called)
+    check.equal(0, code, err)
+    check.is_true(state.exec_called)
   end)
 
   it("reports an unresolvable USERPROFILE as unavailable with exit 3", function()
-    local code, _, err = _run({ "probe.lua" }, { home = "" })
+    local code, out, err = _run({ "probe.lua" }, { home = "" })
 
     check.equal(3, code)
+    check.equal("", out)
     check.truthy(err:find("status=unavailable tool=editor-cli step=userprofile", 1, true), err)
+    check.truthy(err:find("%USERPROFILE%", 1, true), err)
+    check.is_nil(err:find("wslpath", 1, true), "诊断不得再提 wslpath")
+    check.is_nil(err:find("/mnt/c", 1, true), "诊断不得再提 /mnt/c")
   end)
 
   it("reports a missing editor-cli.exe as unavailable with exit 3", function()
-    local code, _, err = _run({ "probe.lua" }, { exe_missing = true })
+    local code, _, err, state = _run({ "probe.lua" }, { exe_missing = true })
 
     check.equal(3, code)
     check.truthy(err:find("status=unavailable tool=editor-cli step=executable", 1, true), err)
+    check.truthy(err:find(HOME .. "/.eggitor/cli/editor-cli.exe", 1, true), err)
+    check.is_false(state.exec_called)
   end)
 
   it("reports an unreachable editor as unavailable with exit 3", function()
@@ -273,6 +274,8 @@ describe("probe cli", function()
     check.equal(0, code)
     check.truthy(out:find("lua5.4 tools/cli.lua probe <lua文件>", 1, true), out)
     check.truthy(out:find("--timeout", 1, true), out)
+    check.truthy(out:find("原生", 1, true), out)
+    check.is_nil(out:find("经 cmd.exe + wslpath 解析", 1, true), "usage 不得再说经 cmd.exe + wslpath 解析")
   end)
 
   it("treats malformed arguments as usage errors", function()

@@ -229,4 +229,31 @@ describe("sync data CLI arguments", function()
 it("unexpected argument is a usage error", function()
   check.equal(2, sync_data.main({ "extra" }))
 end)
+
+-- 家目录与部署目录解析只有 deploy 一份实现:取不到 %USERPROFILE% 就是不可用(退 3),
+-- 与 deploy 的退码口径一致,不是业务失败(退 1)。
+it("an unresolvable home directory is unavailable, not a business failure", function()
+  local deploy = require("packages.ops.deploy")
+  local original = deploy.resolve_default_target_path
+  deploy.resolve_default_target_path = function()
+    return nil, "无法解析原生 Windows 家目录(%USERPROFILE%)。"
+  end
+  local ok, code = pcall(sync_data.main, {})
+  deploy.resolve_default_target_path = original
+  check.is_true(ok, tostring(code))
+  check.equal(3, code)
+end)
+
+-- 回同步只读部署目录,不依赖 robocopy:即使 robocopy 探测会抛错,流程也不该碰它。
+it("sync-back never probes robocopy", function()
+  local deploy = require("packages.ops.deploy")
+  local original_target, original_tools = deploy.resolve_default_target_path, deploy.detect_native_tools
+  deploy.resolve_default_target_path = function() return "C:/sandbox/no-such-deploy-dir" end
+  deploy.detect_native_tools = function() error("sync-back must not probe robocopy") end
+  local ok, code = pcall(sync_data.main, {})
+  deploy.resolve_default_target_path, deploy.detect_native_tools = original_target, original_tools
+  check.is_true(ok, tostring(code))
+  -- 部署目录缺 Data/Prefab.lua:业务失败退 1,而不是不可用退 3。
+  check.equal(1, code)
+end)
 end)
