@@ -86,19 +86,14 @@ local function _default_clock()
   return os.time()
 end
 
+-- 标记里的随机段只用于「同一次 probe 的命中唯一」,不是安全随机源。原生 Windows 上
+-- 没有 /dev/urandom(那是 POSIX 路径,ADR 0083 已退场),这里按时间 + 时钟 + 对象地址
+-- 播种 Lua 的 PRNG 取 8 位十六进制;标记碰撞由轮询与日志内容兜底,不值得引入平台原语。
 local function _default_random_hex()
-  local handle = io.open("/dev/urandom", "rb")
-  local bytes = handle and handle:read(4) or nil
-  if handle then
-    handle:close()
-  end
-  if type(bytes) ~= "string" or #bytes ~= 4 then
-    math.randomseed(os.time(), os.clock() * 1000000)
-    return string.format("%08x", math.random(0, 0x7fffffff))
-  end
-  return (bytes:gsub(".", function(c)
-    return string.format("%02x", c:byte())
-  end))
+  local pointer = tostring({}):gsub("[^%w]+", "")
+  math.randomseed(os.time() + os.clock() * 1000000 + #pointer,
+    os.clock() * 1000000 + #tostring(os.getenv("PID") or ""))
+  return string.format("%08x", math.random(0, 0x7fffffff))
 end
 
 -- 家目录解析复用 deploy 的唯一实现:原生读 %USERPROFILE%,缺失时才经 run 跑
