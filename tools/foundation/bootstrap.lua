@@ -1,11 +1,15 @@
-local function _normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
-end
-
+-- 引导期自定位:此时 package.path 还没装好,只能按本文件位置算目录。
+-- 归一取原语叶子(零 require 可 dofile),不再自带副本。
 local function _module_dir()
   local source = debug.getinfo(1, "S").source or "@tools/foundation/bootstrap.lua"
-  local normalized = _normalize_path(source):gsub("^@", "")
-  return normalized:match("^(.*)/[^/]+$") or "tools/foundation"
+  local dir = tostring(source):gsub("^@", ""):gsub("\\", "/"):match("^(.*)/[^/]+$") or "tools/foundation"
+  local cached = package.loaded["foundation.primitives"]
+  if type(cached) == "table" then
+    return cached.normalize(dir)
+  end
+  local loaded = assert(dofile(dir .. "/primitives.lua"))
+  package.loaded["foundation.primitives"] = loaded
+  return loaded.normalize(dir)
 end
 
 local path_ops = dofile(_module_dir() .. "/runtime_path_ops.lua")

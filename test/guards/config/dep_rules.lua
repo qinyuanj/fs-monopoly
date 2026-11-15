@@ -239,6 +239,8 @@ for _, path in ipairs({
   "tools/foundation/bash.lua",
   "tools/foundation/path.lua",
   "tools/foundation/lua_env.lua",
+  -- platform_boundary 在依赖图底层,必须在 package.path 装好前取 primitives(可读性探测)。
+  "tools/foundation/platform_boundary.lua",
   -- 候选 2(path 代数收敛)的对照证明:要 dofile 收编前的 runtime_path_ops 当 oracle,
   -- 必须在 package.path 装好前自定位。属存量盘点,迁移后删。
   "tools/foundation/test/test_path_parity.lua",

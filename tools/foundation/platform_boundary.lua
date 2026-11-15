@@ -35,11 +35,22 @@ boundary.UNAVAILABLE_EXIT_CODE = 3
 -- 不是第二套受支持平台——非 Windows 一律退 3,不静默通过。
 local _SUPPORTED = { [boundary.WINDOWS] = true }
 
+-- 可读性探测取原语叶子(全仓唯一一份);platform_boundary 保持零 require,
+-- 经 loadfile 取同目录的 primitives,先查 package.loaded 避免实例分裂。
+local function _primitives()
+  local cached = package.loaded["foundation.primitives"]
+  if type(cached) == "table" then
+    return cached
+  end
+  local dir = tostring(debug.getinfo(1, "S").source or ""):gsub("^@", ""):gsub("\\", "/")
+    :match("^(.*)/[^/]+$") or "tools/foundation"
+  local loaded = assert(dofile(dir .. "/primitives.lua"))
+  package.loaded["foundation.primitives"] = loaded
+  return loaded
+end
+
 local function _readable(file)
-  local handle = io.open(file, "r")
-  if handle == nil then return false end
-  handle:close()
-  return true
+  return _primitives().readable(file)
 end
 
 -- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/");
