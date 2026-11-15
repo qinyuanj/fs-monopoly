@@ -65,11 +65,19 @@ end)
 -- 插件拥有子进程的 Lua 环境(ADR 0082 第 4 条),helper 照插件给的环境跑。
 -- crapper 形态:不设 LUA_PATH,沿用解释器默认搜索路径,由 luarocks.loader 接上 tree。
 -- mutator 形态:钉了搜索路径,但 HOME 指向插件自己的空目录。
+--
+-- 机器上没装 luarocks.loader 时(本机 LuaRocks 只随附 bin/,没有 loader.lua),
+-- crapper 形态退成「同样钉住受控 tree」:loader 是接 tree 的手段,不是被测行为本身。
+-- 被测行为是「插件给的环境里 stock busted 能跑完并报出 TAP 结论」。
+local function _loader_available()
+  return package.searchpath("luarocks.loader", package.path) ~= nil
+end
+
 local function _plugin_busted(spec, home)
   local argv = { "env", "-u", "LUA_PATH", "-u", "LUA_PATH_5_4", "-u", "LUA_CPATH", "-u", "LUA_CPATH_5_4" }
   local boot = "pcall(require, 'luarocks.loader'); "
-  if home then
-    argv[#argv + 1] = "HOME=" .. home
+  if home or not _loader_available() then
+    if home then argv[#argv + 1] = "HOME=" .. home end
     boot = "package.path = " .. string.format("%q", _paths(root))
       .. "; package.cpath = " .. string.format("%q", _cpaths()) .. "; "
   end
