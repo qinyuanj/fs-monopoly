@@ -239,10 +239,9 @@ local function _new(options, env, stdout, stderr)
   end
   local code = _generate_code(env.random_bytes or _default_random_bytes)
   if code == nil then
-    stderr:write(boundary.unavailable_verdict("gift-code", " tool=gift-code step=random", {
+    return boundary.emit_unavailable("gift-code", " tool=gift-code step=random", {
       "读不到安全随机源(Windows CNG RandomNumberGenerator 不可用);不退回伪随机,码表未改动。",
-    }).message)
-    return boundary.UNAVAILABLE_EXIT_CODE
+    }, stderr)
   end
   local id = _next_id(code_table)
   local now = (env.now or os.time)()

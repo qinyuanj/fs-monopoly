@@ -23,7 +23,7 @@
 -- 语义:
 --   pcall(require, runner_module) 失败(缺上游工具、package.path 未装等)→
 --   子进程兜底 `lua <runner_script> <args...>`,退出码透传(runner 脚本经
---   script_bootstrap 自举,不依赖调用方 package.path)。
+--   bootstrap.install_here 自举,不依赖调用方 package.path)。
 --   加载成功 → runner.run(args, env) → 归一化:数字原样 / truthy→0 /
 --   falsy→1。
 -- runner.run 自身抛错不兜底——与 #320 前一致,错误冒泡给顶层 tools/cli.lua。
@@ -45,7 +45,7 @@ function tool_cli.normalize_exit_code(result)
 end
 
 -- 子进程兜底:require runner 失败(缺上游工具、package.path 未装等)时改以
--- `<lua5.4> <runner_script>` 直跑脚本形态——runner 经 script_bootstrap 自举,不依赖
+-- `<lua5.4> <runner_script>` 直跑脚本形态——runner 经 bootstrap.install_here 自举,不依赖
 -- 调用方 package.path;退出码透传。非 "exit" 收场(signal 等)归 1。
 -- 解释器身份取 foundation.lua54(入口统一 lua5.4,ADR 0073),不写死 PATH 上的 `lua`。
 function tool_cli.forward_subprocess(runner_script, args)

@@ -105,15 +105,15 @@ function M.compare(project_root, target_path, fs)
   return drift
 end
 
+-- 不可用诊断的写出收在 platform_boundary:本函数只交自己的流与诊断正文,
+-- 不再各自 write(各调用点的 flush 策略曾分成三种,那正是要收掉的分叉)。
 local function _unavailable(stderr, step, reason)
-  local verdict = boundary.unavailable_verdict("deploy-diff", " tool=deploy-diff step=" .. step, {
+  return boundary.emit_unavailable("deploy-diff", " tool=deploy-diff step=" .. step, {
     reason,
     "未做任何比对;退出码 " .. tostring(boundary.UNAVAILABLE_EXIT_CODE)
       .. " 表示环境不可用,不是漂移。",
     "处理: 在原生 Windows 上运行(非 WSL),确认 %USERPROFILE% 已设置。",
-  })
-  stderr:write(verdict.message)
-  return verdict.exit_code
+  }, stderr)
 end
 
 local function _fail(stderr, message)

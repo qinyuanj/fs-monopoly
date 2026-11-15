@@ -92,14 +92,19 @@ describe("platform boundary", function()
     check.same("[fixture] status=unavailable step=y\n[fixture] body\n", table.concat(chunks))
   end)
 
-  it("flushes only streams that actually provide flush", function()
-    local flushed = 0
+  -- 能 flush 的流必须真的被 flush:替身把 write 的内容先攒着,只有 flush 才落到
+  -- 目的地。断言的是「文本到没到」这个可见结果,不是 flush 被调了几次。
+  it("flushes streams that provide flush so the text reaches the destination", function()
+    local pending, delivered = "", ""
     local sink = {
-      write = function() end,
-      flush = function() flushed = flushed + 1 end,
+      write = function(_, text) pending = pending .. text end,
+      flush = function()
+        delivered = delivered .. pending
+        pending = ""
+      end,
     }
-    boundary.emit(boundary.unavailable_verdict("fixture", "", {}), sink)
-    check.same(1, flushed)
+    boundary.emit(boundary.unavailable_verdict("fixture", " step=flushed", {}), sink)
+    check.same("[fixture] status=unavailable step=flushed\n", delivered)
   end)
 
   -- 不传第二参时仍按判决的 stream 选流(tools/cli.lua 就是这种调用形态)。
@@ -112,14 +117,17 @@ describe("platform boundary", function()
         flush = function() end,
       }
     end
+    -- rawset:与 test_log / test_tool_cli 同惯例,避免 W122(io.stdout 是只读字段)。
     local ok, err = pcall(function()
-      io.stdout, io.stderr = sink("stdout"), sink("stderr")
+      rawset(io, "stdout", sink("stdout"))
+      rawset(io, "stderr", sink("stderr"))
       boundary.emit(boundary.unavailable_verdict("fixture", " step=stderr", {}))
       local stdout_verdict = boundary.unavailable_verdict("fixture", " step=stdout", {})
       stdout_verdict.stream = "stdout"
       boundary.emit(stdout_verdict)
     end)
-    io.stdout, io.stderr = real_stdout, real_stderr
+    rawset(io, "stdout", real_stdout)
+    rawset(io, "stderr", real_stderr)
     check.is_true(ok, err)
     check.truthy(written.stderr:find("step=stderr", 1, true) ~= nil, written.stderr)
     check.truthy(written.stdout:find("step=stdout", 1, true) ~= nil, written.stdout)

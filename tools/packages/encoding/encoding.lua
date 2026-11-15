@@ -1,7 +1,7 @@
-local _self = debug.getinfo(1, "S").source or "@tools/packages/encoding/encoding.lua"
-local _sb = dofile(_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$")
-  .. "/../../foundation/script_bootstrap.lua")
-local env = _sb.install(_self)
+-- 入口引导只剩这一行:位置由 bootstrap.install_here 取调用方 chunk source 自解。
+local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("\\", "/"):gsub("^@", "")
+  :match("^(.*)/[^/]+$") or ".") .. "/../../foundation/bootstrap.lua")
+local env = bootstrap.install_here()
 
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")

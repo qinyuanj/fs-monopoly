@@ -186,6 +186,22 @@ local rules = {
     },
     description = "retired owner-only / enlarged-card private reveal model (flat popup fields, gained_item_display record, item_get_reveal chain) must not reappear in production code (#543/#599/#600)",
   },
+
+  -- 入口自定位的机械护栏(ADR 0083 深化,候选 3):`debug.getinfo(1, "S")` 是「第一块砖」
+  -- 自我定位的写法,只能在 package.path 装好**之前**就要跑的那一层出现。其余入口
+  -- 一律改成 foundation.bootstrap.install_here()(它取调用方 chunk source),不再各自
+  -- 拼 dirname + dofile。
+  --
+  -- 白名单是**存量盘点,只许减不许增**:下面的条目都是尚未迁移的调用点,目标终态只剩
+  -- bootstrap.lua / runtime_path_ops.lua / primitives.lua 三个。谁迁移掉一个就删一条;
+  -- 新文件想自定位,先问「为什么不能 require foundation.bootstrap」。
+  {
+    roots = { "tools", "test/bootstrap.lua" },
+    forbidden_patterns = {
+      'debug%.getinfo%s*%(%s*1%s*,%s*["\']S',
+    },
+    description = "self-location via debug.getinfo(1, \"S\") must go through foundation.bootstrap.install_here() instead of hand-rolled dirname + dofile",
+  },
 }
 
 local whitelist = {}
@@ -212,6 +228,38 @@ whitelist["src/app/game_factory.lua"] = {
 whitelist["src/rules/market/init.lua"] = {
   ["market.auto"] = true,
 }
+
+-- 入口自定位的存量盘点(见上面 self-location 规则):只许减不许增。
+-- 迁移一个就删一行,不要为了「顺手统一」去改别人名下的文件。
+for _, path in ipairs({
+  "tools/cli.lua",
+  "tools/foundation/bootstrap.lua",
+  "tools/foundation/runtime_path_ops.lua",
+  "tools/foundation/primitives.lua",
+  "tools/foundation/bash.lua",
+  "tools/foundation/path.lua",
+  "tools/foundation/lua_env.lua",
+  -- 候选 2(path 代数收敛)的对照证明:要 dofile 收编前的 runtime_path_ops 当 oracle,
+  -- 必须在 package.path 装好前自定位。属存量盘点,迁移后删。
+  "tools/foundation/test/test_path_parity.lua",
+  "tools/foundation/test/test_primitives_shared_instance.lua",
+  "tools/packages/spec_lane/spec_lane.lua",
+  "tools/packages/lint/runner.lua",
+  "tools/packages/encoding/encoding.lua",
+  "tools/packages/verify/main.lua",
+  "tools/packages/ops/deploy.lua",
+  "tools/packages/test_runner/runner.lua",
+  "tools/packages/test_runner/lua54.lua",
+  "tools/packages/test_runner/cache_loader.lua",
+  "tools/packages/test_runner/test/test_verified_modules.lua",
+  "tools/packages/test_runner/test/test_stock_busted.lua",
+  "tools/packages/test_runner/test/test_backend_contract.lua",
+  "test/bootstrap.lua",
+}) do
+  whitelist[path] = whitelist[path] or {}
+  whitelist[path]['debug.getinfo(1, "S")'] = true
+end
+
 
 return {
   rules = rules,

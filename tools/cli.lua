@@ -28,18 +28,6 @@ local commands = {
   { name = "clean",             pkg = "clean",              summary = "清生成物(build/tmp/luacov 等)" },
 }
 
-local function _module_dir()
-  local source = debug.getinfo(1, "S").source or "@tools/cli.lua"
-  local normalized = tostring(source):gsub("\\", "/"):gsub("^@", "")
-  return normalized:match("^(.*)/[^/]+$") or "tools"
-end
-
--- 脚本自定位 repo_root:source 为 "@tools/cli.lua"(从仓库根跑)时返回 "."。
-local function _repo_root()
-  local dir = _module_dir()
-  return dir:match("^(.*)/[^/]+$") or "."
-end
-
 local function _usage()
   local lines = {
     "用法: lua tools/cli.lua <子命令> [args...]",
@@ -58,14 +46,6 @@ local function _usage()
   return table.concat(lines, "\n") .. "\n"
 end
 
-local root = _repo_root()
--- 包内 cli.lua 的装载面:模块名自带 packages. 前缀(#300 决议
--- require("packages.<pkg>.cli")),path 拼到 tools/ 一层即可命中
--- tools/packages/<pkg>/cli.lua(命名契约,#300 Q4——伪入口文件名不匹配
--- packages.<name>.cli,物理进不了路由)。?/init.lua 让包内 cli 能 require 目录式
--- 包(如 packages.arch_policy)。
-package.path = package.path .. ";" .. root .. "/tools/?.lua;" .. root .. "/tools/?/init.lua"
-
 -- 入口解释器预检(#191 用户故事 3):入口统一写 `lua`(ADR 0083),具体是哪个
 -- 可执行文件由 foundation.lua54 的候选表按 `-v` 校验选出;这里只兜住「有人拿
 -- 5.1/5.3 直接跑本文件」——误用别的解释器立即退 1,而不是让旧语义悄悄跑完
@@ -74,6 +54,15 @@ if _VERSION ~= "Lua 5.4" then
   io.stderr:write("Lua 5.4 interpreter required; run `lua tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
   os.exit(1)
 end
+
+-- 引导下沉到 foundation.bootstrap:模块搜索面的口径(含 repo_root/?.lua)只在那边表达。
+-- 这里不能 require —— 此刻 package.path 里还没有仓库的任何模式。自制版本只拼了
+-- root/tools/?,缺 repo_root/?.lua,只能靠默认的 ./?.lua 兜住,于是只有「cwd = 仓根」
+-- 这一格能跑(仓根 / tools/ / 临时目录 → 0/1/1)。
+local _self = debug.getinfo(1, "S").source or "@tools/cli.lua"
+local bootstrap = dofile((_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$") or ".")
+  .. "/foundation/bootstrap.lua")
+local bootstrap_env = bootstrap.install(_self)
 
 local tool_cli = require("foundation.tool_cli")
 local boundary = require("foundation.platform_boundary")
@@ -121,7 +110,8 @@ for i = 2, #raw_args do
 end
 
 local env = {
-  repo_root = root,
+  -- 自 bootstrap.install 起是绝对路径(此前是 ".");消费点按路径拼接,不假设相对形态。
+  repo_root = bootstrap_env.repo_root,
   command = "lua tools/cli.lua " .. name,
 }
 local code = cli.main(rest, env)

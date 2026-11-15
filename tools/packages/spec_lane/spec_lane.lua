@@ -4,14 +4,14 @@ if _VERSION ~= "Lua 5.4" then
   io.stderr:write("Lua 5.4 interpreter required; run `lua tools/cli.lua <子命令>` (found " .. tostring(_VERSION) .. ")\n")
   os.exit(1)
 end
-local _self = debug.getinfo(1, "S").source or "@tools/packages/spec_lane/spec_lane.lua"
-local _sb = dofile(_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$")
-  .. "/../../foundation/script_bootstrap.lua")
-local bootstrap_env, bootstrap = _sb.install(_self)
+-- 入口引导只剩这一行:位置由 bootstrap.install_here 取调用方 chunk source 自解。
+local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("\\", "/"):gsub("^@", "")
+  :match("^(.*)/[^/]+$") or ".") .. "/../../foundation/bootstrap.lua")
+local bootstrap_env = bootstrap.install_here()
 
-local function _normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
-end
+-- 归一取 foundation.primitives(全仓唯一一份),不再自带副本。
+local primitives = require("foundation.primitives")
+local _normalize_path = primitives.normalize
 
 local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")

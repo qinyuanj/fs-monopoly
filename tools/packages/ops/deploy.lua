@@ -17,9 +17,8 @@ local _module_name = ...
 local _required = _module_name == "tools.packages.ops.deploy" or _module_name == "packages.ops.deploy"
 -- 直跑(含 ops/cli.lua 子进程转发)时自举 package.path;被 require 时由调用方装好,不重复 install。
 if not _required then
-  local _self = debug.getinfo(1, "S").source or "@tools/packages/ops/deploy.lua"
-  dofile(_self:gsub("\\", "/"):gsub("^@", ""):match("^(.*)/[^/]+$")
-    .. "/../../foundation/script_bootstrap.lua").install(_self)
+  dofile((debug.getinfo(1, "S").source:gsub("\\", "/"):gsub("^@", "")
+    :match("^(.*)/[^/]+$") or ".") .. "/../../foundation/bootstrap.lua").install_here()
 end
 
 local text_lib = require("foundation.text")

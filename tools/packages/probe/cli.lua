@@ -161,10 +161,9 @@ end
 
 -- 流程 --------------------------------------------------------------------
 
+-- 不可用诊断的写出收在 platform_boundary:本函数只交自己的流与诊断正文。
 local function _unavailable(deps, step, lines)
-  local verdict = boundary.unavailable_verdict("probe", " tool=editor-cli step=" .. step, lines)
-  deps.stderr:write(verdict.message)
-  return verdict.exit_code
+  return boundary.emit_unavailable("probe", " tool=editor-cli step=" .. step, lines, deps.stderr)
 end
 
 local function _fail(deps, message, detail)
