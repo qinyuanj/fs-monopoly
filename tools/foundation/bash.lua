@@ -13,10 +13,11 @@
 -- 静默改写;脚本文件形态实测把 a"b&c|d<e>f^g%PATH%h(i)j!k 逐字节送达 bash
 -- (#235 验收:既有命令串语义不变)。
 --
--- 本模块刻意**只依赖 os/io**,不 require 任何 foundation 模块:执行缝在依赖图最底层,
+-- 本模块刻意**不 require 任何 foundation 模块**:执行缝在依赖图最底层,
 -- fs / proc / parallel_lanes / env 都依赖它。若它反向依赖 env(临时目录)或 fs(落盘),
--- 就会形成 shell→env→fs→shell 的环。临时目录因此在这里自取自用(读原生进程的
--- TEMP/TMP,缺省 C:/Windows/Temp),环境变量也是直接 os.getenv。
+-- 就会形成 shell→env→fs→shell 的环。它只取零依赖叶子 primitives(反斜杠归一 / 临时目录 /
+-- 唯一名 / 存在性 / POSIX 引号),而且按**自身位置** loadfile 取,不走 require 边:
+-- 执行缝要在 package.path 装好之前就能跑(见下方 _load_primitives)。环境变量仍直接 os.getenv。
 --
 -- bash 发现顺序(ADR 0083 第 2 条):MONOPOLY_BASH / BASH 环境变量 → PATH 上的 bash
 -- → 常见 Git for Windows 安装路径。每个候选都要**真跑一个探针脚本**通过才采纳:
@@ -31,46 +32,67 @@ bash.UNAVAILABLE_REASON = "bash"
 
 local SEPARATOR = string.char(34)
 local _SCRIPT_PREFIX = "eggy_exec_"
-local _counter = 0
+-- unique_name 自己插一个分隔下划线(prefix .. "_" .. 时间 …),所以传去掉尾下划线的形态:
+-- 生成的名字仍是 eggy_exec_<time>_<counter>_<token>.sh,与旧实现逐字节同形。
+local _SCRIPT_NAME_PREFIX = _SCRIPT_PREFIX:gsub("_$", "")
 local _resolved -- 发现结果:成功是路径字符串,失败是 false,未探测是 nil
 local _last_unavailable
 
--- 内部路径口径:D:/… 正斜杠。TEMP/TMP 来自原生 Lua 进程,不读 bash 继承来的值
--- (Git Bash 会把 TMP 覆盖成 /tmp)。
-function bash.system_tmp_dir()
-  local value = os.getenv("TEMP")
-  if value == nil or value == "" then
-    value = os.getenv("TMP")
+-- 原语叶子的取用:本模块会在 package.path 装好**之前**被 loadfile(lua_env 的受控环境
+-- 核对、bootstrap 链上的 cygpath 探测),那时 require 未必可用,所以自己按源文件位置
+-- loadfile 同目录的 primitives.lua。
+--
+-- 关键在**只装一次**:loadfile 出来的第二份 primitives 自带第二套 unique_name 计数器,
+-- 与 require 取到的那份各数各的,临时脚本名就可能撞车。因此装载顺序是
+-- package.loaded 命中 → require → loadfile,并且 loadfile 的分支把结果登记回
+-- package.loaded,后续任何 require 拿到的都是同一张表(test_shell_execute.lua 钉住)。
+local function _load_primitives()
+  local cached = package.loaded["foundation.primitives"]
+  if type(cached) == "table" then
+    return cached
   end
-  if value == nil or value == "" then
-    value = "C:/Windows/Temp"
+  local ok_require, required = pcall(require, "foundation.primitives")
+  if ok_require and type(required) == "table" then
+    return required
   end
-  return (tostring(value):gsub("\\", "/"):gsub("/+$", ""))
+  local source = tostring(debug.getinfo(1, "S").source or ""):gsub("^@", ""):gsub("\\", "/")
+  local dir = source:match("^(.*)/[^/]+$")
+  if dir == nil then
+    return nil
+  end
+  local chunk = loadfile(dir .. "/primitives.lua")
+  if chunk == nil then
+    return nil
+  end
+  local ok_load, loaded = pcall(chunk)
+  if not ok_load or type(loaded) ~= "table" then
+    return nil
+  end
+  package.loaded["foundation.primitives"] = loaded
+  return loaded
 end
 
-local function _exists(file)
-  if file == nil or file == "" then
-    return false
-  end
-  local handle = io.open(file, "rb")
-  if handle ~= nil then
-    handle:close()
-    return true
-  end
-  return false
+local primitives = _load_primitives()
+assert(type(primitives) == "table", "foundation.bash requires the primitives leaf next to it")
+
+-- 内部路径口径:D:/… 正斜杠。TEMP/TMP 来自原生 Lua 进程,不读 bash 继承来的值
+-- (Git Bash 会把 TMP 覆盖成 /tmp)。函数名保留:ADR 0083 第 4 条与 env.lua 按这个名调用,
+-- 真源已下沉到 primitives.tmp_dir,这里只转发,不再留会漂移的副本。
+function bash.system_tmp_dir()
+  return primitives.tmp_dir()
 end
 
 -- WSL 的 C:/Windows/System32/bash.exe 也是一个 bash,但它跑不了原生 Windows 路径,
 -- 发现到它等于把工具链扔进另一个操作系统(where bash 会把它列出来)。
 local function _is_wsl_bash(file)
-  return _exists(file) and tostring(file):lower():find("/system32/bash", 1, true) ~= nil
+  return primitives.readable(file) and tostring(file):lower():find("/system32/bash", 1, true) ~= nil
 end
 
 local function _path_entries()
   local entries, seen = {}, {}
   local raw = os.getenv("PATH") or ""
   for entry in tostring(raw):gmatch("[^;]+") do
-    local trimmed = entry:gsub("^%s+", ""):gsub("%s+$", ""):gsub("\\", "/"):gsub("/+$", "")
+    local trimmed = primitives.normalize(entry):gsub("^%s+", ""):gsub("%s+$", ""):gsub("/+$", "")
     if trimmed ~= "" and seen[trimmed] == nil then
       seen[trimmed] = true
       entries[#entries + 1] = trimmed
@@ -84,7 +106,7 @@ local function _env_candidate(name)
   if value == nil or value == "" then
     return nil
   end
-  return (tostring(value):gsub("\\", "/"))
+  return primitives.normalize(value)
 end
 
 -- 候选来源按 ADR 0083 的顺序排列,每一项是 { source = ..., path = ... }。
@@ -99,7 +121,7 @@ function bash.candidates()
   for _, dir in ipairs(_path_entries()) do
     for _, name in ipairs({ "bash.exe", "bash" }) do
       local candidate = dir .. "/" .. name
-      if _exists(candidate) and not _is_wsl_bash(candidate) then
+      if primitives.readable(candidate) and not _is_wsl_bash(candidate) then
         list[#list + 1] = { source = "PATH", path = candidate }
       end
     end
@@ -112,7 +134,7 @@ function bash.candidates()
   }) do
     for _, name in ipairs({ "bash.exe", "bash" }) do
       local candidate = dir .. "/" .. name
-      if _exists(candidate) then
+      if primitives.readable(candidate) then
         list[#list + 1] = { source = "git-install", path = candidate }
       end
     end
@@ -121,20 +143,7 @@ function bash.candidates()
 end
 
 local function _temp_script_path()
-  _counter = _counter + 1
-  local token = tostring({}):gsub("[^%w]+", "")
-  if token == "" then token = "ptr" end
-  return table.concat({
-    bash.system_tmp_dir(),
-    "/",
-    _SCRIPT_PREFIX,
-    tostring(os.time()),
-    "_",
-    tostring(_counter),
-    "_",
-    token,
-    ".sh",
-  })
+  return primitives.tmp_dir() .. "/" .. primitives.unique_name(_SCRIPT_NAME_PREFIX, ".sh")
 end
 
 -- cmd 行:外层双引号 + "bash" + 空格 + "script",再整体包一层双引号。
@@ -152,7 +161,9 @@ local function _probe(executable)
   if handle == nil then
     return false
   end
-  handle:write("printf '%s' 'bash-ok' > '" .. marker .. "'\n")
+  -- marker 落在临时目录下:目录名带单引号时,手拼的 '…' 会被 bash 提前闭合、探针静默失败,
+  -- 整台机器被误判「没有 bash」。引号统一交给 primitives.quote。
+  handle:write("printf '%s' 'bash-ok' > " .. primitives.quote(marker) .. "\n")
   handle:write("exit 7\n")
   handle:close()
 
@@ -174,7 +185,7 @@ end
 -- override 由调用方显式钉定(测试与 MONOPOLY_BASH 同一条路径),同样要过探针。
 function bash.discover(override)
   if override ~= nil then
-    local pinned = tostring(override):gsub("\\", "/")
+    local pinned = primitives.normalize(override)
     if _probe(pinned) then
       return pinned, nil
     end

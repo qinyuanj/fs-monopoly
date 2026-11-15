@@ -3,7 +3,28 @@
 -- 与 foundation.env 里的 current_dir / system_tmp_dir / make_temp_path 划清界限——那几个要读
 -- 环境变量、起子进程,属于 IO,不在这里。这条边界的意义是:路径演算可以脱离文件系统
 -- 单测,不需要临时目录,也不需要替身。
-local text = require("foundation.text")
+--
+-- 本文件是**全仓唯一**的路径代数叶子(ADR 0083 深化):join / parent / simplify / 绝对判定
+-- 只在这里实现一份,runtime_path_ops 与 bootstrap 一律转发过来,不再各写一套。
+--
+-- 硬约束:**顶层零 require**。bootstrap 会在 package.path 装好之前用 loadfile 取本文件,
+-- 那时 require 不可用。需要 to_native_drive 时经 primitives 取(同样零 require),不复制第二份。
+-- 取原语叶子:先查 package.loaded,再按本文件位置 dofile,并登记回去。
+-- 不能裸 dofile —— 每次 dofile 都会重跑该文件、造出第二套 unique_name 计数器,
+-- 临时名就会撞车(test_primitives_shared_instance.lua 钉住这条)。
+local function _load_primitives()
+  local cached = package.loaded["foundation.primitives"]
+  if type(cached) == "table" then
+    return cached
+  end
+  local dir = tostring(debug.getinfo(1, "S").source or ""):gsub("^@", ""):gsub("\\", "/")
+    :match("^(.*)/[^/]+$") or "tools/foundation"
+  local loaded = assert(dofile(dir .. "/primitives.lua"), "foundation.primitives must sit next to path")
+  package.loaded["foundation.primitives"] = loaded
+  return loaded
+end
+
+local primitives = _load_primitives()
 
 local path = {}
 
@@ -36,11 +57,25 @@ function path.join_path(...)
   return result
 end
 
-function path.parent_dir(value)
+-- 父目录:无父返回 nil。nil 是**契约**,不是缺省值——三个调用点各有各的兜底
+-- (fs.lua 的 ensure_dir(nil) 直接成功、arch_policy 补 "."、deploy 补 current_dir()),
+-- 在这里替它们选一种就会改写三处语义。
+--
+-- 名字是 split_parent:它只做"切一段",不承诺结果仍是可用路径。parent_dir 保留为
+-- 同义别名(28 个 require("foundation.path") 调用点不动)。
+function path.split_parent(value)
   local normalized = path.normalize_path(value)
   return normalized:match("^(.*)/[^/]+$")
 end
 
+path.parent_dir = path.split_parent
+
+-- MSYS 形态 /d/dev/... → D:/dev/...(原生 Lua 的 io.open 只认后者)。
+-- 实现只有一份,在 primitives 里;这里转发而不是复制,免得两份漂移。
+path.to_native_drive = primitives.to_native_drive
+
+-- 段的分割用 gmatch 而不是 foundation.text.split:本文件不能 require。两者在本用途上
+-- 等价——split 只是多产出空段,而下面的循环本就丢弃空段。
 function path.simplify_path(value)
   local normalized = path.normalize_path(value)
   local prefix = ""
@@ -52,8 +87,8 @@ function path.simplify_path(value)
   end
 
   local parts = {}
-  for _, segment in ipairs(text.split(remainder, "/")) do
-    if segment ~= "" and segment ~= "." then
+  for segment in remainder:gmatch("[^/]+") do
+    if segment ~= "." then
       if segment == ".." then
         if #parts > 0 and parts[#parts] ~= ".." then
           parts[#parts] = nil

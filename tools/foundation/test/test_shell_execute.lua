@@ -81,10 +81,117 @@ describe("shell execute seam", function()
     check.same(3, mcode)
   end)
 
+  -- shell_quote 这个名字被全仓二十多处调用点依赖,引号实现却只该有一份:
+  -- 转发到原语叶子,名字与 assert 语义留在原地。结构断言(读源码)而非行为断言——
+  -- 两种写法的行为本来就一样,重复只有这里看得出来。
+  it("leaves the POSIX escaping body in the primitive leaf", function()
+    local source = assert(io.open(shell.__source or "tools/foundation/shell.lua", "rb")):read("*a")
+    check.is_nil(source:find([[gsub("'", "']], 1, true),
+      "shell.lua must forward to primitives.quote instead of re-escaping single quotes")
+    check.truthy(source:find("primitives.quote", 1, true), "shell_quote must forward to primitives.quote")
+  end)
+
+  it("quotes through the shared primitive and keeps the assert semantics", function()
+    local primitives = require("foundation.primitives")
+    for _, value in ipairs({ "", "plain", "a b", "a'b", "中文 路径", "a$b", "a\\b" }) do
+      check.equal(primitives.quote(value), shell.shell_quote(value), "quote mismatch: " .. value)
+    end
+    check.equal("''", shell.shell_quote(nil))
+    check.has_error(function() shell.shell_quote("a\nb") end)
+    check.has_error(function() shell.shell_quote("a\0b") end)
+  end)
+
   it("foundation.bash exposes no second capture entry", function()
     local bash_lib = require("foundation.bash")
     check.equal("function", type(bash_lib.execute))
     check.is_nil(bash_lib.capture,
       "bash.capture must be gone: shell.execute({capture=true}) is the only seam")
+  end)
+end)
+
+-- 执行缝把 os/io 原语下沉到 primitives 叶子之后,可观察行为必须逐字节不变;
+-- 同时钉住「同一进程里 primitives 只装一次」——装两次会让 unique_name 的计数器分裂,
+-- 临时脚本名可能撞车。
+describe("shell execute seam consumes the primitives leaf", function()
+  local bash_lib = require("foundation.bash")
+  local primitives = require("foundation.primitives")
+
+  it("writes temp scripts named eggy_exec_*.sh under the primitives temp dir", function()
+    local output, ok, code = shell.execute([[printf '%s' "$0"]], { capture = true })
+    check.is_true(ok == true)
+    check.same(0, code)
+    local dir, name = tostring(output):match("^(.*)/([^/]+)$")
+    check.same(primitives.tmp_dir(), dir, "temp scripts must live in primitives.tmp_dir()")
+    check.matches("^eggy_exec_.+%.sh$", name)
+  end)
+
+  -- 探针脚本原先手拼 \"'\" 包住 marker;临时目录含单引号时那串引号会被 bash 提前闭合,
+  -- 探针失败 → 整台机器判「找不到 bash」。改走 primitives.quote 后同一场景必须照常发现。
+  it("quotes the probe marker so a temp dir with a quote still discovers bash", function()
+    local env = require("foundation.env")
+    local root = env.make_temp_path("probe_quote", "")
+    local ok, err = xpcall(function()
+      local weird = root .. "/sp ace'quote"
+      check.truthy(fs.ensure_dir(weird))
+      local real_tmp, real_bash_tmp = primitives.tmp_dir, bash_lib.system_tmp_dir
+      rawset(primitives, "tmp_dir", function() return weird end)
+      rawset(bash_lib, "system_tmp_dir", function() return weird end)
+      bash_lib.reset()
+      local ran, kind, code = bash_lib.execute("exit 0")
+      local reason = bash_lib.last_unavailable()
+      rawset(primitives, "tmp_dir", real_tmp)
+      rawset(bash_lib, "system_tmp_dir", real_bash_tmp)
+      bash_lib.reset()
+      check.is_true(ran == true, "bash must stay discoverable: " .. tostring(reason))
+      check.same("exit", kind)
+      check.same(0, code)
+    end, debug.traceback)
+    fs.remove_path(root)
+    check.is_true(ok, err)
+  end)
+
+  -- tools/ 不在搜索面上时,执行缝只能按自身位置 loadfile primitives;那条路径必须把结果
+  -- 登记进 package.loaded,否则之后再 require 会得到第二份,计数器各数各的。
+  it("loads primitives once so the unique-name counter is not split", function()
+    local env = require("foundation.env")
+    local proc = require("foundation.proc")
+    local lua54 = require("foundation.lua54")
+    local repo = env.current_dir()
+    local root = env.make_temp_path("primitives_single_load", "")
+    local ok, err = xpcall(function()
+      check.truthy(fs.ensure_dir(root))
+      local script = root .. "/probe.lua"
+      check.truthy(fs.write_file(script, table.concat({
+        'package.path = "/nonexistent/?.lua"',
+        "local bash = assert(loadfile([[" .. repo .. "/tools/foundation/bash.lua]]))()",
+        'local out, ok, code = bash.execute([[printf %s "$0"]], { capture = true })',
+        "assert(ok == true, tostring(out) .. tostring(code))",
+        'package.path = [[' .. repo .. "/?.lua;" .. repo .. '/tools/?.lua]] .. ";" .. package.path',
+        'local registered = package.loaded["foundation.primitives"]',
+        'local primitives = require("foundation.primitives")',
+        'local name = primitives.unique_name("probe", "")',
+        'io.write(tostring(out), "\\n", name, "\\n",',
+        '  tostring(registered ~= nil and registered == primitives))',
+        "",
+      }, "\n")))
+      local result = proc.run_command({ lua54.lua54_bin(), script }, { cwd = repo })
+      check.truthy(result.ok, result.output)
+      local lines = {}
+      for line in tostring(result.output):gmatch("[^\r\n]+") do
+        lines[#lines + 1] = line
+      end
+      local script_path, name, registered = lines[1], lines[2], lines[3]
+      check.truthy(script_path, result.output)
+      check.same("true", registered,
+        "the loadfile branch must register primitives in package.loaded")
+      local script_name = tostring(script_path):match("([^/]+)$")
+      local script_counter = tonumber(script_name:match("^eggy_exec_%d+_(%d+)_"))
+      local probe_counter = tonumber(name:match("^probe_%d+_(%d+)_"))
+      check.truthy(script_counter and probe_counter, result.output)
+      check.same(script_counter + 1, probe_counter,
+        "bash and require must share one unique_name counter")
+    end, debug.traceback)
+    fs.remove_path(root)
+    check.is_true(ok, err)
   end)
 end)

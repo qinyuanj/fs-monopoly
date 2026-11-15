@@ -1,17 +1,15 @@
 -- package.path 装配:把仓库的 tools/ / test/ / 根目录接进 Lua 的模块搜索路径。
 --
--- ⚠️ 下面的 _normalize_path / _join 与 foundation(fs/path)的同名工具**结构重复,
--- 而且这个重复是故意的,别合并**(工单 #126)。
---
--- 原因:本文件是 bootstrap 的**第一块砖**,被 `dofile` 而非 `require` 加载 ——
---   tools/foundation/bootstrap.lua:29
---   test/bootstrap.lua:20 (经 bootstrap.install 间接加载)
--- 在它跑完之前,package.path 还没装好,`require("foundation.fs")` 这类 require **根本不可用**。
--- 也就是说它不可能复用 foundation —— 它正是那个让 foundation 变得可 require 的东西。
---
--- ⚠️ 这条约束**没有任何测试能钉住**。`/dry` 是 report-only 的顾问工具,不是 merge gate;
--- 它会反复把这两处报成结构重复(实测相似度 0.75 / 0.81)。谁要是「顺手修好」它,
--- **不会有任何测试变红** —— 只会在下一次 bootstrap 时炸。注释是这里唯一的护栏。
+-- 硬约束:本文件必须**自包含**。它会被单独复制进临时仓根运行 ——
+-- test_bootstrap.lua 的 install 用例只拷这一份文件进临时目录,并且是在
+-- `package.path = "/sentinel/?.lua"` 的哨兵状态下 dofile 的。也就是说:
+--   * 不能 require 任何东西(那时 package.path 里没有仓库模式);
+--   * 不能 dofile 任何兄弟文件(临时目录里没有它们);
+--   * 下面的 _normalize_path / _join 因此只能自带一份,与 foundation 的同名工具
+--     结构重复是**约束的结果**,不是疏忽,别合并。
+-- 合并的后果不是测试变红,而是 bootstrap 在哨兵/临时仓根下直接炸 —— 这两条测试
+-- (install adds repository paths / loading bootstrap touches no module search path)
+-- 是唯一的机械护栏。
 local package_path_helper = {}
 
 local function _normalize_path(path)

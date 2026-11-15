@@ -149,4 +149,10 @@ function primitives.shared(name)
   return nil
 end
 
+-- 自登记:本文件可能被 require、dofile、loadfile 三种方式装载。登记进 package.loaded 后,
+-- 按 require 取到的就是同一张表。但 dofile/loadfile 仍会**重新执行**本文件,所以调用方
+-- 必须先查 package.loaded 再决定是否装载(见 path.lua / runtime_path_ops.lua / bash.lua
+-- 的取用段),否则模块级状态(unique_name 计数器、shared registry)会分裂。
+package.loaded["foundation.primitives"] = primitives
+
 return primitives

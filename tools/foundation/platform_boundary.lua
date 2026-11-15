@@ -70,11 +70,22 @@ end
 local function _unavailable_text(tag, fields, lines)
   local prefix = "[" .. tostring(tag) .. "] "
   local out = { prefix .. "status=" .. boundary.UNAVAILABLE .. (fields or "") }
-  for _, line in ipairs(lines) do
+  for _, line in ipairs(lines or {}) do
     out[#out + 1] = prefix .. line
   end
   out[#out + 1] = ""
   return table.concat(out, "\n")
+end
+
+-- 判决 → 诊断文本。公开是因为「渲染」和「写出」是两件事:写流需要真终端,
+-- 渲染不需要,只断言文本的调用方(help、子进程诊断)不必为此造一个流。
+-- 判决自带 message 时以它为准(那是 unavailable_verdict 已经渲染好的结果);
+-- 手工组装的判决没有 message,就按 tag/fields/lines 现场渲染。
+function boundary.render(verdict)
+  if verdict.message ~= nil then
+    return verdict.message
+  end
+  return _unavailable_text(verdict.tag, verdict.fields, verdict.lines)
 end
 
 -- 不可用判定(stderr + 退 3),交 emit 写出。fields 是首行状态词后的可机读字段
@@ -102,12 +113,23 @@ function boundary.platform_verdict(tag, platform)
   })
 end
 
--- 写诊断。stream 由判决给定,调用点不再各自挑输出流。
-function boundary.emit(verdict)
-  local stream = verdict.stream == "stderr" and io.stderr or io.stdout
-  stream:write(verdict.message)
-  stream:flush()
+-- 写诊断。stream 缺省由判决给定(调用点不各自挑输出流),也可以显式传入:
+-- 子命令的注入缝常常只提供 write,那时由调用方交自己的流。
+-- flush 必须是可选能力:测试替身是只有 write 的鸭子 sink,无条件 flush 会炸。
+function boundary.emit(verdict, stream)
+  local target = stream or (verdict.stream == "stderr" and io.stderr or io.stdout)
+  target:write(boundary.render(verdict))
+  if target.flush then
+    target:flush()
+  end
   return verdict.exit_code
+end
+
+-- 不可用诊断的整条链:组装判决 → 渲染 → 写流 → 返回退出码。
+-- 各入口原先「组装判决 + 自己写流」两段各写一份,flush 策略还分三种;
+-- 写出收在这里,入口只交自己的流与诊断正文。
+function boundary.emit_unavailable(tag, fields, lines, stream)
+  return boundary.emit(boundary.unavailable_verdict(tag, fields, lines), stream)
 end
 
 return boundary

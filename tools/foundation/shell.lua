@@ -9,6 +9,7 @@
 -- 写成 '\'');环境变量按 `NAME=value cmd` 前缀导出。原生 Lua 的 os.execute 在
 -- Windows 走 cmd.exe,所以执行必须经 shell.execute,不得在别处直接 os.execute。
 local number_utils = require("src.foundation.number")
+local primitives = require("foundation.primitives")
 local path_lib = require("foundation.path")
 local bash_lib = require("foundation.bash")
 local boundary = require("foundation.platform_boundary")
@@ -30,10 +31,10 @@ function shell.exit_status(ok, _, code)
   return false, code or 1
 end
 
+-- 名字与 assert 语义留在这里(全仓二十多处调用点按这个名用),转义正文归原语叶子:
+-- POSIX 单引号的实现只该有一份,否则两条「同口径」的注释迟早各说各话。
 function shell.shell_quote(value)
-  local text = tostring(value or "")
-  assert(not text:find("[\r\n%z]"), "Command arguments cannot contain NUL or newlines")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
+  return primitives.quote(value)
 end
 
 function shell.build_command(args)

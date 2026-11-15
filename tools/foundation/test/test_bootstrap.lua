@@ -8,11 +8,15 @@ local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
-local test_source = debug.getinfo(1, "S").source:gsub("^@", "")
-local test_dir = test_source:match("^(.*)/[^/]+$") or "tools/foundation/test"
-local runtime_path_ops = dofile(test_dir .. "/../runtime_path_ops.lua")
-local bootstrap_path = test_dir .. "/../bootstrap.lua"
+local lua54 = require("foundation.lua54")
 local bootstrap = require("foundation.bootstrap")
+
+-- 本文件自己的位置不靠 debug.getinfo:package.searchpath 问的是「require 会从哪装」,
+-- 与 require 同源且 cwd 无关。
+local bootstrap_path = assert(package.searchpath("foundation.bootstrap", package.path))
+local foundation_dir = path_lib.parent_dir(bootstrap_path)
+local repo_root = path_lib.parent_dir(path_lib.parent_dir(foundation_dir))
+local runtime_path_ops = dofile(path_lib.join_path(foundation_dir, "runtime_path_ops.lua"))
 
 local function _with_stubs(stubs, fn)
   local saved_lua54 = package.loaded["foundation.lua54"]
@@ -58,6 +62,15 @@ local function _native_probe(command)
 end
 
 local _LUA54_PATH = "/usr/bin/lua5.4"
+
+-- 子进程里跑一段 Lua(原生 Windows 上必须显式给解释器;cwd 由调用方定)。
+local function _run_child(script, cwd)
+  local path = path_lib.join_path(env_lib.make_temp_path("bootstrap_child", ""), "child.lua")
+  check.truthy(fs_lib.write_file(path, script))
+  local result = proc_lib.run_command({ lua54.lua54_bin(), path }, { cwd = cwd })
+  fs_lib.remove_path(path_lib.parent_dir(path))
+  return result
+end
 
 describe("bootstrap", function()
 
@@ -111,6 +124,78 @@ it("resolves a repo root from the standard tool layout", function()
   fs_lib.remove_path(root)
 
   check.equal(path_lib.normalize_path(root), env.repo_root)
+end)
+
+-- 入口只需要一行引导:install_here 取**调用方 chunk** 的 source,不读 arg[0]。
+-- `lua -e 'dofile(...)'` 下 arg[0] 是 lua.exe 自己,拿它当源路径必然解不出仓根。
+it("install_here resolves the repo root from the calling chunk source", function()
+  -- driver 放在仓内 tmp/(gitignored):它模拟的正是「入口 chunk 在仓内、进程入口
+  -- 不是它」的场景 —— `lua -e 'dofile(<仓内入口>)'` 下 arg[0] 是 lua.exe 自己。
+  local driver_dir = path_lib.join_path(repo_root, "tmp", env_lib.make_temp_path("bootstrap_here", ""):match("[^/\\]+$"))
+  check.truthy(fs_lib.ensure_dir(driver_dir))
+  local driver = path_lib.join_path(driver_dir, "driver.lua")
+  check.truthy(fs_lib.write_file(driver, table.concat({
+    "local bootstrap = dofile(" .. string.format("%q", bootstrap_path) .. ")",
+    "local env = bootstrap.install_here()",
+    "io.write(env.repo_root)",
+    "",
+  }, "\n")))
+
+  -- cwd 也刻意放在仓外:仓根只能由调用方 chunk source 解出。
+  local outside = path_lib.join_path(env_lib.make_temp_path("bootstrap_here_cwd", ""), "outside")
+  check.truthy(fs_lib.ensure_dir(outside))
+  local result = proc_lib.run_command({ lua54.lua54_bin(), "-e",
+    "arg[0] = 'C:/Windows/Temp/lua.exe'; dofile(" .. string.format("%q", driver) .. ")" },
+    { cwd = outside })
+  fs_lib.remove_path(driver_dir)
+  fs_lib.remove_path(path_lib.parent_dir(outside))
+
+  check.is_true(result.ok == true, tostring(result.output))
+  check.equal(path_lib.normalize_path(repo_root), path_lib.normalize_path(tostring(result.output):gsub("%s+$", "")))
+end)
+
+-- 装载期零 require:哨兵 package.path 下 dofile bootstrap.lua 必须成功且一个字都不加,
+-- 加路径只发生在 install 里。进程内 `package.loaded` 早被灌满,钉不住这件事,所以走子进程。
+it("loading bootstrap touches no module search path and requires nothing", function()
+  local outside = path_lib.join_path(env_lib.make_temp_path("bootstrap_sentinel_cwd", ""), "outside")
+  check.truthy(fs_lib.ensure_dir(outside))
+  local result = _run_child(table.concat({
+    "package.path = '/sentinel/?.lua'",
+    "package.cpath = '/sentinel/?.so'",
+    "local before = package.path",
+    "local bootstrap = dofile(" .. string.format("%q", bootstrap_path) .. ")",
+    "assert(package.path == before, 'bootstrap.lua must not touch package.path at load time')",
+    "assert(package.cpath == '/sentinel/?.so', 'bootstrap.lua must not touch package.cpath')",
+    "local env = bootstrap.install(" .. string.format("%q", path_lib.join_path(repo_root, "tools/cli.lua")) .. ")",
+    "assert(require('foundation.primitives') ~= nil, 'installed paths must make foundation requireable')",
+    "io.write(env.repo_root)",
+    "",
+  }, "\n"), outside)
+
+  check.is_true(result.ok == true, tostring(result.output))
+  check.equal(path_lib.normalize_path(repo_root), path_lib.normalize_path(tostring(result.output):gsub("%s+$", "")))
+end)
+
+-- bug 1:cli 入口原先只拼 root/tools/?,缺 repo_root/?.lua,只能靠默认的 ./?.lua 兜住,
+-- 于是只有「cwd = 仓根」这一格能跑。
+it("cli entry is cwd independent", function()
+  local cli = path_lib.join_path(repo_root, "tools/cli.lua")
+  local outside = path_lib.join_path(env_lib.make_temp_path("cli_cwd_matrix", ""), "outside")
+  check.truthy(fs_lib.ensure_dir(outside))
+  local cwds = {
+    { label = "repo root", cwd = repo_root },
+    { label = "tools/", cwd = path_lib.join_path(repo_root, "tools") },
+    { label = "temp", cwd = outside },
+  }
+  local failures = {}
+  for _, item in ipairs(cwds) do
+    local result = proc_lib.run_command({ lua54.lua54_bin(), cli, "--help" }, { cwd = item.cwd })
+    if result.ok ~= true then
+      failures[#failures + 1] = item.label .. " -> " .. tostring(result.output)
+    end
+  end
+  fs_lib.remove_path(path_lib.parent_dir(outside))
+  check.equal("", table.concat(failures, "\n"))
 end)
 
 it("tool discovery env exports resolved interpreter path and luarocks exe", function()

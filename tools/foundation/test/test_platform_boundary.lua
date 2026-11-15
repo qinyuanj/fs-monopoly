@@ -73,4 +73,65 @@ describe("platform boundary", function()
     fs.remove_path(root)
     check.is_true(ok, err)
   end)
+
+  -- 候选 4:判决 → 文本只有一个公开渲染点。message 是它的产物(既有断言逐字钉住),
+  -- 手工拼的判决没有 message 时也按 tag/fields/lines 现场渲染。
+  it("renders a verdict through one public renderer", function()
+    local verdict = boundary.unavailable_verdict("fixture", " tool=x step=y", { "first" })
+    check.equal(verdict.message, boundary.render(verdict))
+    check.equal("[fixture] status=unavailable tool=x step=y\n[fixture] first\n",
+      boundary.render({ status = "unavailable", tag = "fixture", fields = " tool=x step=y", lines = { "first" } }))
+  end)
+
+  -- 写终端只有一个出口:调用点可以交自己的流(子命令的注入缝常常只提供 write)。
+  it("emits to a caller-supplied stream that offers only write", function()
+    local chunks = {}
+    local sink = { write = function(_, text) chunks[#chunks + 1] = text end }
+    local code = boundary.emit(boundary.unavailable_verdict("fixture", " step=y", { "body" }), sink)
+    check.same(3, code)
+    check.same("[fixture] status=unavailable step=y\n[fixture] body\n", table.concat(chunks))
+  end)
+
+  it("flushes only streams that actually provide flush", function()
+    local flushed = 0
+    local sink = {
+      write = function() end,
+      flush = function() flushed = flushed + 1 end,
+    }
+    boundary.emit(boundary.unavailable_verdict("fixture", "", {}), sink)
+    check.same(1, flushed)
+  end)
+
+  -- 不传第二参时仍按判决的 stream 选流(tools/cli.lua 就是这种调用形态)。
+  it("defaults the stream from the verdict", function()
+    local real_stdout, real_stderr = io.stdout, io.stderr
+    local written = { stdout = "", stderr = "" }
+    local function sink(key)
+      return {
+        write = function(_, text) written[key] = written[key] .. text end,
+        flush = function() end,
+      }
+    end
+    local ok, err = pcall(function()
+      io.stdout, io.stderr = sink("stdout"), sink("stderr")
+      boundary.emit(boundary.unavailable_verdict("fixture", " step=stderr", {}))
+      local stdout_verdict = boundary.unavailable_verdict("fixture", " step=stdout", {})
+      stdout_verdict.stream = "stdout"
+      boundary.emit(stdout_verdict)
+    end)
+    io.stdout, io.stderr = real_stdout, real_stderr
+    check.is_true(ok, err)
+    check.truthy(written.stderr:find("step=stderr", 1, true) ~= nil, written.stderr)
+    check.truthy(written.stdout:find("step=stdout", 1, true) ~= nil, written.stdout)
+    check.is_nil(written.stderr:find("step=stdout", 1, true), written.stderr)
+  end)
+
+  -- 不可用诊断的唯一写出入口:组装、渲染、写流、返回退出码一条链。
+  it("emits an unavailable diagnostic and returns its exit code", function()
+    local chunks = {}
+    local sink = { write = function(_, text) chunks[#chunks + 1] = text end }
+    local code = boundary.emit_unavailable("probe", " tool=editor-cli step=status", { "detail" }, sink)
+    check.same(3, code)
+    check.same("[probe] status=unavailable tool=editor-cli step=status\n[probe] detail\n", table.concat(chunks))
+  end)
 end)

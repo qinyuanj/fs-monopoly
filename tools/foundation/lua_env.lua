@@ -22,8 +22,42 @@ lua_env.REQUIREMENTS = {
 
 local LUA_VERSION = "5.4"
 
+-- 原语叶子在**同目录**,而本文件会在 package.path 装好之前被 dofile(见文件头):
+-- require 未必可用,所以装载顺序是 package.loaded 命中 → require → 按本文件自身位置
+-- loadfile。两条路给出同一份实现,不存在第二份语义。
+-- 取不到是真实损坏(文件被搬走),按同目录模块的既有口径 assert,不静默退回手写副本
+-- ——副本正是这次要消掉的东西。
+local _primitives
+local function _load_primitives()
+  if _primitives ~= nil then return _primitives end
+  local cached = package.loaded["foundation.primitives"]
+  if type(cached) == "table" then
+    _primitives = cached
+    return cached
+  end
+  local ok_require, required = pcall(require, "foundation.primitives")
+  if ok_require and type(required) == "table" then
+    _primitives = required
+    return required
+  end
+  local source = tostring(debug.getinfo(1, "S").source or ""):gsub("^@", ""):gsub("\\", "/")
+  local dir = source:match("^(.*)/[^/]+$")
+  assert(dir ~= nil, "foundation.lua_env cannot locate its own directory")
+  local chunk = loadfile(dir .. "/primitives.lua")
+  assert(chunk ~= nil, "foundation.primitives must be loadable next to lua_env.lua")
+  local loaded = chunk()
+  assert(type(loaded) == "table", "foundation.primitives must return a table")
+  -- 登记回 package.loaded:否则同进程里别的模块(执行缝 bash.lua)再按 loadfile 取一次,
+  -- 会得到第二份表,unique_name 的计数器随之分裂——临时名撞车正是这么来的。
+  package.loaded["foundation.primitives"] = loaded
+  _primitives = loaded
+  return loaded
+end
+
+-- 反斜杠→正斜杠来自原语叶子;去掉尾部分隔符是本模块自己的口径:tree 根带尾斜杠时
+-- is_inside 拼出来的前缀会多一个斜杠,受控 tree 里的模块会被误判在 tree 之外。
 local function _normalize(path)
-  return (tostring(path or ""):gsub("\\", "/"):gsub("/+$", ""))
+  return (_load_primitives().normalize(path):gsub("/+$", ""))
 end
 
 -- "2.3.0-1" → {2,3,0};去掉 rock 修订号。认不出的片段按 0。
@@ -75,18 +109,16 @@ end
 
 -- 默认子进程执行面刻意不 require foundation.proc:本模块会在 stock busted 的钉死
 -- 环境里被 dofile,那时只有仓根与受控 tree 在 package.path 上,tools/ 还不可见,
--- 所以 foundation.bash 只能惰性 require(见 _default_run)。
--- POSIX 单引号:`$`、反引号与空白都按字面传递(与 foundation.shell 同口径)。
+-- 所以 foundation.bash 只能惰性取(见 _load_bash)。
+-- 引号走原语叶子的 quote_if_needed:这里要的是「能省则省」形态——env、-u、变量名这些
+-- 安全字符不加引号,拼出来的 env -u LUA_PATH ... 前缀才与既有命令行逐字同形。
+-- 恒引号形态(primitives.quote)会把它改写成 'env' '-u' ...,那是另一种文本。
 -- 执行只走统一执行缝 foundation.bash.execute(capture = true):原生 Lua 的 io.popen 在
 -- Windows 上同样走 cmd.exe,而 `env -u ...` 与 POSIX 单引号在 cmd.exe 下都不成立
 -- (ADR 0083 / #235)。**不再有 io.popen 回落**——执行缝不可用就如实报「不可核对」,
 -- 绝不静默退回 POSIX 路径(#234 F1)。
 local function _quote(arg)
-  local text = tostring(arg)
-  if text:match("^[%w%-%._/:=]+$") ~= nil then
-    return text
-  end
-  return "'" .. text:gsub("'", "'\\''") .. "'"
+  return _load_primitives().quote_if_needed(arg)
 end
 
 -- 本模块会在钉死 LUA_PATH/LUA_CPATH 的子进程里被调用(busted runner、lint 子进程),
@@ -94,26 +126,16 @@ end
 -- 核对的是「机器 tree 里装了什么」,与调用方钉死的装载面无关。
 local _CLEARED_PATHS = "env -u LUA_PATH -u LUA_PATH_5_4 -u LUA_CPATH -u LUA_CPATH_5_4 "
 
--- 加载统一执行缝实现 foundation.bash:优先 require;受限 package.path(lint 子进程、
--- mutation worker 把装载面钉在受控 tree 上)里 tools/ 可能不在搜索面上,此时按**本文件
--- 自身位置**加载同一份实现(按路径 dofile,仍是唯一实现,不回落 io.popen)。
-local _bash_cached
+-- 加载统一执行缝实现 foundation.bash。装载面有两种:require 可用时走 require;
+-- 受限 package.path(lint 子进程、mutation worker 把装载面钉在受控 tree 上)里 tools/
+-- 不在搜索面上,此时只能按**本文件自身位置** loadfile 同一份文件。这段两路回落正是
+-- primitives.shared 的语义,而且它保证同一进程里只装一次:执行缝的 bash 发现缓存与
+-- 临时名计数器若分裂成两份,行为会随「先被谁装载」而变。
+-- 取不到就返回 nil,由调用方如实报「受控 Lua 环境不可核对」,绝不回落 io.popen。
 local function _load_bash()
-  if _bash_cached ~= nil then return _bash_cached end
-  local ok_load, mod = pcall(require, "foundation.bash")
-  if ok_load and type(mod) == "table" and type(mod.execute) == "function" then
-    _bash_cached = mod
+  local mod = _load_primitives().shared("bash")
+  if type(mod) == "table" and type(mod.execute) == "function" then
     return mod
-  end
-  local source = tostring(debug.getinfo(1, "S").source or ""):gsub("^@", ""):gsub("\\", "/")
-  local dir = source:match("^(.*)/[^/]+$")
-  if dir == nil then return nil end
-  local chunk = loadfile(dir .. "/bash.lua")
-  if chunk == nil then return nil end
-  local ok2, mod2 = pcall(chunk)
-  if ok2 and type(mod2) == "table" and type(mod2.execute) == "function" then
-    _bash_cached = mod2
-    return mod2
   end
   return nil
 end
@@ -333,13 +355,9 @@ function lua_env.is_inside(file, roots)
   return false
 end
 
+-- 可读性探测来自原语叶子(它是 locate 的默认注入缝;调用方仍可传 exists 覆盖)。
 local function _readable(path)
-  local handle = io.open(path, "rb")
-  if handle == nil then
-    return false
-  end
-  handle:close()
-  return true
+  return _load_primitives().readable(path)
 end
 
 -- 按 search_path 的搜索顺序定位模块首个命中文件,并要求它位于受控 Lua 环境之内。

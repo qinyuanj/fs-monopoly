@@ -33,10 +33,19 @@ function bootstrap.install(script_path, opts)
   return env
 end
 
+-- 入口自定位:取**调用方 chunk** 的 source 交给 install,入口只剩一行引导。
+-- 为什么不用 arg[0]:`lua -e 'dofile(...)'` 下 arg[0] 是 lua.exe 自己,拿它当源路径
+-- 必然解不出 repo_root(旧 script_bootstrap 的 bug)。chunk source 在直跑 / 被 require /
+-- 被 dofile 三种装载面下都指向真正的入口文件。
+function bootstrap.install_here(opts)
+  local info = debug.getinfo(2, "S")
+  return bootstrap.install(info and info.source or "", opts)
+end
+
 -- 解释器解析与全仓同源:LUA54_BIN 覆写 + 候选表 + `<candidate> -v` 版本验证全在
 -- foundation.lua54 一处表达;这里不再自造第二套规则(旧实现读 arg[-1],
 -- 而 `-e` 形态下 arg[-1] 恒为 nil,等于沉默退回 PATH 猜测)。调用点均已装好
--- package.path(install / script_bootstrap 在前)。
+-- package.path(install / install_here 在前)。
 local function _selected_interpreter()
   return require("foundation.lua54").lua54_bin()
 end

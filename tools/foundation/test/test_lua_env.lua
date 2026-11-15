@@ -340,6 +340,43 @@ describe("controlled lua environment module origin", function()
   it("compares paths byte for byte, so a case variant of the tree is outside it", function()
     check.is_false(lua_env.is_inside(ROOT:upper() .. "/share/lua/5.4/x.lua", roots))
   end)
+
+  -- tree 根带上尾分隔符(luarocks config 的某些形态)时,模块仍在 tree 之内:
+  -- 归一除了反斜杠转正斜杠,还要吃掉尾部分隔符,否则拼出来的路径多一个斜杠。
+  -- 一行原语只该有一份:归一 / 可读性探测 / 能省则省的引号都来自原语叶子,
+  -- 执行缝的加载也走它的兄弟加载器。结构断言,因为两边的行为本来就该完全一致。
+  it("consumes the primitive leaf instead of rewriting its one-line primitives", function()
+    local handle = assert(io.open("tools/foundation/lua_env.lua", "rb"))
+    local source = handle:read("*a")
+    handle:close()
+    check.truthy(source:find(".normalize(path)", 1, true), "normalize must come from primitives")
+    check.truthy(source:find(".readable(path)", 1, true), "readable must come from primitives")
+    check.truthy(source:find(".quote_if_needed(", 1, true),
+      "lua_env must use quote_if_needed (safe characters stay unquoted) rather than the always-quoted form")
+    check.is_nil(source:find([['" .. text:gsub("'", "']], 1, true), "no second single-quote escaping body")
+    check.truthy(source:find([[.shared("bash")]], 1, true),
+      "the bash seam must load through primitives.shared, not a bespoke require/loadfile pair")
+    check.is_nil(source:find('loadfile(dir .. "/bash.lua")', 1, true), "no bespoke bash loader")
+  end)
+
+  it("treats a tree root given with a trailing separator as inside", function()
+    check.is_true(lua_env.is_inside(ROOT .. "/share/lua/5.4/x.lua", { ROOT .. "/" }))
+    check.is_true(lua_env.is_inside(ROOT:gsub("/", "\\") .. "\\share\\lua\\5.4\\x.lua", { ROOT .. "\\" }))
+  end)
+
+  -- 可读性探测的默认注入缝:没传 exists 时按真实文件判断,命中即接受。
+  it("probes real files when no exists seam is injected", function()
+    local root = env_lib.make_temp_path("lua_env_locate", ""):gsub("\\", "/")
+    fs_lib.remove_path(root)
+    assert(fs_lib.ensure_dir(root .. "/share/lua/5.4/luacheck"))
+    assert(fs_lib.write_file(root .. "/share/lua/5.4/luacheck/main.lua", "return {}"))
+    local ok, err = xpcall(function()
+      local file = lua_env.locate("luacheck.main", { root }, root .. "/share/lua/5.4/?.lua")
+      check.equal(root .. "/share/lua/5.4/luacheck/main.lua", file)
+    end, debug.traceback)
+    fs_lib.remove_path(root)
+    check.is_true(ok, err)
+  end)
 end)
 
 -- P1-b(#150):require_controlled 必须约束整条装载链,而不只是入口模块。
@@ -403,6 +440,16 @@ local function _run_controlled(module, roots, prelude, env_vars)
 end
 
 describe("controlled lua environment loading", function()
+
+  -- 受限装载面(package.path 上没有 tools/)里 dofile 本文件时,原语叶子只能 loadfile;
+  -- 那条路径必须把结果登记回 package.loaded,否则执行缝会再装一份,计数器分裂。
+  it("registers the loadfile'd primitive leaf in package.loaded", function()
+    local result = _run_controlled("unused", { "." },
+      "local e = assert(loadfile('tools/foundation/lua_env.lua'))()\n"
+        .. "e.is_inside('/x/y.lua', { '/x' })\n"
+        .. "io.write(tostring(package.loaded['foundation.primitives'] ~= nil))\n")
+    check.truthy(result.output:find("true", 1, true) ~= nil, result.output)
+  end)
 
   it("loads a module whose whole dependency chain lives in the controlled tree", function()
     _with_dirs({ "controlled" }, function(dirs)
