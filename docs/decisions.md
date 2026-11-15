@@ -98,11 +98,11 @@ state 只向 foundation 依赖。foundation 需要可变状态时暴露参数化
 
 CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异走 crapper / mutator 的 Lua 路径，架构面走 policy 与 IR。`docs/architecture.md` 解释职责，`arch_policy/levels.edn`（层序与同层分组的唯一权威，见 ADR 0077）、`arch_policy/policy.json` 与 `test/guards/` 构成层边界执行真源；仓根 `policy.edn` 只是同一份边界在 uml-viewer 侧的投影，不构成第二真源。
 
-理由：uml-viewer 已承担「非 Clojure 的 CRAP 与变异」，具备 Lua 扫描与 WSL Ubuntu 复验记录（ADR 0073）；本仓沿用同一实现与架构边界，避免维护两套会漂移的真源。
+理由：uml-viewer 已承担「非 Clojure 的 CRAP 与变异」，以 DSH 插件 `dsh-uml-viewer` 在本机原生运行（ADR 0083）；本仓沿用同一实现与架构边界，避免维护两套会漂移的真源。
 
 落地：入口是 DSH 插件 `dsh-uml-viewer` 的 `uml_crap` / `uml_mutate` / `uml_dry` / `uml_ir`（ADR 0082），派发次序与 validResult 由插件二进制判定，本仓不再包装。`.metrics/` 按上游 README 入库：真实跑出的度量随改动提交（#69 维护者决定）。
 
-修订记录：2026-10-27 层序来源收窄到 `levels.edn`（ADR 0077 / #214）；2026-10-29 去掉已退场的 `uml.ps1`（#219）；2026-11-10 入口由仓内 `uml` 包装改为 DSH 插件（ADR 0082 / #233）。
+修订记录：2026-10-27 层序来源收窄到 `levels.edn`（ADR 0077 / #214）；2026-10-29 去掉已退场的 `uml.ps1`（#219）；2026-11-10 入口由仓内 `uml` 包装改为 DSH 插件（ADR 0082 / #233）；2026-11-15 复验环境口径由 WSL 改为插件在本机原生运行（ADR 0083）。
 
 ## ADR 0069 — 测试框架的终态是 busted
 
@@ -140,18 +140,7 @@ CRAP、变异与架构图的生成交由 `qinyuanj/uml-viewer`（`lua` 分支）
 
 ## ADR 0073 — 开发与工具链保证面迁到 WSL Ubuntu 与 macOS
 
-开发与工具链的保证面是 **WSL Ubuntu 24.04 与 macOS**（#191）；原生 Windows 只是部署目标，不保留原生 Windows 开发的双轨支持。取代 ADR 0066 与 ADR 0071。
-
-1. **平台判定与二态**。`foundation/platform_boundary.lua` 的 `host_platform()` 返回 `linux` / `macos` / `posix` / `windows`（`/proc/version` 可读即 `linux`，`/System/Library/CoreServices/SystemVersion.plist` 可读即 `macos`），`supported_platform()` 是保证面判定的唯一入口，只接受 `linux` 与 `macos`，其余 POSIX 归 `posix`、不在保证面内。平台或工具不可用退 3（`status=unavailable`），真实失败退 1、用法错误退 2，两者互相区分；平台不可用不是检测结论，也不计通过。
-2. **foundation 用 POSIX 原语**。`proc` 以 `os.execute`（`/bin/sh -c`）+ `find -print0` 执行与枚举，`fs` 用 `mkdir -p` / `rm -rf` / `cp -R` 并把存在性与目录判定收成纯 Lua（`io.open` + `rename` 自探测），`env` 以 `pwd -L` 取当前目录（继承的 `PWD` 可能被子进程 cwd 作废，只兜底）、取 `TMPDIR`，`shell` 按 POSIX 单引号拼装与 `NAME=value` 前缀导出。`parallel_lanes` 让 launcher 自成进程组并用进程组看门狗收容超时：Linux 用 `setsid`，macOS 没有 `setsid` 命令，改用 `set -m` 作业控制，组 id 与收容语义相同。Windows 时代的 `cmd.exe` / `chcp` / `robocopy` / `where.exe` / PowerShell Job Object 全部退场。
-3. **解释器统一 `lua5.4`**。入口显式写 `lua5.4 tools/cli.lua`，候选表只认 `lua5.4` / `lua54`，子进程沿用当前解释器身份；不改机器全局 `lua`（兄弟仓依赖 5.1），不引入 LuaJIT。macOS 上 `lua5.4` 由机器 Lua 5.4 提供（可为指向 5.4 解释器的同名链接）。受控 Lua 环境（ADR 0072）口径不变，机器 tree 是 `~/.luarocks`（LuaRocks 5.4）；`luarocks.loader` 须不可解析，或解析在受控 tree 内（luarocks 自装进 tree 时，loader 只会接回受控 tree 本身）。
-4. **deploy 是唯一的 Windows 互操作面**。`deploy` 在 WSL 中运行：在 `/mnt/c` 下经 `cmd.exe` 取 `%USERPROFILE%`，再用 `wslpath -u` 换算，目标仍是 `<home>/Desktop/dev/eggy/LuaSource_大富翁`，拷贝用 Linux 原生命令。`cmd.exe` 或 `wslpath` 缺失退 3（`status=unavailable`），不是部署失败，macOS 上即如此；`deploy` 仍是零参数。
-5. **无 CI，hook 可选**。本仓不跑 CI，`.github/` 已删除；push 前的硬地板是本地 `lua5.4 tools/cli.lua verify`。`.githooks/pre-push` 是可选本地拦截（`git config core.hooksPath .githooks` 启用），只做转发：`exec lua5.4 tools/cli.lua verify </dev/null`。
-6. **新脚本默认 bash**。仓库内新增或改写的自动化脚本用 bash（`#!/usr/bin/env bash`），不再以 PowerShell 为默认形态。
-
-理由：开发机已整体迁到 WSL Ubuntu（#106），部署目标与宿主仍在 Windows。保留一条没有消费者的原生 Windows 开发路径，等于为每个工具各写两套实现与两套测试；而 `deploy` 的互操作面很小、边界清楚，把它收成唯一的 Windows 接触点，其余部分就能用一套 POSIX 语义表达，macOS 也因此只需在进程组收容一处分派。代价写明：这是平台迁移而非双轨化，将来若回到原生 Windows 开发须重新引入平台分派层；`/mnt/c` 上的文件系统语义（大小写、权限）与 ext4 不同，部署只做纯拷贝，不依赖这些语义。
-
-修订记录：2026-10-22 撤销 CI，hook 改为可选（维护者决定）；2026-10-27 保证面增补 macOS（维护者决定，#215）；2026-10-29 平台边界由三态改为二态，删除显式跳过协议（#219）；2026-11-10 删除原第 5 条仓内 uml 入口，质量工具改由 DSH 插件提供（ADR 0082 / #233）。
+已被 ADR 0083 取代（2026-11-15）；原文见 `4f17b65:docs/decisions.md`。
 
 ## ADR 0074 — 皮肤归属以宿主玩家存档为真源
 
@@ -282,3 +271,21 @@ uml-viewer 由 DSH 插件 `dsh-uml-viewer` 提供：`uml_ir` / `uml_crap` / `uml
 6. **dry 只扫全量、用默认阈值**。插件 `uml_dry` 不接受路径和阈值参数。抽函数前跑一次，到 `.metrics/dry.edn` 里查目标文件的条目。
 
 理由：插件的面板操作会让 agent 去改 policy，注入的规则也要求改 policy 时保留 `:proposals`。若保留「`policy.edn` 是生成物、推演另存」，每个会话都要跟插件规则对着干，下次重生还会冲掉 agent 写进去的提案。投影中真正来自 arch_policy 的只有 `:levels` / `:foreign` / `:src`，用守卫核对一致，就能守住「层序只有一个真源」，不必再靠生成。代价：`policy.edn` 有两类内容，一类是镜像、一类可以手改，由守卫划界；dry 不能按文件跑、也不能调阈值；变异有没有假绿，只能信插件。
+
+## ADR 0083 — 开发与工具链保证面回到原生 Windows
+
+开发与工具链的保证面收窄为**原生 Windows 单平台**；WSL 与 macOS 退出保证面。取代 ADR 0073，并回到 ADR 0066 / 0071 的立场（后两者已被 0073 取代，见各自存根）。与 ADR 0066 的差别只有一条：本决策**允许 Git for Windows / MSYS 的 bash 充当工具脚本的 shell**（ADR 0066 当年把这一层也排除在外）。
+
+1. **平台判定与二态**。`foundation/platform_boundary.lua` 的 `supported_platform()` 只接受 `windows`；`host_platform()` 仍识别 `windows` / `linux` / `macos` / `posix`，但只用于给出可诊断的不可用判决——非 Windows 一律退 3（`status=unavailable`），不静默成功。不可用 / 真实失败二态不变：平台或工具不可用退 3，真实失败退 1、用法错误退 2。
+2. **bash 是运行前提，且只用于执行命令**。工具脚本经 `bash -c` 执行；bash 发现顺序为 `MONOPOLY_BASH` / `BASH` 环境变量 → PATH 上的 `bash` → 常见 Git 安装路径；缺失判不可用退 3 并打印安装指引。代价写明：这把「兼容 Windows」具体化为「兼容某个 Git Bash」，MSYS 的路径改写会作用于传给原生 exe 的参数——这是本决策相对 ADR 0066 显式接受的代价。
+3. **唯一执行缝**。新增 `foundation.shell.execute(command)` 作为全仓唯一的命令执行入口，内部一律 `bash -c`；`fs` / `proc` / `parallel_lanes` 里现有的 `os.execute` 全部改走它。命令串与 POSIX 引号（`shell.shell_quote` / `build_env_lines`）原样保留，其余模块不动。原因是原生 Lua 的 `os.execute` 在 Windows 走 `cmd.exe`，不经这一层任何 POSIX 命令都会失败。
+4. **内部路径统一正斜杠 Windows 绝对路径**。`foundation.path` / `runtime_path_ops` 内部一律用 `D:/...` / `C:/...` 形态（原生 Lua 的 `io.open` 与 bash 都接受）；`current_dir` 经 `cygpath -m .`（或 `pwd -W`）取得 `D:/...`、兜底归一 `PWD`；`is_absolute` 识别盘符（`^%a:/`）；`system_tmp_dir` 取 `TEMP` / `TMP`，缺省 `C:/Windows/Temp`，弃用 `/tmp`。`/c/...` 与 `/d/...` 的 MSYS 形态原生 Lua 打不开，不得作为内部路径。
+5. **部署面原生**。`deploy` / `probe` / `data_sync` 不再经 `cmd.exe` + `wslpath` + `/mnt/c`：`deploy` 直接取 `os.getenv("USERPROFILE")`（缺失再 `cmd /c echo %USERPROFILE%` 兜底），目标仍是 `%USERPROFILE%\Desktop\dev\eggy\LuaSource_大富翁`，拷贝走原生 `robocopy`，仍零参数；`probe` 原生定位 `editor-cli.exe`；`data_sync` 复用 deploy 的解析。部署面独立于 bash 选择。
+6. **并行车道退场**。`parallel_lanes` 的 `setsid` 进程组收容在原生 Windows / MSYS 均无（Git Bash 也没有 `setsid`），`verify --parallel` 退场，默认串行（约慢 3~4 倍）。原生进程树收容（`cmd /c start` + `taskkill /T /F /PID` 一类）记为后续取证项，不在本决策落地。
+7. **解释器候选**。`lua54` 的候选表改为 `lua5.4` → `lua54` → `lua` → `lua.exe`，每个都以 `-v` 校验含「Lua 5.4」，`LUA54_BIN` 可覆盖；入口与文档命令写 `lua tools/cli.lua`。受控 Lua 环境（ADR 0072）口径不变，机器 tree 仍是 LuaRocks 5.4。
+8. **质量工具依赖归插件**。CRAP / 变异 / dry / IR 由 DSH 插件 `dsh-uml-viewer` 在本机原生运行，其所需 Lua 环境（含 luacov、lcov reporter）由插件自带二进制自管；本仓不预检、不承载、不包装（ADR 0082）。ADR 0068 理由句里的「WSL Ubuntu 复验记录」据此改为插件原生口径。
+9. **测试与入口改写**。断言 `/mnt/c`、`wslpath`、`setsid` 与纯 POSIX 形态的测试改为 Windows 口径，并把「在非 Windows 上运行会红」写成显式断言（ADR 0066 的同一条要求）；删除纯 WSL 互操作测试；`.githooks/pre-push` 与各入口的 `lua5.4` 改为 `lua`。
+
+理由：开发机、部署目标与 Eggy 宿主都在 Windows；上一轮为 WSL 建的 POSIX 分支没有消费者，却要为它维护两套实现与两套测试（ADR 0073 已把这条路走到底）。回到原生 Windows 并把执行面收在一个 `bash -c` 缝里，能用最小改动保留既有 POSIX 命令串与测试语义，同时把「必须装某个 bash」这一前提显式化。
+
+代价：这是平台收窄而非双轨化——非 Windows 平台直接不可用；依赖 Git Bash，MSYS 路径改写是已知脆弱点（`C:/...` 正斜杠形态是对抗它的统一口径）；并行车道退场使 `verify` 变慢，进程树收容留待后续取证；`robocopy`、`taskkill`、`cygpath` 等原生工具成为新的环境前提。
