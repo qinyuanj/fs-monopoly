@@ -158,4 +158,40 @@ function runtime_path_ops.resolve(opts)
   error("failed to resolve repo_root from source path: " .. tostring(source_path))
 end
 
+-- 仓库自身模块的搜索模式(7 条),按装载优先级从低到高排列。
+-- 原来是 package_path_helper.lua 的职责,但它必须"自包含"只是因为 bootstrap 会从
+-- **解析出的仓根**去 dofile 它;搬到这里后 install 只从本文件(自身目录)取,不再
+-- 依赖仓根里存在某个具体文件,那条自包含约束随之消失。
+-- 纯数据 + 纯拼接,不碰 package.path,可单测。
+local _PACKAGE_PATTERNS = {
+  "tools/?.lua",
+  "tools/?/init.lua",
+  "test/?.lua",
+  "test/?/init.lua",
+  "test/fixtures/?.lua",
+  "?.lua",
+  "?/init.lua",
+}
+
+function runtime_path_ops.package_patterns(repo_root)
+  local root = runtime_path_ops.normalize(repo_root)
+  local patterns = {}
+  for index, relative in ipairs(_PACKAGE_PATTERNS) do
+    patterns[index] = runtime_path_ops.join(root, relative)
+  end
+  return patterns
+end
+
+-- 把 7 条模式前置进 package.path(已存在的跳过,故可重复调用)。
+-- 逆序前置:最终顺序与 _PACKAGE_PATTERNS 一致。
+function runtime_path_ops.install_eggy_package_paths(repo_root)
+  local patterns = runtime_path_ops.package_patterns(repo_root)
+  for index = #patterns, 1, -1 do
+    local pattern = patterns[index]
+    if not tostring(package.path):find(pattern, 1, true) then
+      package.path = pattern .. ";" .. package.path
+    end
+  end
+end
+
 return runtime_path_ops

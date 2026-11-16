@@ -82,10 +82,6 @@ it("install adds repository paths and leaves cpath alone", function()
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "src")))
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "test")))
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools/foundation")))
-  check.is_true(fs_lib.copy_file(
-    "tools/foundation/package_path_helper.lua",
-    path_lib.join_path(root, "tools/foundation/package_path_helper.lua")
-  ))
   check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools")))
   check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/cli.lua"), "return {}"))
 
@@ -98,9 +94,32 @@ it("install adds repository paths and leaves cpath alone", function()
   package.path, package.cpath = original_path, original_cpath
   fs_lib.remove_path(root)
 
-  check.truthy(path:find(path_lib.normalize_path(root) .. "/tools/?.lua", 1, true),
-    "root=" .. tostring(root) .. " path=" .. tostring(path))
+  -- 7 条模式逐条钉住。旧实现要从仓根 dofile package_path_helper.lua 才拿到这张表,
+  -- 所以临时仓根里必须存在那份文件;现在模式表住在 runtime_path_ops,仓根里
+  -- 只需要目录形状本身。
+  for _, relative in ipairs({
+    "tools/?.lua", "tools/?/init.lua", "test/?.lua", "test/?/init.lua",
+    "test/fixtures/?.lua", "?.lua", "?/init.lua",
+  }) do
+    local pattern = path_lib.normalize_path(root) .. "/" .. relative
+    check.truthy(path:find(pattern, 1, true),
+      "missing pattern " .. pattern .. " in " .. tostring(path))
+  end
   check.equal("/sentinel/?.so", cpath)
+end)
+
+-- 模式表是纯数据:仓根 + 7 条相对模式,不依赖仓根里存在任何具体文件。
+it("package patterns are pure data independent of the repo contents", function()
+  local patterns = runtime_path_ops.package_patterns("D:/repo")
+  check.same({
+    "D:/repo/tools/?.lua",
+    "D:/repo/tools/?/init.lua",
+    "D:/repo/test/?.lua",
+    "D:/repo/test/?/init.lua",
+    "D:/repo/test/fixtures/?.lua",
+    "D:/repo/?.lua",
+    "D:/repo/?/init.lua",
+  }, patterns)
 end)
 
 it("resolves a repo root from the standard tool layout", function()

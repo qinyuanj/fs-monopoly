@@ -29,11 +29,10 @@ end
 -- 不写入任何 tree,也不在项目内自举安装 rock。
 function bootstrap.install(script_path, opts)
   local env = bootstrap.resolve(script_path, opts)
-  local helper_path = path_ops.join(env.tools_dir, "foundation/package_path_helper.lua")
-  local helper = dofile(helper_path)
-  helper.install_eggy_package_paths({
-    repo_root = env.repo_root,
-  })
+  -- 模式表住在 runtime_path_ops(本文件装载期已 dofile 它),install 不再从
+  -- 解析出的仓根里加载任何文件——旧实现要从仓根 dofile package_path_helper.lua,
+  -- 才被迫让那份文件"必须自包含"。
+  path_ops.install_eggy_package_paths(env.repo_root)
   return env
 end
 

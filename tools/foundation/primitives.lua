@@ -1,7 +1,7 @@
 -- primitives.lua —— 全仓唯一的 os/io 原语叶子(ADR 0083 深化)。
 --
 -- 为什么要有这个文件:执行缝(foundation.bash)、cwd 探测(runtime_path_ops)、受控环境核对
--- (lua_env)、平台判决(platform_boundary)、第一块砖(package_path_helper)都必须在
+-- (lua_env)、平台判决(platform_boundary)、第一块砖(bootstrap)都必须在
 -- package.path 装好**之前**运行,那时 require 不可用,于是各自重写"反斜杠归一 / 存在性
 -- 探测 / POSIX 引号 / 临时名熵"这些一行原语,靠注释"与其他模块同口径"手工同步。
 -- 这个叶子把它们收成一份。
