@@ -65,8 +65,6 @@ end
 
 local function _expand_affected_tiles(state, owner_ids)
   tables.clear(_expand_tile_ids)
-  -- owner_ids 恒为 table(_normalize_payload 经 _dedupe_into 归一),`not owner_ids`
-  -- 是死防御——or->and 变异体在空表下殊途同归不可杀(#262 删除)。
   if #owner_ids == 0 then
     return _expand_tile_ids
   end

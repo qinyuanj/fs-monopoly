@@ -35,8 +35,6 @@ function event_handlers.install(_, logger, state)
     return result
   end
 
-  -- handlers_by_event 登记簿已删(#262):写后无任何读者(纯记账),
-  -- `#list + 1` 的下标变异不可杀;注册行为本身由 host_events 承担。
   local function _register_handler(event_name, handler)
     -- gm.finished 是终态事件,落地 hold 激活时不得 defer:finished 后
     -- advance_turn 直接返回(game_state),回合脚本永不恢复,release_pending

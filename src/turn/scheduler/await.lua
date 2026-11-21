@@ -50,8 +50,6 @@ local _resolve_choice_action
 local _validate_choice_action
 local _wait_for_choice_action_anim
 
--- 共享 decide 入参表;elapsed_seconds 在 _resolve_choice_action 调用前恒被覆写,
--- 初值 0 恒不可读(等价变异体,已删冗余)。
 local _decide_opts = {}
 
 local function _resolve_after_action_anim(args, res)
@@ -77,8 +75,6 @@ local function _resolve_choice_result(game, choice, session)
     return nil, false
   end
   if action.type == "choice_force_skip" then
-    -- game 与 game.turn 恒非 nil(_choice 入口断言 + pending_choice 读取把守),
-    -- 「game and game.turn」是恒真守卫(等价变异体,已删冗余)。
     game.turn.pending_choice = nil
     _mark_dirty(game)
     return {}, true
@@ -106,8 +102,6 @@ end
 _resolve_choice_action = function(choice, session, game)
   if game and game.turn and game.turn._choice_force_skip_pending then
     game.turn._choice_force_skip_pending = nil
-    -- choice 恒非 nil(唯一调用方 _resolve_choice_result 由 _choice 的
-    -- not-choice 短路把守),「choice and」是恒真守卫(等价变异体,删冗余)。
     return { type = "choice_force_skip", choice_id = choice.id }
   end
   _decide_opts.elapsed_seconds = session.choice_elapsed_seconds or 0
@@ -116,7 +110,6 @@ end
 
 _validate_choice_action = function(action, choice)
   -- choice_force_skip 不设独立分支:它 ~= choice_select 且 ~= choice_cancel,
-  -- 由下面的类型闸门天然放行——早退分支是逐位等价的死代码(变异清扫删冗余)。
   if action.type ~= "choice_select" and action.type ~= "choice_cancel" then
     return true
   end

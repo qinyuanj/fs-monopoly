@@ -1,5 +1,3 @@
--- 角色解析与标记默认实现(自 default_ports.lua 拆分,行为保持):角色枚举、
--- 合成角色适配器回退、单角色解析、失败标记与出局的宿主侧执行。
 local logger = require("src.foundation.log")
 local role_die = require("src.host.role_die")
 local role_model = require("src.host.role_model")

@@ -49,9 +49,7 @@ local function _switch_canvas_after_choice_close(state, ui)
 end
 
 -- 只有「这个 route 自己的屏已经开着」才算重复开屏。判定必须和 choice_state 的
--- 开屏门控同口径（choice_active AND active_choice_screen_key == route_key）：
--- 早先这里只看 choice_active，于是任何残留的旧屏都会把后续所有开屏一并跳过 ——
--- 旧屏关不掉、新屏出不来，choice_active 与 key 一起卡死。
+-- 开屏门控同口径（choice_active AND active_choice_screen_key == route_key）。
 local function _should_skip_reopen(state, screen_key, choice_id)
   if screen_key == "market" then
     return false
@@ -83,8 +81,6 @@ local function _close_or_reset_inline_choice(state)
   choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
 end
 
--- 返回值会被 _open_special_screen 丢弃,不要在这里 return 状态位:
--- 死返回值在变异测试下不可证伪(true→false 突变必然幸存)。
 local function _open_base_inline_choice(state, choice)
   if choice_common.requires_item_slot_pre_confirm(choice) and not pending_confirmation.is_item_phase_confirmed(state) then
     _open_item_phase_pre_confirm(state, choice)

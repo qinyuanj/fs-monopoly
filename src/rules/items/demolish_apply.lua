@@ -14,9 +14,6 @@ local action_anim_duration = timing.action_anim_default_seconds or 1.0
 local tile_state = tile_mod.get_state
 
 local function _try_destroy_building(game, tile, idx, item_id)
-  -- 无入口守卫:唯一调用方先断言 tile 非 nil 且只在 type == "land" 时进入,
-  -- 守卫恒真不可达(#259 删除)。st.level 在 tile 构造即初始化为 0,
-  -- `(st.level or 0)` 的兜底同样是死防御。
   local st = tile_state(game, tile)
   if not st.owner_id or st.level <= 0 then
     game:set_tile_level(tile, 0)
@@ -61,10 +58,6 @@ local function _apply_demolish_effects(game, idx, opts)
     destroyed, destroyed_owner = _try_destroy_building(game, tile, idx, opts.item_id)
   end
   local hospital_targets = nil
-  -- hit 不在声明处初始化:未致伤时保持 nil,所有读取点(fully_blocked 第二臂、
-  -- 消息伤亡后缀、handle_result 分支)都被 opts.injure 短路守卫;`local hit = 0`
-  -- 的 0→1 变异在旧形态下不可观测(#259 化简,同时封死 fully_blocked
-  -- 第二臂 not 删除变异——nil == 0 为假,行为分歧可观测)。
   local hit
   if opts.injure then
     hospital_targets = demolish_hospital.collect_targets(game, idx, opts.item_id)

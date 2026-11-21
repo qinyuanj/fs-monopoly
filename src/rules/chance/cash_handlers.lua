@@ -76,14 +76,6 @@ local function _pay_other(env, game, player, other, fee)
   if game:player_is_in_mountain(other) then
     return
   end
-  -- payer 侧**故意不守恒**,别顺手改成 coin_settlement.transfer(工单 #126)。
-  -- charge 在 0 处钳制并返回实付额,但这里刻意丢弃返回值,下一行把**全额 fee**
-  -- 无条件记给收款人 —— payer 余额不足时,差额是被**铸出来**的。
-  -- (对照 collect_from_others:那边用 transfer,守恒、按流动性封顶。)
-  -- 语义:破产玩家仍须让每个收款人拿满,先付清再淘汰,而不是让先收到的人拿满、
-  -- 后面的人分不到。回归护栏在 test/support/scenario_suites/bankruptcy/cases.lua:148
-  -- (P1=15、每人收 10:P2 拿满 10,P3 时 P1 只剩 5 却仍断言 P3 到账 10)。
-  -- 改用 transfer 会让那条断言当场变红。
   coin_settlement.charge(game, player, fee, {
     reason = player.name .. " 向他人支付后破产",
     cash_opts = { suppress_cash_receive_anim = true },
@@ -143,7 +135,6 @@ local function _collect_from_others(env, game, player, card)
   })
 end
 
--- register 只绑定环境;各 handler 留在模块级,复杂度不累加到 register(CRAP)。
 local HANDLERS = {
   add_cash = _add_cash,
   pay_cash = _pay_cash,

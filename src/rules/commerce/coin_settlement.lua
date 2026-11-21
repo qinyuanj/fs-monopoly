@@ -2,7 +2,7 @@
 -- 「扣一笔钱/转一笔钱 → 判非正余额 → 破产淘汰(或延后上报) → 收款遥测」
 -- 全部收敛于此。deity ×2 定价规则按域各异,留在 adapter;
 -- 本模块只拥有结算机制:余额钳制、partial 封顶、非正判定、淘汰时机、收款遥测。
-local achievement_progress = require("src.rules.ports.achievement_progress") -- luacheck: ignore (Task 2 transfer 使用)
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local bankruptcy = require("src.rules.elimination.bankruptcy")
 
 local coin_settlement = {}

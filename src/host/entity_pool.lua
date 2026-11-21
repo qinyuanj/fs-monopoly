@@ -20,9 +20,6 @@ local function _access_field(obj, key)
 end
 
 local function _call_method(handle, name, ...)
-  -- 返回值无读者、ok/type 守卫与 pcall 吞错殊途同归(method 不可调用时
-  -- pcall 自行吞掉),一并删除(#259 化简);handle nil 守卫保留——它让
-  -- `== nil` 翻转变异体能被「有效 handle 必须被调用」用例直接杀死。
   if handle == nil then return end
   local _, method = pcall(_access_field, handle, name)
   pcall(method, ...)
@@ -55,8 +52,6 @@ function entity_pool.acquire(unit_key, pos, rotation, scale)
     end
   end
   b.live = b.live + 1
-  -- math.max 形态:原 `b.live > b.peak` 的 > -> >= 在等值时重复赋同值不可杀;
-  -- live/peak 是内部不变量(恒数值),is_numeric 双守卫是死防御(#259 化简)。
   b.peak = math.max(b.peak, b.live)
   return handle
 end
@@ -86,9 +81,6 @@ end
 
 local function _prewarm_one(unit_key, b, pos, rotation, scale)
   local handle = unit_lifecycle.create_unit_with_scale(unit_key, pos, rotation, scale)
-  -- 预热失败(handle nil)跳过本格,由循环继续尝试下一格;返回值无读者,
-  -- 满池早退移给 _fill_prewarm 的 break(#259 化简:`return false` -> true
-  -- 在旧形态下只改变无副作用的迭代次数,不可杀)。
   if not handle then return end
   _call_method(handle, "set_model_visible", false)
   _call_method(handle, "set_position", runtime_constants.entity_pool_park_pos)
@@ -108,7 +100,6 @@ function entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
   _fill_prewarm(unit_key, b, count, sample_pos or runtime_constants.entity_pool_park_pos, rotation, scale)
 end
 
--- 行为测试公共接缝：test_entity_pool 通过快照观测复用、容量上限和 reset 的资源结果。
 function entity_pool.stats()
   local snapshot = {}
   for unit_key, b in pairs(_buckets) do

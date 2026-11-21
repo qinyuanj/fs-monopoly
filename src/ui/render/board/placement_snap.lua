@@ -85,7 +85,6 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
   end
 end
 
--- Exported for testing
 M.resolve_min_player_y = placement_geometry.resolve_min_player_y
 return M
 

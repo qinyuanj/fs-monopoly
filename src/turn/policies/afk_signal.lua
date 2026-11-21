@@ -86,8 +86,6 @@ function afk_signal.reset(state)
   turn_runtime.afk_timeout_counts = {}
 end
 
--- 连续超时计数自增(CRAP 门禁):缺省 0 的兜底收敛到本函数,
--- on_timeout_fallback 只留阈值判定与托管切换。
 local function _bump_count(counts, key)
   local count = (counts[key] or 0) + 1
   counts[key] = count

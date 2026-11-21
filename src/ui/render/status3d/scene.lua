@@ -45,8 +45,6 @@ local function _create_scene_ui_bind_unit(ctrl_unit, layout_id)
 end
 
 local function _resolve_label_node_id(node_name)
-  -- node_name 来自静态 specs.text_node_name(恒为非空字符串),串守卫是死防御
-  -- (#262 删除:or->and 与 ""->nil 在配置约束输入下不可观测)。
   if not (UIManager and type(UIManager.get_first_node_by_name) == "function") then
     return nil
   end
@@ -58,8 +56,6 @@ local function _resolve_label_node_id(node_name)
 end
 
 local function _resolve_text_node(layer, status_key, deps)
-  -- status_key 恒为 status_specs 的键(来自 meta.layouts),spec 与
-  -- text_node_name 静态恒在,and->or 不可观测,守卫删除(#262)。
   local node_id = _resolve_label_node_id(specs.status_specs[status_key].text_node_name)
   if node_id == nil then
     return nil

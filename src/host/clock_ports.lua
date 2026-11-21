@@ -1,5 +1,3 @@
--- 时钟端口默认实现(自 default_ports.lua 拆分,行为保持):wall/cpu 时刻与差值
--- 的宿主 API 适配,经 runtime_context 取当前 env 的 GameAPI 时间戳方法。
 local number_utils = require("src.foundation.number")
 local host_context = require("src.host.context")
 

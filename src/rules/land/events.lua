@@ -56,8 +56,6 @@ function land_events.apply(game, result)
   end
   -- 山地免租(ok == false)不需要特判:_emit_land_event 本就不看 ok,按 result.event
   -- 查表拿到的正是同一个事件键,发事件与推 feed 的动作逐字相同。它的两个生产方
-  -- (rent_payment / actions)都返回不带 bankrupt_reason 的定值表,所以原先那条
-  -- 特判路径提前 return 跳过的破产分支本来也是空转。
   local payload = result.payload or {}
   _emit_land_event(game, result, payload)
 

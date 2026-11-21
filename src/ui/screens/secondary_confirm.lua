@@ -56,8 +56,6 @@ function M.open_pre_confirm(state, choice, option_id, title, body)
 end
 
 -- 道具阶段询问用预确认（由 modal_presenter 在 base_inline 路径触发）。
--- 注:resolve_* 的第三参 _source_screen 按签名约定不被读取,此处 "base_inline"
--- 字面量的变异是等价变异(不可杀),不要为它补钉文案的测试。
 function M.open_item_phase_pre_confirm(state, choice)
   pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   local title = choice_common.resolve_secondary_confirm_title(choice, state.game, "base_inline", nil)

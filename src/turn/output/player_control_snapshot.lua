@@ -28,7 +28,6 @@ local function _entry(player)
   })
 end
 
--- 单条落表(CRAP 门禁):归一化与空 id 跳过收敛到本函数,build 只留遍历。
 local function _write_entry(by_player, player)
   local player_id = identity.normalize(player and player.id or nil)
   if player_id == nil then

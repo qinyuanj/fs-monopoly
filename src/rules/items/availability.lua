@@ -37,8 +37,6 @@ end
 availability.copy_table = tables.copy_table
 availability.normalize_integer_field = normalize_integer_field
 
--- 行为测试公共接缝：test_item_availability_matrix 通过阶段窗口判定覆盖道具开放时机。
--- 生产 can_offer_in_phase 与这些入口共用 offer_window 的判定。
 availability.resolve_offer_in_phases = offer_window.resolve_offer_in_phases
 availability.trigger_timing_allowed = offer_window.trigger_timing_allowed
 
@@ -110,8 +108,6 @@ function availability.requires_followup_choice(item_id)
   return followup_choice_item_set[item_id] == true
 end
 
--- 行为测试公共接缝：test_item_availability_matrix / rent_response 通过报价结果
--- 验证各阶段、免租/强征条件与后续选择需求，不重算私有拒绝规则。
 function availability.analyze_offer(game, player, item_id, phase)
   local can_offer, deny_reason = availability.can_offer_in_phase(game, player, item_id, phase)
   local requires_followup_choice = availability.requires_followup_choice(item_id)

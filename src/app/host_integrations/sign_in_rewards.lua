@@ -1,5 +1,4 @@
--- 签到奖励 UI 刷新接线(自 host_install.lua 拆分,>100 mutation sites 行为保持):
--- 宿主 RewardDay1..7 事件→金币发放→奖励 UI 脏刷新。game/app state 只存在
+-- 签到奖励 UI 刷新接线：宿主 RewardDay1..7 事件→金币发放→奖励 UI 脏刷新。game/app state 只存在
 -- bootstrap 之后,由装配侧注入惰性访问器,事件触发时解析。
 local sign_in = require("src.app.host_integrations.sign_in")
 local host_runtime = require("src.host.init")

@@ -2,9 +2,7 @@
 --
 -- 这是 canvas 面,不是选择屏:没有 descriptor / open / canvas 三契约(详见
 -- screens_registry 的说明)。
--- 开屏/翻页/图集选择面住 item_atlas/panel.lua(>100 mutation sites 拆分,
--- 公开 API 经本文件再导出保持调用方不变);面板态/目录/翻页纯逻辑住
--- item_atlas/ 子目录卫星(require 路径 src.ui.screens.item_atlas.*)。
+-- 面板态/目录/翻页纯逻辑住 item_atlas/ 子目录卫星(require 路径 src.ui.screens.item_atlas.*)。
 local append_intent_spec = require("src.ui.input.route_specs")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
 local atlas_state = require("src.ui.screens.item_atlas.item_atlas_state")
@@ -45,8 +43,6 @@ function item_atlas.reset_for_tests()
 end
 
 -- 装载时不再预绑 catalog:该字段只被测试注入路径(configure/reset)消费,
--- src 内无读者,预绑值在「首个 reset 前」的窗口外不可观测(等价变异,#262
--- 删除);读取方一律先 reset_for_tests 再取。
 
 local panel_interrupt = require("src.ui.state.panel_interrupt")
 -- screen registry 只有进程级注册、没有卸载生命周期；模块热重载时由固定键

@@ -42,8 +42,6 @@ local function _has_pending_trigger_anim(state, overlay_kind, tile_index)
   if not turn then
     return false
   end
-  -- overlay_kind 恒为 roadblock/mine(_sync_overlay_kind 只喂这两种),映射恒命中,
-  -- target_kind 空守卫是死防御(#262 删除)。
   local target_kind = _trigger_kind_for_overlay[overlay_kind]
   if _matches_trigger(turn.action_anim, target_kind, tile_index) then
     return true

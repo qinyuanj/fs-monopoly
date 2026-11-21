@@ -100,8 +100,6 @@ end
 -- settlement 不得反向依赖本 policy)。
 function item_preconsume_policy.refund(game, choice)
   local settlement = require("src.rules.items.settlement")
-  -- #293:abandon 忽略第三参(签名 `(game, choice, _)`),label 是死参数,
-  -- 等价变异体处置——删冗余。
   return settlement.abandon(game, choice)
 end
 

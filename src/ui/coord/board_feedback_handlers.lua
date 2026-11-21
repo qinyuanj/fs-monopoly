@@ -1,5 +1,3 @@
--- 棋盘反馈 cue 事件处理器(自 event_handlers.lua 拆分,行为保持):租金/税务/
--- 机会卡/回合开始/状态/神明/破产等事件的 player/tile 级 cue 与打断;
 -- 踩雷/地块命中索引定位在 tile_index_handlers。
 local board_feedback = require("src.ui.render.board_feedback.service")
 local panel_interrupt = require("src.ui.state.panel_interrupt")

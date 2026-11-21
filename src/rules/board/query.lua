@@ -3,7 +3,6 @@ local target_direction = require("src.rules.board.target_direction")
 
 local board_query = {}
 
--- 行为测试公共接缝：test_board_query 观察队列扩展后的广度优先访问顺序。
 function board_query.queue_walk(queue, visit)
   local pending = queue or {}
   local head = 1

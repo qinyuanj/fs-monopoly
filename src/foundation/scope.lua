@@ -28,8 +28,6 @@ function Scope:defer(cleanup)
   return cleanup
 end
 
--- 倒序清空 cleanups 数组,聚合首个错误(CRAP 门禁 #452:循环与错误聚合
--- 从 destroy 提出来,各自复杂度落在小函数上)。后续错误只记日志。
 local function _drain_cleanups(cleanups)
   local has_error = false
   local first_error = nil

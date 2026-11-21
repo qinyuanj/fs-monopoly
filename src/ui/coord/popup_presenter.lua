@@ -84,8 +84,6 @@ end
 -- 买家免展示口径(2026-08-25):被载荷排除的角色(黑市买家)看不到展示也无
 -- 关闭权——其收屏只走超时自动关闭,程序化 popup_confirm 不得提前收掉旁观者
 -- 的展示。
--- 广播弹窗的关闭权判定(CRAP 门禁):排除者与非行动者两条拒绝路径收敛到
--- 本谓词,dismiss_popup 只留「是否广播」的分派与收屏。
 local function _may_dismiss_broadcast(state, ui, actor_role_id)
   local actor = role_id_utils.normalize(actor_role_id)
   if ui.popup_exclude_role_id ~= nil and role_id_utils.equals(actor, ui.popup_exclude_role_id) then

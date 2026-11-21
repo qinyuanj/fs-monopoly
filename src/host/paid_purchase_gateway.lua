@@ -543,7 +543,6 @@ function gateway.start(game, player, entry)
   return true, nil
 end
 
--- Test seam exports
 gateway._on_purchase_goods_callback = _on_purchase_goods_callback
 gateway._runtime = _runtime
 gateway._push_pending = _push_pending

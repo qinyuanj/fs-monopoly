@@ -72,8 +72,6 @@ function modal_state.operator_role_id(state)
   return _model_current_role_id(state)
 end
 
--- 载荷落旗标(CRAP 门禁):payload 派生的四个字段收敛到本函数,
--- open_popup 只留断言、dirty 标记与面板打断。
 local function _apply_popup_payload(ui, payload)
   ui.popup_active = true
   ui.popup_payload = payload

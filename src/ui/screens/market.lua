@@ -5,8 +5,6 @@
 -- 对它直接 return false,不经选择屏的 open_screen,由 coord/modal 直呼本模块的
 -- open/close。
 --
--- items 与 controls 此前是 canvas_builders 里相邻的两个 builder,合并进一份
--- build_route_specs 时必须保持「先 items 后 controls」—— 发射序即点击回调的注册序。
 local nodes = require("src.ui.schema.market")
 local ui_event_intents = require("src.ui.input.event_intents")
 local route_model = require("src.ui.input.route_model")
@@ -77,9 +75,6 @@ local function _reject_buy(text, dedupe_key, source)
   })
 end
 
--- items 与 controls 保持两个具名 builder,而不是合成一坨:这个二分是真实的(items 由
--- nodes.item_buttons 数据驱动,controls 是固定集),且 canvas_route_market_baseline_spec
--- 正是分别钉住两者的产物。build_route_specs 只负责按序合成。
 function M.build_items(state)
   local specs = {}
   for index, name in ipairs(nodes.item_buttons or {}) do

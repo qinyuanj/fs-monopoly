@@ -95,8 +95,7 @@ local function _current_players()
   return _game_players(state and state.game or nil)
 end
 
--- 终局总收尾(#609 复审更名,原名 _apply_game_result_panels 名不副实):先逐玩家
--- 路由胜/负面板,再无条件下发 end_game——职责是「面板 + 终局收尾」,不止面板。
+-- 终局总收尾:先逐玩家路由胜/负面板,再无条件下发 end_game。
 local function _finalize_game_result(event_data)
   local players = _current_players()
   if players == nil then

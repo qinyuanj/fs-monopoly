@@ -19,8 +19,6 @@ function obstacle_clear_tiles.copy_path(src)
 end
 
 local function _clear_obstacles_on_tile(game, state, tile_index, had_rb, had_mine)
-  -- 无 cleared_map 去重守卫:唯一调用方 visit_tile 由 obstacle_snapshot
-  -- 保证每格只进一次,守卫与字段均无读者(#259 删除)。
   if had_rb then
     game:clear_roadblock(tile_index)
     state.roadblock_cleared = state.roadblock_cleared + 1

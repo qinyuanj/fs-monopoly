@@ -77,8 +77,6 @@ end
 
 local _slot_pickable = {}
 
--- 单槽图与高亮判定(CRAP 门禁):图 key 解析与高亮谓词各自成函数,
--- _sync_one_slot 只留有物/空槽两分支的落值。
 local function _slot_image_key(ctx, item_id)
   local image = runtime_assets.image_for_item(item_id, ctx.asset_refs)
   return image.ok == true and image.image_key or ctx.empty_key
@@ -103,8 +101,6 @@ local function _sync_one_slot(ctx, slot_name, item_id, index, slot_pickable)
 end
 
 local function _sync_slot_images(ctx)
-  -- pairs 清除:原 `for i = 1, #_slot_pickable` 的下界 1→0 变异逐值等价
-  -- (槽位下标恒 ≥1,多清 [0] 无人观测)不可杀;pairs 无数字位点(#262 化简)。
   for key in pairs(_slot_pickable) do _slot_pickable[key] = nil end
   local slot_pickable = _slot_pickable
   for index, slot_name in ipairs(ctx.slots) do

@@ -34,7 +34,6 @@ local function _build_multiplier_text(breakdown_parts)
   return "（" .. table.concat(breakdown_parts, "、") .. "）"
 end
 
--- 深山跳租的定型结果(CRAP 门禁):早退分支的载荷构造收敛到本函数。
 local function _skipped_mountain_result(skip, tile)
   return {
     ok = false,
@@ -47,8 +46,6 @@ local function _skipped_mountain_result(skip, tile)
   }
 end
 
--- 欠付破产的结果改写(CRAP 门禁):把已建好的 rent_paid 结果就地改成
--- rent_bankrupt,execute_pay_rent 只留「付清了吗」的判定。
 local function _apply_bankruptcy(result, player, owner, rent, moved)
   result.event = "rent_bankrupt"
   result.payload.amount = rent
@@ -59,8 +56,6 @@ local function _apply_bankruptcy(result, player, owner, rent, moved)
   return result
 end
 
--- 连片 + 财神/穷神的租金定价与 rent_paid 载荷构造(CRAP 门禁):
--- execute_pay_rent 只留归属判定、结算与破产分派。返回 (result, rent)。
 local function _build_rent_paid(game, player, owner, tile)
   local board = game.board
   local idx = assert(board:index_of_tile_id(tile.id), "missing tile index: " .. tostring(tile.id))
@@ -100,12 +95,6 @@ function rent_payment.execute_pay_rent(game, player_id, tile_id)
   local settled = coin_settlement.transfer(game, player, owner, rent, {
     defer_bankruptcy = true,
   })
-  -- 破产判据必须问「租金付清了吗」(settled.moved >= rent),**不能**读 settled.bankrupt
-  -- (工单 #126)。两者在 cash == rent 这一点上分叉:coin_settlement 的破产判据是
-  -- 「非正余额(<= 0) → 破产」,所以玩家付清租金后**恰好剩 0** 时 settled.bankrupt 为 true
-  -- —— 但他付清了,不该破产。玩家永不因「付得起」而被淘汰。
-  -- PIN: test/behavior/rules/test_land_rent.lua:180
-  --      "paying exactly full rent leaves payer at zero but NOT bankrupt"
   if settled.moved >= rent then
     return result
   end

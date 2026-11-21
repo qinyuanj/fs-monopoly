@@ -13,8 +13,6 @@ local timing = require("src.config.gameplay.timing")
 local use_result = require("src.rules.items.use_result")
 
 local settlement = {}
--- 兜底动画时长只认 config 真源(timing.action_anim_default_seconds 恒有值,
--- 「or 1.0」是恒被短路的死默认——等价变异体,已删冗余)。
 local action_anim_duration = timing.action_anim_default_seconds
 
 -- 消耗时机:kind 级默认由调用方描述符经 opts.consume 声明
@@ -237,8 +235,6 @@ local function _escrow_slot(player, item_id, choice_spec)
     or assert(inventory.find_index(player, item_id), "missing item: " .. tostring(item_id))
 end
 
--- 行为测试公共接缝：test_item_use_flow / test_force_skip_refund_pin 经此入口建立托管，
--- 再由真实选择解析或强制跳过验证仅消费一次、退还幂等与背包容量约束。
 function settlement.escrow(player, item_id, choice_spec)
   assert(type(choice_spec) == "table", "escrow needs a choice spec")
   local slot_index = _escrow_slot(player, item_id, choice_spec)

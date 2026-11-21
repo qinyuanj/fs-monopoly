@@ -1,8 +1,6 @@
 -- 回合阻塞/等待判定深模块:唯一判定器。
 -- 「回合此刻被什么挡住(current_block)」与「带着一个目标 intent 该进入哪个 wait 态、
--- 如何挂 resume 回调(next_wait_state)」全部收敛于此。原先 land.lua 手搓的
--- anim×hold×move_anim×action_anim 组合路由(约130行 + 孪生 _resolve_finished_landing_state)
--- 迁入本模块;land 降为薄委托,保留其被 characterization 钉死的两个导出 seam。
+-- 如何挂 resume 回调(next_wait_state)」全部收敛于此。
 local runtime_state = require("src.state.runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local wait_callbacks = require("src.turn.waits.callback_registry")

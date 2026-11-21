@@ -36,8 +36,6 @@ local function _dispatch_anim_done(game, opts, anim)
   game:dispatch_action({ type = opts.done_action, seq = anim.seq })
 end
 
--- on_anim 结果分派:失败留痕(warn 带标识与错误)但行为保持——仍走
--- done 分支;成功且正延迟才进 schedule(ADR 0046「跳过必留痕」,#339)。
 local function _finish_step_anim(game, opts, anim, ok, delay)
   if not ok then
     logger.warn("[turn.anim]", "on_anim failed for seq=" .. tostring(opts.seq_key)
