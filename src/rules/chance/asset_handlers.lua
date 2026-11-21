@@ -129,7 +129,6 @@ local function _sorted_property_ids(env, player)
     if ai ~= nil and bi ~= nil then
       return ai < bi
     end
-    -- pairs 的键互不相同,走到这里的非整数键字符串化后也不相等,< 改 <= 不改变排序结果(等价变异体,不可杀)。
     return tostring(a) < tostring(b)
   end)
   return ids
@@ -178,7 +177,6 @@ local function _discard_properties(env, game, player, card)
   end
 end
 
--- register 只绑定环境;各 handler 留在模块级,复杂度不累加到 register(CRAP)。
 local HANDLERS = {
   destroy_buildings_on_path = _destroy_buildings_on_path,
   reset_tiles_on_path = _reset_tiles_on_path,

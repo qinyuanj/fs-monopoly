@@ -1,6 +1,4 @@
--- choice 归属者与本地身份解析(自 ui_sync/choice_state.lua 拆分,
--- >100 mutation sites 行为保持):choice 契约 owner/meta 角色 id 优先,
--- 回落当前回合玩家;房间席位判定只走 resolve_roles 遍历。
+-- choice 归属者与本地身份解析:choice 契约 owner/meta 角色 id 优先,回落当前回合玩家;房间席位判定只走 resolve_roles 遍历。
 local choice_contract = require("src.config.choice.contract")
 local role_id_utils = require("src.foundation.identity")
 local runtime_ui = require("src.ui.render.support.runtime_ui")
@@ -45,17 +43,9 @@ end
 -- 语义不兼容(#444):reconcile 路径无点击事件、client_role 在作用域外恒 nil,
 -- 偶然导致席位判定生效;一旦 client_role 有值且不等于 owner,原第一级短路即回到
 -- #438 的错误形状(四槽多真人落地面板永不弹)。
---
--- 原第二级 _single_local_role_id 一并删除,它是本判定的冗余快路径而非独立语义:
--- 它取 resolve_roles() 长度为 1 时那个 role_id 去比 owner,与遍历同一名册比
--- owner 在单席位下同解;多席位下只有遍历正确。边界亦无差异——名册非 table 时
--- 两者都不放行,空表时它返 nil 落到下一级、遍历零次返 false,同一出口。
---
--- 行为变更(#444 记):判定改为硬依赖 resolve_roles,名册未配置时恒 false。
+-- 判定改为硬依赖 resolve_roles,名册未配置时恒 false。
 -- 生产侧名册取自 GameAPI.get_all_valid_roles() 恒非空;测试侧须显式铺席位
 -- (单字段 patch resolve_roles,勿用整表替换的 runtime_ports.configure)。
--- 名册遍历判定 owner 是否被服务(CRAP 门禁 #452):遍历与归一化比对收敛到
--- 独立小函数,owner_is_served_seat 只留前置短路与调用。
 local function _roles_contain_owner(roles, owner_role_id)
   for _, role in ipairs(roles) do
     local role_id = role_id_utils.normalize(runtime_ui.resolve_role_id(role))

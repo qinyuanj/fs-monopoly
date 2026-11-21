@@ -24,8 +24,6 @@ local function _shallow_freeze(snapshot)
   return frozen
 end
 
--- 快照双向比对拆为小函数(CRAP 门禁 #452):a 侧字段在 b 中同值、
--- b 侧无多余字段,两段独立判定,任一不满足即不等。
 local function _a_fields_match_in_b(a, b)
   for key, value in pairs(a) do
     if b[key] ~= value then

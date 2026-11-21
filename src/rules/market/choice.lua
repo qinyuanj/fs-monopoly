@@ -46,9 +46,6 @@ local function _normalize_tab(tab)
   return TAB_ITEM
 end
 
--- page_index 缺省回落首页由 clamp 的 nil→min 承担;page_count 在唯一调用方
--- builder.build 处由 number_utils.page_count 保证为 ≥1 整数,两端点的
--- `or 1` 默认值均为死防御(#259 变异清扫删除)。
 local function _clamp_page(page_index, page_count)
   return number_utils.clamp(number_utils.to_integer(page_index), 1, page_count)
 end
@@ -101,8 +98,6 @@ function builder.build(player, game, state)
   state = state or {}
   local active_tab = _normalize_tab(state.active_tab)
   local visible = _build_tab_entries(player, game, active_tab)
-  -- foundation 的 page_count 与本地实现逐点等价(含空列表 → 1 页),
-  -- 本地化简后删除(#259 变异清扫:双默认值死防御不可达)。
   local page_count = number_utils.page_count(#visible, PAGE_SIZE)
   local page_index = _clamp_page(state.page_index, page_count)
   local body_lines, options = _build_options_for_page(visible, page_index, PAGE_SIZE)
@@ -147,8 +142,6 @@ end
 local _resolve_owner_role_id = choice_contract.resolve_owner_role_id
 
 local function _apply_spec(game, pending_choice, spec)
-  -- 无入口断言:两个调用方(rebuild_pending / _apply_navigation_spec)都在
-  -- 进入前挡掉了 nil pending_choice 与 nil spec,守卫不可达(#259 删除)。
   pending_choice.title = spec.title
   pending_choice.body_lines = spec.body_lines
   pending_choice.options = spec.options
@@ -186,14 +179,10 @@ local NAVIGATION_ACTIONS = {
     if active_tab == action.tab then
       return active_tab, page_index, true
     end
-    -- 页码用 nil 表达「回默认」:build 端 clamp(nil → 1) 承担,字面量 1 的
-    -- 1→0 变异会被 clamp 吸收成等价体(#259 化简)。
     return action.tab, nil, false
   end,
   market_page_prev = function(_, active_tab, page_index)
     local current = number_utils.to_integer(page_index)
-    -- nil 页码同样交 clamp 回落首页;`(x or 1) - 1` 的 1→0 变异在 clamp 下
-    -- 不可观测,此形态下该变异体会跳过递减直接可杀。
     return active_tab, current and current - 1 or nil, false
   end,
   market_page_next = function(_, active_tab, page_index)

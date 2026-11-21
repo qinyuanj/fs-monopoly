@@ -133,10 +133,6 @@ local function _should_stop_landing_result(out)
 end
 
 function _begin_resolved_landing(game, player, tile, context, depth)
-  -- depth 是必传实参:入口(begin_landing_settlement)按 context.depth or 0 给初值,
-  -- 递归(_continue_followup_landing)传 depth + 1。这里不再写第二份默认值——
-  -- 「depth or context.depth or 0」的整条默认链在两个调用方面前恒被短路,
-  -- 变异体全是等价死尾(#259 清扫裁定:等价变异体优先删冗余源码)。
   context = context or {}
 
   local game_ctx = shared.build_game_ctx(game, context.move_result, "landing")

@@ -17,7 +17,6 @@ local target_resolve = require("src.rules.items.target_resolve")
 local use_result = require("src.rules.items.use_result")
 
 local handlers = {}
--- timing 是静态配置,action_anim_default_seconds 键恒在,`or 1.0` 是死防御(#259 删除)。
 local action_anim_duration = timing.action_anim_default_seconds
 
 local function _queue_target_player_anim(game, user, item_id, target)
@@ -79,8 +78,6 @@ local function _no_candidate_result(game, player, item_id, context, opts)
 end
 
 local function _await_choice_result(game, player, item_id, candidates, context, opts)
-  -- 无 opts.choice_spec 存在性守卫:唯一调用方 _run_item_choice_flow 的
-  -- opts 是字面量构造,choice_spec 恒在(#259 删除);工厂返回值守卫保留。
   local choice_spec = assert(opts.choice_spec(game, player, item_id, candidates, context), "missing choice_spec")
   return {
     waiting = true,
@@ -98,7 +95,6 @@ local function _run_item_choice_flow(game, player, item_id, context, opts)
     return _no_candidate_result(game, player, item_id, context, opts)
   end
 
-  -- 无 opts.ai_select 守卫:同上,字面量 opts 恒提供(#259 删除)。
   if context.is_computer_controlled then
     return opts.ai_select(game, player, item_id, candidates, context)
   end
@@ -240,7 +236,6 @@ function handlers.handle_roadblock(game, player, item_id, context)
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       -- pick_best 只收非空候选、auto_candidates 必带 idx,roadblock.apply 另有 idx 断言;
-      -- 曾经的「best and best.idx」入口断言恒不触发(等价变异体,已删冗余)。
       local best = roadblock.pick_best(candidates)
       return settlement.execute(inner_game, inner_player, inner_item_id, function()
         return roadblock.apply(inner_game, inner_player, best.idx)

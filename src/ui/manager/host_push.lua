@@ -1,8 +1,6 @@
 -- ui.manager.host_push — UIManager 子树推送宿主的公共形。
 -- 每个 __update_* 都是同一件事:有 client_role 就只推给它,否则广播给 allroles。
--- 这段双分支原先在 6 个 manager 模块里手抄了 26 遍(dry4lua 满分重复簇),
--- 收敛到这里,让 __update_* 只留「推什么」,不再重复「推给谁」。
---
+-- 这段双分支收敛到这里,让 __update_* 只留「推什么」,不再重复「推给谁」。
 -- 取 context.allroles 用运行期读而非 load 期缓存:context.allroles 全仓只在
 -- context.lua 赋值一次,子模块与 spec 都是原地增删同一张表,两种读法等价。
 -- 不挂在 context 上是因为 utils 把 context 原表发布成全局 UIManager facade,
@@ -54,8 +52,7 @@ end
 
 --- 把一次宿主推送发给该发的角色。
 --- 广播时按「每个角色依次执行 apply」推进,故 apply 内推多个宿主方法时,
---- 顺序是 role1.a、role1.b、role2.a、role2.b —— 与各 __update_* 原先手写
---- 双分支的调用顺序一致(EButton.__update_disabled 依赖这个顺序)。
+---- 顺序是 role1.a、role1.b、role2.a、role2.b（EButton.__update_disabled 依赖这个顺序）。
 ---@param apply fun(role: Role)
 function host_push.push(apply)
     if context.client_role then

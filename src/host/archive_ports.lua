@@ -1,5 +1,4 @@
--- 档案读写默认实现(自 default_ports.lua 拆分,行为保持):经 defaults.resolve_role
--- 解析角色(调用时解析,须在 role_ports.install 之后安装)。Int 读失败统一回落 0,
+-- 档案读写默认实现:经 defaults.resolve_role 解析角色(调用时解析,须在 role_ports.install 之后安装)。Int 读失败统一回落 0,
 -- 写失败返回 false;Str(#198 / ADR 0075 礼包码兑换记录)读失败返回 nil——与
 -- 「从未写过」的空串区分,调用方据此拒绝而不是覆盖已有记录——写失败返回 false,
 -- 每条降级路径留 warn。宿主写档无成功返回值约定,是否落档由调用方写后回读判定。

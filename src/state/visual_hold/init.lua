@@ -155,7 +155,6 @@ function landing_visual_hold.start(game, opts)
   return true
 end
 
--- 行为测试公共接缝：test_phase_transitions 在落地等待场景建立 hold，观察回合恢复。
 landing_visual_hold.hold_state_for_game = landing_visual_hold.start
 
 local function _hold_field_or_game_fallback(game, field, fallback)
@@ -225,8 +224,6 @@ local function _flush_pending_release(game, state, hold)
   runtime_state.set_ui_dirty(state, true)
 end
 
--- hold 已存在时的清除(CRAP 门禁 #452):release_pending 两段握手走
--- _flush_pending_release 回放(#440),否则直接销毁 scope,再投影回 game。
 local function _clear_hold_state(game, state)
   local hold = _ensure_hold(state)
   local replay_pending = hold.release_pending == true
@@ -347,8 +344,6 @@ local function _defer_replay(state, bucket, replay, ...)
   return release_scheduler.register_deferred_replay(_ensure_hold(state), bucket, replay, ...)
 end
 
--- 行为测试公共接缝：test_visual_hold 经这些入口观测 release 的载荷保真与回放顺序。
--- 生产回放统一经 run_or_defer；保留类型化入口以覆盖同一 release 调度行为。
 function landing_visual_hold.defer_popup(state, payload, opts, replay)
   return _defer_replay(state, "popup", replay, payload, opts)
 end

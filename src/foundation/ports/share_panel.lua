@@ -29,8 +29,7 @@ function share_panel.is_configured()
 end
 
 -- 唤起宿主分享面板:成功 → true;role 缺失、方法缺失或宿主抛错 → warn + false
--- (语义由实现侧钉住)。tag 区分调用方日志前缀(托管首点沿用历史钉住的
--- "auto share panel")。未配置时安全降级返回 false,不抛错。
+-- (语义由实现侧钉住)。tag 区分调用方日志前缀。未配置时安全降级返回 false,不抛错。
 function share_panel.try_show(actor_role_id, tag)
   if configured_impl == nil then
     return false

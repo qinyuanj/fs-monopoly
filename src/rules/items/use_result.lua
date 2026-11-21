@@ -1,7 +1,5 @@
 -- 道具使用结果的全量构造器与唯一成功判定器。
 -- applier 的合法结果只有三种终态表达:applied / rejected / await_choice;
--- 历史多态形状(true/false/{ok=...}/{waiting=...}/无 ok 表)
--- 一律经 canonicalize 收敛——它是全模块唯一的成功/等待裁决点,
 -- waiting 按「非成功、非失败」处理(不广播、不遥测、不消耗)。
 local use_result = {}
 
@@ -106,8 +104,6 @@ local function _canonicalize_applied_table(raw)
   })
 end
 
--- 六种历史 raw 形状的唯一解码点。settlement 只认 canonicalize 的产出;
--- executor/handlers/use_flow_result 里互相矛盾的三个判定器由此取代。
 function use_result.canonicalize(raw, fallback_reason)
   if use_result.is_result(raw) then
     return raw

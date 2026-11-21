@@ -33,8 +33,6 @@ function host_slot.new(spec)
     end
   end
 
-  -- 声明名单单一真源：聚合面（host_runtime）据此派生逐名转发，不再手写清单。
-  -- 返回副本，消费方改动不回污染槽内部状态。
   function slot.declared_names()
     local copy = {}
     for i = 1, #names do

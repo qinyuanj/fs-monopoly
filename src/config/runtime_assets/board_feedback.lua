@@ -21,8 +21,7 @@ local function _resolve_numeric_field(cue_name, field, value)
     return nil
   end
   if number_utils.is_numeric(value) then
-    -- 保整数类型的数值归一(int*1=int,float*1=float);`value + 0` 的
-    -- + -> - 逐值等价不可杀,`* 1` 形态下 * -> / 会产生 float 类型分歧(#261)。
+    -- 保整数类型的数值归一(int*1=int,float*1=float)，避免写成会改变类型的表达式。
     return value * 1
   end
   local reason = type(value) == "table" and "vector_like_not_allowed" or "non_numeric"

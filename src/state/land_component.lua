@@ -30,8 +30,6 @@ end
 ---@return table component 按 BFS 顺序排列的同主地块 id 列表(起点不同主时为空表)
 function land_component.same_owner(start_tile_id, owner_id, owner_of, neighbors_of)
   -- 波次 BFS(逐层推进,顺序与单队列 BFS 逐位一致)。选这个形态而不是 head 游标
-  -- 单队列:游标 +1 / 布尔 visited 的变异体是不终止死循环,断言杀不掉只能等超时;
-  -- 波次形态下每个位点的变异体都收敛为报错或结果错误,便于变异测试观测。
   -- visited 存地块 id 本身(不存 true),入会检查用 == nil 而非 not。
   local visited = { [start_tile_id] = start_tile_id }
   local component = {}

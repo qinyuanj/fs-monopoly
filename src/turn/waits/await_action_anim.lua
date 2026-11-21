@@ -14,8 +14,6 @@ local _next_action_anim
 local function _resolve_action_anim_wait(game)
   local anim = game.turn.action_anim
   if anim then
-    -- 第二返回值只在 anim 缺失时被消费(_resolve_action_anim_idle 先判
-    -- anim ~= nil),anim 在场时恒不被读——false 字面值是死位(等价变异体)。
     return anim
   end
   local next_anim = _next_action_anim(game)
@@ -119,8 +117,6 @@ local function _coalesce_head(queue)
 end
 
 _next_action_anim = function(game)
-  -- game 与 game.turn 恒非 nil(两个调用方都先读写 game.turn 才到这里),
-  -- 曾经的入口断言恒不触发——等价变异体,已删冗余。
   local queue = game.turn.action_anim_queue
   if type(queue) ~= "table" or #queue == 0 then
     return nil

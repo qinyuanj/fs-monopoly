@@ -1,5 +1,3 @@
--- 市场提示事件处理器(自 event_handlers.lua 拆分,行为保持):购买失败与卡槽
--- 满载的 tip 队列消息。
 local tip_queue = require("src.foundation.tips")
 
 local market_tip_handlers = {}

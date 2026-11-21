@@ -68,9 +68,6 @@ end
 
 -- 派生路由：依赖声明与派生逻辑同处，新增派生状态只需在此登记一处。
 -- 快照投影把 dirty 表归一为标量字段；inventory 布尔域投影为 has_inventory。
--- 路由表数据化（CRAP 门禁 #452）：每条路由 = 键 → 依赖字段表，compute 用
--- _any_dirty 遍历——or 决策点从 compute 本体（cx=18）摊到遍历器与数据上，
--- 行为等价（_any_dirty 返回首个 truthy 值或 nil，与原 or 链逐位一致）。
 local function _route_snapshot(dirty)
   return {
     players = not not dirty.players,

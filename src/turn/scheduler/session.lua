@@ -76,7 +76,6 @@ local function _build_session(opts)
   end
 
   -- choice_elapsed_seconds 在 snapshot() 中总被 self.choice_elapsed_seconds or 0 覆写，
-  -- 模板不需要初值（等价变异体消除）。
   local _snapshot = { wait_state = nil, current_state = nil, pending_choice_id = nil }
 
   local function _pending_choice_id(turn)

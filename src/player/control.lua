@@ -51,7 +51,6 @@ function control.is_computer_controlled(player)
   return control.is_replacement_computer(player) or control.is_delegated(player)
 end
 
--- 模式枚举校验单独成谓词(CRAP 门禁):_command_target 只留三级前置短路。
 local function _is_known_mode(mode)
   return mode == DIRECT or mode == MANUAL_DELEGATION or mode == AFK_DELEGATION
 end

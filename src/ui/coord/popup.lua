@@ -190,9 +190,6 @@ local function _render_card_popup(state, kind, payload)
 end
 function renderer.show_popup(state, payload)
   local ui = state.ui
-  -- kind 缺省(nil)与 "card" 同走卡牌分支;popup_kind 的三个读者
-  -- (本文件 _hide_popup、popup_presenter、modal)对 nil 各自回落卡牌,
-  -- 这里的 `or "card"` 与 _hide_popup 的成对死防御(#262 删除)。
   local kind = payload.kind
   ui.popup_kind = kind
   if kind == "bankruptcy" then

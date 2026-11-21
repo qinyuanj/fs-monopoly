@@ -57,8 +57,6 @@ local function _role_id_from_proxy(event_role)
   return event_role.id
 end
 
--- id 提取(CRAP 门禁):proxy / 标量两种形态的解析收敛到本函数,
--- _is_other_role_exit 只留「读不出即不排除」与比对。
 local function _event_role_id(event_role)
   if type(event_role) == "table" then
     return _role_id_from_proxy(event_role)
@@ -83,8 +81,6 @@ end
 
 -- AI 玩家无宿主 role,不产生宿主退出事件;真人玩家 role 解析失败或注册
 -- 失败时跳过且留痕(ADR 0046 跳过必留痕),不静默。
--- 注册两级失败判定(CRAP 门禁):端口不可用与宿主拒绝各自留痕,
--- _watch_player_quit 只留 AI/role 前置短路与注册调用。
 local function _warn_register_failure(player_id, port_ok, trigger)
   if not port_ok then
     _skip_warn("global_register_trigger_event unavailable", player_id)

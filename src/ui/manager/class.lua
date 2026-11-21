@@ -1,9 +1,5 @@
 -- ui.manager.class 富类系统:UIManager 子树(ENode/ELabel/… 深包 Eggy 宿主节点)专用。
 -- 支持多父继承、__get_*/__set_* getter/setter、__custom_index、Init/init 双命名构造。
--- 写路径只认 __set_<key> 命名 setter,没有 __custom_new_index 机制(从未接线,整搬带入的
--- 死概念，勿再引入；读自定义 __custom_index 生效、写自定义走命名 setter（#268）。
--- 与 src.foundation.class(最小类,零继承)刻意分家:foundation.class 服务 rules/state 等
--- 零继承使用面，本模块承载 UIManager 整搬保行为所需的全部魔法（#60）。
 
 ---@class Class
 ---@field __name string 类名

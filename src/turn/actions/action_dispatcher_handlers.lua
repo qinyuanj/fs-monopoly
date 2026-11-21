@@ -14,12 +14,8 @@ local handlers = {}
 
 -- 首次开启托管弹宿主分享面板。shown 标记只在宿主调用成功之后锁存：role 解析不出、
 -- 宿主 Role 缺 show_map_share_panel、或宿主调用抛错时本次不弹但也不锁存，
--- 下次开启托管可重试（失败路径一律 warn，不静默吞）。宿主调用机制收敛在
--- share_panel.try_show（与分享按钮共用），日志前缀沿用历史钉住的 "auto share panel"。
+-- 下次开启托管可重试（失败路径一律 warn，不静默吞）。宿主调用机制收敛在 share_panel.try_show。
 local function _try_show_share_panel(actor_role_id, player)
-  -- actor_role_id 恒可解析:唯一调用方 handle_auto_toggle 先经
-  -- ctx_mod.resolve_actor_player 把 normalize 不出 role_id 的 action 挡成
-  -- rejected。曾经的「unresolvable」分支不可达——等价变异体,已删冗余。
   if share_panel.try_show(actor_role_id, "auto share panel") then
     player.auto_share_panel_shown = true
   end

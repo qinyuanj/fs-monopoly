@@ -12,7 +12,6 @@ local steal = require("src.rules.items.steal")
 local demolish = require("src.rules.items.demolish")
 
 local target_effects = {}
--- timing 是静态配置,action_anim_default_seconds 键恒在,`or 1.0` 是死防御(#259 删除)。
 local action_anim_duration = timing.action_anim_default_seconds
 
 -- 请神卡只请正面神灵：穷神持有者与无神灵者都不进候选面（deities_008/009/010）。

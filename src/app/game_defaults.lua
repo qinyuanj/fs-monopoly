@@ -1,6 +1,3 @@
--- 初始游戏对象构造助手(自 compose_game.lua 拆分,行为保持):玩家索引、
--- 地块初始态、初始 turn 与默认字段装配。组合根保留装载时序,
--- 这里只承载纯构造逻辑。
 local game_factory = require("src.app.game_factory")
 local role_id_utils = require("src.foundation.identity")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
@@ -9,8 +6,6 @@ local dirty_tracker = require("src.state.dirty_tracker")
 local game_defaults = {}
 
 -- 归一化 player 的 role id 后按 id 收录,id 非法(空/无法归一化)时跳过。
--- players 由 game_factory 生成恒为表;normalize(nil) 即 nil,曾经的「p and p.id ~= nil」
--- 前置守卫是冗余(等价变异体,已删冗余)。
 local function _insert_normalized_player(out, p)
   local player_id = role_id_utils.normalize(p.id)
   if player_id ~= nil then

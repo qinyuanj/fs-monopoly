@@ -24,7 +24,6 @@ function host_runtime.schedule(delay, fn)
 end
 
 -- 逐名转发面由各 port 的声明名单派生（单一真源 host_ports + slot.declared_names），
--- 不再手写清单——port 加/删函数只改该 port 自己的 host_slot.new(spec) 声明。
 for _, port in ipairs(host_ports) do
   for _, name in ipairs(port.declared_names()) do
     _forward(port, name)

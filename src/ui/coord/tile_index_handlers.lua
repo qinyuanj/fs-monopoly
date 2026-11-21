@@ -1,5 +1,3 @@
--- tile 索引定位事件处理器(自 event_handlers.lua 拆分,行为保持):踩雷/地块
--- 命中的 payload→棋盘索引解析,返回索引供事件消费方使用。
 local tile_index_handlers = {}
 local context = { state = nil }
 

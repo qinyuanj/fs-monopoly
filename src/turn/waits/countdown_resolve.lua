@@ -1,5 +1,3 @@
--- 倒计时解析树(#602 拆分,自 ui_sync.lua 移出,行为保持):拘留/选择/弹层
--- 各分支的剩余秒数判定。写回与打脏仍归 ui_sync.update_countdown。
 local tick_ui_gate = require("src.turn.waits.ui_gate")
 local choice_route_policy = require("src.config.choice.route_policy")
 local runtime_state = require("src.state.runtime")

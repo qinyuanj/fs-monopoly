@@ -11,12 +11,6 @@ function completions.build(helpers)
     return item_phase.resolve_completion(game, player, meta, result)
   end
 
-  -- 道具 completion 收尾后「这扇窗该不该清」的唯一裁决点。原先 item_phase_handlers
-  -- 的 _keeps_choice_open/_finish_unless_open 与本模块的 _clear_unless_open 各写了
-  -- 一份同款判定(直用道具一份、跟随选择道具一份),两处逐字重复 —— 正是残留能藏住的
-  -- 土壤(5ce62507:跟随选择道具作为阶段最后一张牌用掉时,少清一次就把 choice 门控
-  -- 带进下一位玩家的回合)。二者收敛到此。
-  --
   -- completion 重开了道具窗口(reopened)或原地等待(stay)时,pending_choice 是那个
   -- 要继续用的窗口,不能动;否则 pending_choice 还是刚结算掉的那扇窗,必须清。
   -- completion 为 nil 时不在这里兜底:resolver._build_resolve_result 是 resolve

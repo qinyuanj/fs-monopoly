@@ -1,5 +1,3 @@
--- item_atlas 面板面(自 screens/item_atlas.lua 拆分,>100 mutation sites 行为保持):
--- 开屏/翻页/图集选择/放大隐藏/点击派发。
 -- #543:图鉴放大卡回归纯浏览用途,不再承担获得展示,dismiss 只收浏览放大卡,
 -- 不向回合机派发 action_anim_done(获得展示的提前关闭归卡牌展示屏弹窗)。
 local number_utils = require("src.foundation.number")

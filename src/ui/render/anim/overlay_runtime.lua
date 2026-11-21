@@ -22,8 +22,6 @@ local function _get_overlay_bucket(overlays, kind)
   return nil
 end
 
--- 调用方(_spawn_entry)只在 group_id/unit_id 非 nil 时才进这两条路径,
--- id 的 nil assert 是不可达死防御(#262 删除);pos 仍可经 spawn_transient 缺省。
 local function _spawn_unit_group(host_runtime, group_id, pos)
   assert(pos ~= nil, "missing pos")
   return host_runtime.create_unit_group(group_id, pos, runtime_constants.q_zero)
@@ -49,8 +47,6 @@ local function _spawn_unit(host_runtime, unit_id, pos, scale)
   return host_runtime.create_unit_with_scale(unit_id, pos, runtime_constants.q_zero, unit_scale), false
 end
 
--- entry 恒为 _spawn_entry 产物(handle 恒在),空守卫是死防御(#262 删除:
--- or->and 变异体在 nil 输入索引报错,而 nil 输入本就不可达)。
 local function _destroy_unit(host_runtime, entry)
   if entry.kind == "group" then
     host_runtime.destroy_unit_with_children(entry.handle, true)

@@ -52,9 +52,6 @@ local function _build_branch_tree(branches)
 end
 
 local function _resolve_longest_branch(branches)
-  -- 负分支数种子 + math.max:`longest = 0` 的 0->1 与 `#branch > longest` 的
-  -- >->>= 逐值等价不可杀(全空分支时步长无消费者);-#branches 是最长值的
-  -- 安全下界且无数字位点(删负号会变步长,可杀)(#262 化简)。
   local longest = -#branches
   for _, branch in ipairs(branches or {}) do
     longest = math.max(longest, #branch)
@@ -129,8 +126,6 @@ local function _play_branches(state, clear_overlay, schedule, hr, robot_id, bran
   -- #339:不走池化,去掉 prewarm 预热(直接 create,无需预填池)。
   local root_handle = _spawn_robot(hr, robot_id, player_pos)
   if #branch_tree.children == 0 then
-    -- 全空分支没有步进,步长无消费者,直接销毁(#262:这也封死了
-    -- longest==0 分支上的一切等价变异)。
     _destroy_robot(hr, robot_id, root_handle)
     return
   end

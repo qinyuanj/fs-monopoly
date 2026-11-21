@@ -29,9 +29,6 @@ local function _use_post_effect(game, player, item_id, context, fallback_reason)
   end, { consume = "before_apply", fallback_reason = fallback_reason, slot_index = context.slot_index })
 end
 
--- 历史 handler 契约:效果已在 handler 内部生效(含消耗),结算只负责
--- 判定/广播/兜底动画;消耗事实经 apply 前后计数回填台账。
--- 该路径随 step 3 各 kind 迁入 settlement 后仅剩注入式测试 handler 使用。
 local function _settle_applied_handler(game, player, item_id, res, before_count, fallback_reason)
   return settlement.execute(game, player, item_id, function()
     return res

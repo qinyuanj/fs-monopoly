@@ -40,8 +40,6 @@ local function _sync_text_status(cache, player, status_key, roles, game)
   end
   local text = _get_remaining_text(remaining)
   for _, role in ipairs(roles) do
-    -- ipairs 遇 nil 即停,role 恒非 nil,`role and` 是死防御(#262 删除:
-    -- and->or 在 role 恒真下逐值等价)。
     if role.set_label_text then
       pcall(role.set_label_text, text_node, text)
     end

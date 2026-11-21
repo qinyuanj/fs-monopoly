@@ -56,10 +56,6 @@ local function _fail(player, reason)
 end
 
 local function _is_finite_numeric(value)
-  -- 无 is_numeric 提前拦截:非数值在 pcall 减法处自然报错归 false,与拦截
-  -- 殊途同归(#259 删除);本函数真正的载荷是有限性(NaN/inf 经 value-value
-  -- 失真)与宿主对象减法防崩,`ok and diff == 0` 的 and->or 变异体会放进
-  -- inf,由 math.huge 用例封死。
   local ok, diff = pcall(function()
     return value - value
   end)
@@ -92,9 +88,7 @@ end
 -- 存储：解析角色并读写 coin_count 属性 -------------------------------------
 
 local function _as_fixed_number(amount)
-  -- 整数 → 浮点 coercion(Eggy Fixed 写入约定)。恒等算术必须写成双运算:
-  -- `+ 0.0`/`* 1.0` 的运算符翻转变异(+↔-、*↔/)逐值等价不可杀;双运算下
-  -- 任一翻翻转都改变结果(#259)。
+  -- 整数 → 浮点 coercion(Eggy Fixed 写入约定)；用双运算避免运算符翻转改变结果。
   return amount * 2.0 / 2.0
 end
 
@@ -235,8 +229,6 @@ end
 -- 前置条件：delta 已通过 _validate_delta；结果为负时钳制到 0。
 local function _apply_coin_delta(game, player, delta, opts)
   local current_cash = _read_coin_count(player)
-  -- math.max 形态:`if next_cash < 0 then next_cash = 0` 的 < -> <= 与 0 -> 1
-  -- 在整数域逐值等价(差集只有 0,而 0 钳到 0)不可杀(#259 化简)。
   local next_cash = math.max(0, current_cash + delta)
   local updated_cash = _write_coin_count(game, player, next_cash)
   _queue_cash_anim(game, player, updated_cash - current_cash, opts)
@@ -261,8 +253,6 @@ local function _transfer_amount(payer, requested, opts)
     _fail(payer, "支付金额不能为负数")
   end
   local payer_before = _read_coin_count(payer)
-  -- math.min 形态:原 `payer_before < requested` 的 < -> <= 在等值边界
-  -- 两分支返回同一元组不可杀(#259 化简)。
   if opts and opts.allow_partial == true then
     return math.min(payer_before, requested), payer_before
   end
