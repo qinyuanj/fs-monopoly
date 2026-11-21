@@ -153,7 +153,13 @@ describe("stock busted inside a mutation worker", function()
       local result = proc.run_command({ "git", "ls-files", directory }, { cwd = root })
       check.equal(0, result.code, result.output)
       for file in result.output:gmatch("[^\r\n]+") do
-        check.truthy(fs.copy_file(root .. "/" .. file, worker .. "/" .. file))
+        local source = root .. "/" .. file
+        -- git ls-files 仍列出工作树中已删除的跟踪文件;worker 必须反映这次删除。
+        if not fs.path_exists(source) then
+          goto next_file
+        end
+        check.truthy(fs.copy_file(source, worker .. "/" .. file))
+        ::next_file::
       end
     end
     -- Keep the real helper/options, replace only the full-suite default roots.

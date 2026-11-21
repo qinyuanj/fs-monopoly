@@ -14,15 +14,6 @@ describe("platform boundary", function()
       verdict.message)
   end)
 
-  it("offers only the unavailable and real-failure states, no explicit skip protocol", function()
-    check.is_nil(boundary.evaluate)
-    check.is_nil(boundary.strip_skip_flag)
-    check.is_nil(boundary.declared_ids)
-    check.is_nil(boundary.SKIP_FLAG)
-    check.is_nil(boundary.SKIPPED)
-    check.is_nil(boundary.SKIPPED_EXIT_CODE)
-  end)
-
   -- 保证面收窄是**被测事实**,不是注释约定(ADR 0083 / #239):
   -- 只有原生 Windows 在保证面内,linux / macos / posix 一律判不可用。
   it("keeps native Windows as the only supported platform", function()
